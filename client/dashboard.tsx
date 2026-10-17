@@ -7,11 +7,12 @@ import { ActivityIndicator, Image, Linking, Pressable, StyleSheet, Text, View, t
 import { contrast, isHex, PRESETS, THEME_CATALOG_ID, themeSchema, themeSettings, TOKEN_ROLES, TOKENS, type ThemeDraft, type Token } from "../shared/theme";
 import { HIDEABLE, ICON_KINDS, LOADERS, prefsSettings, RICH_TEXT, type Hideable, type IconKind, type Loader, type Prefs, type RichText } from "../shared/timeline";
 import { applyUpdate, checkUpdate, type UpdateStatus } from "../shared/update";
-import { hideableKind, toolData } from "./model";
+import { hideableKind, todoData, toolData } from "./model";
+import { setTodoChanges } from "./steps";
 import { PrefsOverride, setPrefs, usePrefs } from "./prefs";
 import { registerTheme, useCurrentTheme } from "./theme-registry";
 import { PLAIN_SYNTAX, SYNTAX_THEMES } from "./highlight";
-import { alpha, AppearanceOverride, CodeLine, ImagesItem, MergedSteps, PMONO, sunken, SyntaxOverride, ThoughtItem, ToolItem, useReducedMotion, useStyles } from "./views";
+import { alpha, AppearanceOverride, CodeLine, ImagesItem, MergedSteps, PMONO, sunken, SyntaxOverride, ThoughtItem, TodoItem, ToolItem, useReducedMotion, useStyles } from "./views";
 import { canSetAppTheme, DEFAULTS, PASEO_FONT_STACKS, readHostAppearance, readSyntaxTheme, setAppTheme, updateAppSettings } from "./web";
 
 type ToolCall = Extract<AgentTimelineItem, { type: "tool_call" }>;
@@ -27,9 +28,26 @@ const PREVIEW_CALLS = [
   call({ type: "plain_text", label: "Dev server exited", text: "<task-notification/>" }, { name: "task_notification" }),
 ];
 
+// A todo update that finished the second of three tasks: a step of the merged row, or its own row with merging off.
+const PREVIEW_TODO = {
+  type: "todo",
+  items: [
+    { text: "Find every verifyToken() call", completed: true, status: "completed" },
+    { text: "Move auth into requireAuth", completed: true, status: "completed" },
+    { text: "Run the auth tests", completed: false, status: "in_progress", activeForm: "Running the auth tests" },
+  ],
+} as Extract<AgentTimelineItem, { type: "todo" }>;
+setTodoChanges(PREVIEW_TODO, [{ type: "completed", text: "Move auth into requireAuth" }]);
+
 // The Theme page's Code view: an edit diff, a quiet and a failed shell call, and an MCP call with input and output.
 const CODE_CALLS = [
-  call({ type: "edit", filePath: "/tmp/cp-ui-sample/auth.ts", oldString: "  if (!ok) return deny(401);", newString: "  if (!ok) return deny(403);" }),
+  call({
+    type: "edit",
+    filePath: "/tmp/cp-ui-sample/auth.ts",
+    oldString: "  if (!ok) return deny(401);",
+    newString: "  if (!ok) return deny(403);",
+    unifiedDiff: "@@ -12,4 +12,4 @@\n export function requireAuth(req, next) {\n   const ok = verifyToken(req);\n-  if (!ok) return deny(401);\n+  if (!ok) return deny(403);\n   next();",
+  }),
   call({ type: "shell", command: "ls -la && head -5 auth.ts", output: "" }),
   call({ type: "shell", command: 'node -e "process.exit(1)"', output: "", exitCode: 1 }, { status: "failed" }),
   call(
@@ -852,7 +870,7 @@ function HighlightTheme({ theme, draft, shown, setDraft }: { theme: PluginTheme;
 }
 
 
-const HIDEABLE_LABELS: Record<Hideable, string> = { read: "Reads", search: "Searches", fetch: "Fetches", task: "Tasks" };
+const HIDEABLE_LABELS: Record<Hideable, string> = { read: "Reads", search: "Searches", fetch: "Fetches", task: "Tasks", todo: "Todo lists" };
 const ICON_LABELS: Record<IconKind, string> = { steps: "Merged", tool: "Tools", thought: "Thoughts" };
 
 /** Titles and tile labels for each rich text variant, from the "Rich Text — Style Variants" design. */
@@ -1460,6 +1478,7 @@ function Preview({ theme, draft, prefs, layout, theming }: { theme: PluginTheme;
   // Rows read their open state once; remount them when a pref that sets it changes.
   const remount = `${prefs.reasoning}-${prefs.toolDetails}`;
   const calls = PREVIEW_CALLS.filter((t) => !prefs.hidden.includes(hideableKind(t)!));
+  const todos = prefs.hidden.includes("todo") ? [] : [PREVIEW_TODO];
   const tools = calls.map(toolData);
   const thought = "Handlers in routes/ each call verifyToken(); one middleware removes the duplicates.";
   const { uiFont, monoFont, contentSize, codeSize } = theming ?? {};
@@ -1485,7 +1504,7 @@ function Preview({ theme, draft, prefs, layout, theming }: { theme: PluginTheme;
                       key={`steps-${remount}`}
                       {...props}
                       item={item(null)}
-                      steps={[{ type: "reasoning" as const, text: thought }, ...calls].map((item) => ({ item, phase: "complete" as const }))}
+                      steps={[{ type: "reasoning" as const, text: thought }, ...calls, ...todos].map((item) => ({ item, phase: "complete" as const }))}
                       ms={41000}
                       growing={false}
                     />
@@ -1494,6 +1513,9 @@ function Preview({ theme, draft, prefs, layout, theming }: { theme: PluginTheme;
                       <ThoughtItem key={`thought-${remount}`} {...props} item={item({ text: thought, phase: "complete" as const })} />
                       {tools.map((d) => (
                         <ToolItem key={`${d.verb}-${d.target}-${remount}`} {...props} item={item(d)} />
+                      ))}
+                      {todos.map((t) => (
+                        <TodoItem key="todo" {...props} item={item(todoData(t))} />
                       ))}
                     </>
                   )}

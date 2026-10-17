@@ -28,10 +28,31 @@ const TODO_TOOLS = new Set(["todowrite", "todo_write", "update_plan"]);
 // headed by one would never render (its head is never transformed while the rest are removed).
 const DROPPED_TOOLS = new Set(["taskcreate", "taskupdate", "tasklist"]);
 export const droppedByApp = (item: Item) => item.type === "tool_call" && DROPPED_TOOLS.has(toolName(item));
+/** A todo-list update: the daemon's own todo items, or the calls the app turns into one. */
+export const isTodo = (item: Item) => item.type === "todo" || (item.type === "tool_call" && TODO_TOOLS.has(toolName(item)));
 
-/** The id a step has both in the app and in the daemon's timeline: tool calls by callId, thoughts (which carry none) by their opening words.
- * Plans, todo-list calls and agent messages aren't steps: they stand on their own. */
+type Task = Extract<Item, { type: "todo" }>["items"][number];
+const taskStatus = (t: Task) => t.status ?? (t.completed ? "completed" : "pending");
+
+/** What a todo update changed, the way Paseo words its own task rows: the first list is "created", then tasks are added, started or completed. */
+export type TaskChange = { type: "created"; count: number } | { type: "added" | "started" | "completed"; text: string };
+export function taskChanges(before: readonly Task[], after: readonly Task[]): TaskChange[] {
+  if (!before.length) return after.length ? [{ type: "created", count: after.length }] : [];
+  const key = (t: Task, i: number) => t.id ?? `${i}:${t.text}`;
+  const prior = new Map(before.map((t, i) => [key(t, i), t]));
+  return after.flatMap((t, i): TaskChange[] => {
+    const was = prior.get(key(t, i));
+    if (!was) return [{ type: "added", text: t.text }];
+    const now = taskStatus(t);
+    if (now === taskStatus(was)) return [];
+    return now === "completed" ? [{ type: "completed", text: t.text }] : now === "in_progress" ? [{ type: "started", text: t.text }] : [];
+  });
+}
+
+/** The id a step has both in the app and in the daemon's timeline: tool calls by callId, thoughts (which carry none) by their opening words,
+ * todo updates (which carry none either) by their list. Plans, todo-list calls and agent messages aren't steps: they stand on their own. */
 export function stepKey(item: Item): string | undefined {
+  if (item.type === "todo") return `d:${item.items.map((t) => `${taskStatus(t)} ${t.text}`).join("\n")}`;
   if (item.type === "tool_call") {
     const name = toolName(item);
     if (item.detail.type === "plan" || TODO_TOOLS.has(name) || name === "agent_message" || DROPPED_TOOLS.has(name)) return undefined;
@@ -61,23 +82,30 @@ export function applyItem(list: Entry[], item: Item, at: number): boolean {
   return true;
 }
 
-/** Runs of consecutive steps; anything else ends a run, and steps `skip` names (hidden by prefs) are passed over. */
+/** Runs of consecutive steps; anything else ends a run, and items `skip` names (hidden by prefs) are passed over. Todo updates join a run but
+ * never make one: a run of only todo updates isn't a run, so those stand on their own. */
 export function stepRuns(list: readonly Entry[], skip: (item: Item) => boolean): Run[] {
   const runs: Run[] = [];
   let run: Item[] = [];
   let start = 0;
   let end = 0;
   const close = (open = false) => {
-    if (run.length) runs.push({ steps: run, ms: Math.max(0, end - start), open });
+    if (run.some((s) => s.type !== "todo")) runs.push({ steps: run, ms: Math.max(0, end - start), open });
     run = [];
   };
+  let lastTodo: string | undefined;
   for (const [i, { item, at }] of list.entries()) {
-    if (droppedByApp(item)) continue;
+    if (droppedByApp(item) || skip(item)) continue;
+    // An agent can send the same list again; it changes nothing (Paseo rewrites its row in place), so it isn't a step.
+    if (item.type === "todo") {
+      const key = stepKey(item);
+      if (key === lastTodo) continue;
+      lastTodo = key;
+    }
     if (!stepKey(item)) {
       close();
       continue;
     }
-    if (skip(item)) continue;
     if (!run.length) start = list[i - 1]?.at ?? at;
     run.push(item);
     end = Math.max(end, at);
@@ -90,7 +118,7 @@ const PASEO_TOOL = /^(mcp__paseo(_[a-z0-9_]*)?__.|paseo(_[a-z0-9_]*)?\.|paseo_)/
 const plural = (n: number, one: string, many: string) => (n === 1 ? one : many).replace("#", String(n));
 
 /** "Thought 2 times, edited 1 file and ran 3 commands": what a run did, in the words and order of Paseo's own groups. */
-export function stepSummary(items: readonly Item[]): string {
+export function stepSummary(items: readonly Item[], changesOf: (item: Item) => readonly TaskChange[] = (item) => todoChanges.get(stepKey(item)!) ?? []): string {
   const edited = new Set<string>();
   const read = new Set<string>();
   let thoughts = 0;
@@ -98,8 +126,10 @@ export function stepSummary(items: readonly Item[]): string {
   let searches = 0;
   let other = 0;
   let paseo = 0;
+  let completed = 0;
   for (const item of items) {
     if (item.type === "reasoning") thoughts++;
+    if (item.type === "todo") completed += changesOf(item).filter((c) => c.type === "completed").length;
     if (item.type !== "tool_call") continue;
     const d = item.detail;
     if (PASEO_TOOL.test(item.name.trim().toLowerCase())) paseo++;
@@ -116,6 +146,7 @@ export function stepSummary(items: readonly Item[]): string {
     read.size && plural(read.size, "read # file", "read # files"),
     searches && plural(searches, "searched # time", "searched # times"),
     other && plural(other, "used # other tool", "used # other tools"),
+    completed && plural(completed, "completed # task", "completed # tasks"),
     paseo && plural(paseo, "called Paseo # time", "called Paseo # times"),
   ].filter((p): p is string => !!p);
   const text = parts.length > 2 ? `${parts.slice(0, -1).join(", ")}, and ${parts.at(-1)}` : parts.join(" and ");
@@ -131,6 +162,8 @@ const places = new Map<string, { head: string; index: number }>();
 const seen = new Map<string, { item: Item; phase: Phase }>();
 /** What the transformer last made of each step, to tell when Paseo must transform again. */
 const made = new Map<string, "head" | "none">();
+/** What each todo update changed, against the update before it in its agent's timeline. */
+const todoChanges = new Map<string, TaskChange[]>();
 // ponytail: seen keeps the latest few thousand steps across agents; key it per agent if long sessions show stale rows.
 const SEEN_MAX = 4000;
 
@@ -167,6 +200,7 @@ function unplace(agentId: string) {
   for (const key of keysByAgent.get(agentId) ?? []) {
     places.delete(key);
     runs.delete(key);
+    todoChanges.delete(key);
   }
 }
 
@@ -174,14 +208,25 @@ function unplace(agentId: string) {
 function rebuild(agentId: string) {
   unplace(agentId);
   const keys: string[] = [];
-  for (const run of stepRuns(lists.get(agentId) ?? [], skip)) {
-    const head = stepKey(run.steps[0]!)!;
+  const list = lists.get(agentId) ?? [];
+  // Every todo update, placed or not, so one that leaves a run is made again on its own; the same list twice keeps its first changes.
+  let before: readonly Task[] = [];
+  for (const { item } of list) {
+    if (item.type !== "todo") continue;
+    const key = stepKey(item)!;
+    if (!todoChanges.has(key)) todoChanges.set(key, taskChanges(before, item.items));
+    before = item.items;
+    keys.push(key);
+  }
+  for (const run of stepRuns(list, skip)) {
+    // The merged row stands where the run's first thought or tool call is; todo updates are only ever folded in.
+    const head = stepKey(run.steps.find((s) => s.type !== "todo")!)!;
     const before = runs.get(head);
     runs.set(head, run);
     if (before?.ms !== run.ms || before.open !== run.open || before.steps.length !== run.steps.length || before.steps.some((x, i) => x !== run.steps[i])) touch(head);
     run.steps.forEach((item, index) => {
       const key = stepKey(item)!;
-      places.set(key, { head, index });
+      places.set(key, { head, index: key === head ? 0 : index + 1 });
       keys.push(key);
     });
   }
@@ -284,3 +329,6 @@ export function subscribeRun(head: string, listener: () => void) {
 }
 
 export const runVersion = (head: string) => versions.get(head) ?? 0;
+export const changesOfTodo = (key: string): readonly TaskChange[] => todoChanges.get(key) ?? [];
+/** What a todo update changed when there is no timeline to work it out from (the dashboard preview's sample). */
+export const setTodoChanges = (item: Item, changes: TaskChange[]) => void todoChanges.set(stepKey(item)!, changes);

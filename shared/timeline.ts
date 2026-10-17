@@ -1,8 +1,8 @@
 import { defineRpc, defineSettings } from "@getpaseo/plugin";
 import { z } from "zod";
 
-/** Completed tool calls the dashboard can leave out of the timeline. */
-export const HIDEABLE = ["read", "search", "fetch", "task"] as const;
+/** Completed tool calls (and todo-list updates) the dashboard can leave out of the timeline. */
+export const HIDEABLE = ["read", "search", "fetch", "task", "todo"] as const;
 export type Hideable = (typeof HIDEABLE)[number];
 
 /** Markdown elements with a choice of style. */

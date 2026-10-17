@@ -43,8 +43,9 @@ declare const document: {
   querySelector(selector: string): DomElement | null;
   querySelectorAll(selector: string): ArrayLike<DomElement>;
   createElement(tag: "style" | "div" | "span" | "button"): DomElement;
-  addEventListener(type: "click", listener: (event: { target: unknown }) => void, capture?: boolean): void;
-  removeEventListener(type: "click", listener: (event: { target: unknown }) => void, capture?: boolean): void;
+  addEventListener(type: "click", listener: (event: { target: unknown; clientX: number; clientY: number }) => void, capture?: boolean): void;
+  removeEventListener(type: "click", listener: (event: { target: unknown; clientX: number; clientY: number }) => void, capture?: boolean): void;
+  elementsFromPoint(x: number, y: number): DomElement[];
   addEventListener(type: "keydown", listener: (event: KeyEvent) => void, capture?: boolean): void;
   removeEventListener(type: "keydown", listener: (event: KeyEvent) => void, capture?: boolean): void;
   body: unknown;
@@ -555,7 +556,9 @@ ${SURFACE} { background-color: var(--cp-control) !important; }
 /* Command Center keeps its taller palette rows, inset like every other surface's. */
 [data-testid="command-center-panel"] button { margin: 0 6px !important; padding: 8px 10px !important; border-radius: 6px !important; }
 [data-testid="combobox-desktop-container"]:not([${TAG}]) > div:first-child > div { padding: 4px 12px !important; }
-[data-testid="combobox-desktop-container"]:not([${TAG}]) > div:nth-child(2) button { min-height: 28px !important; margin: 0 4px !important; padding: 0 8px !important; border-radius: 6px !important; }
+[data-testid="combobox-desktop-container"]:not([${TAG}]) > div:nth-child(2) button { min-height: 28px !important; margin: 0 4px !important; padding: 0 8px !important; }
+/* Picker rows sit 4px inside a 12px card with a 1px border: 12 - 1 - 4 = 7px keeps their corners concentric with the card's. */
+[data-testid="combobox-desktop-container"]:not([${TAG}="models"]) button { border-radius: 7px !important; }
 :is(:is([data-testid="combobox-desktop-container"]:not([${TAG}]) > div:nth-child(2) button, [data-cp-part="menu"] [role="menuitem"]) > div:nth-child(2), [data-testid="command-center-panel"] button > div > div:first-child > div:nth-child(2)) > :first-child { font-size: 13px !important; font-weight: 500 !important; }
 
 /* Pin the bottom while the chat follows output. Paseo scrolls to the bottom a frame after a row grows (streaming text, a tool call
@@ -645,6 +648,20 @@ ${USAGE} > div:nth-child(4) { margin-top: -6px !important; }
 
 // Values come from CSS variables set by setNativeColors, so a theme switch restyles without re-tagging.
 const NATIVE_CSS = `
+/* Settings pages (tagged by tagSettings): surfaces 12, controls 8, and one text field, 32px in a sunken well that lights up on focus.
+   Settings has its own sidebar, so a reload there can come before the --cp-* colors are set: Paseo's own colors stand in. */
+[data-cp-set="card"] { border-radius: 12px !important; }
+[data-cp-set="control"] { height: 32px !important; min-height: 32px !important; padding-top: 0 !important; padding-bottom: 0 !important; border-radius: 8px !important; }
+:is([data-cp-set="field"], [data-cp-set="area"]) { border: 1px solid var(--colors-border) !important; border-radius: 8px !important; background-color: var(--cp-sunken, color-mix(in srgb, var(--colors-surface0), #000 15%)) !important; transition: border-color 120ms ease-out, box-shadow 120ms ease-out; }
+[data-cp-set="field"] { height: 32px !important; min-height: 32px !important; padding: 0 10px !important; }
+:is([data-cp-set="field"], [data-cp-set="area"]):hover { border-color: color-mix(in srgb, var(--cp-muted, var(--colors-foreground-muted)) 55%, transparent) !important; }
+:is([data-cp-set="field"], [data-cp-set="area"]):focus-within { border-color: var(--cp-accent, var(--colors-accent)) !important; box-shadow: 0 0 0 3px color-mix(in srgb, var(--cp-accent, var(--colors-accent)) 25%, transparent) !important; }
+/* The field draws focus; an input inside a wrapper field stays see-through. */
+[data-cp-set-input] { outline: none !important; }
+[data-cp-set-input]:not([data-cp-set]) { background-color: transparent !important; }
+@supports (corner-shape: squircle) { [data-cp-set="card"] { border-radius: 16px !important; corner-shape: squircle; } }
+/* Paseo's keyboard focus ring is its brand green on every theme; follow the theme's accent instead. */
+:focus-visible { outline-color: var(--cp-accent, var(--colors-accent)) !important; }
 ${ROW} > button { padding: 2px 8px 2px 12px !important; }
 ${ROW} > button > div > div:first-child { width: 20px !important; height: 20px !important; margin-right: 8px !important; }
 ${ROW} > button > div > div:first-child svg { width: 15px !important; height: 15px !important; }
@@ -949,7 +966,49 @@ const PARTS: Array<[string, (el: DomElement) => DomElement | null | undefined, s
 ];
 
 /** Tags the parts above, for selectors that would otherwise need :has() or a slow "X *". */
+const SETTINGS_PANE = '[data-testid="settings-detail-pane"]';
+const CLEAR = "rgba(0, 0, 0, 0)";
+
+/**
+ * Settings pages draw their cards, select triggers and text fields from generated styles, without testIDs. Tag each by what it draws,
+ * once, and only inside the Settings pane (a small tree, so reading styles there is cheap): data-cp-set="card" | "control" | "field" | "area".
+ * The settings rules in NATIVE_CSS then put them on the chat's radius scale (design: "Settings — Radius & Inputs").
+ */
+function tagSettings(roots: DomElement[]) {
+  const scopes = new Set<DomElement>();
+  for (const root of roots) {
+    if (root.closest(SETTINGS_PANE)) scopes.add(root);
+    else for (const pane of within([root], SETTINGS_PANE)) scopes.add(pane);
+  }
+  for (const scope of scopes)
+    for (const el of [scope, ...Array.from(scope.querySelectorAll("*"))]) {
+      if (el.hasAttribute("data-cp-set")) continue;
+      if (el.matches("input, textarea")) {
+        // The field is the nearest box that draws something: the input itself, or the wrapper around it and its icon.
+        let box: DomElement | null = el;
+        while (box && !box.matches(SETTINGS_PANE)) {
+          const s = getComputedStyle(box);
+          if (parseFloat(s.borderTopWidth) > 0 || s.backgroundColor !== CLEAR) break;
+          box = box.parentElement;
+        }
+        if (box && !box.matches(SETTINGS_PANE)) box.setAttribute("data-cp-set", el.matches("textarea") ? "area" : "field");
+        el.setAttribute("data-cp-set-input", "");
+        continue;
+      }
+      const s = getComputedStyle(el);
+      const radius = parseFloat(s.borderRadius);
+      const border = parseFloat(s.borderTopWidth) > 0;
+      // Pills (switches, badges) are full by design; boxes that draw nothing aren't shapes.
+      if (!radius || radius >= 999 || (!border && s.backgroundColor === CLEAR)) continue;
+      const height = el.getBoundingClientRect().height;
+      if (el.tagName === "BUTTON" || el.getAttribute("role") === "button") {
+        if (radius >= 10 && height >= 24 && height <= 48) el.setAttribute("data-cp-set", "control");
+      } else if (el.getAttribute("role") === "alert" || (border && radius >= 8 && height >= 44)) el.setAttribute("data-cp-set", "card");
+    }
+}
+
 function tagParts(roots: DomElement[]) {
+  tagSettings(roots);
   for (const [child, parentOf, part] of PARTS) for (const el of within(roots, child)) parentOf(el)?.setAttribute("data-cp-part", part);
   for (const body of within(roots, '[data-testid="permission-plan-card"] > div:nth-child(2)')) body.setAttribute("data-cp-plan-md", "");
   // The turn footer sits close under a reply block. Decided once per pair, not with a sibling combinator: the virtual list mounts and
@@ -1333,7 +1392,7 @@ ${MODEL_POP} ${MODEL_ROW} svg { stroke: var(--cp-accent) !important; }
 
 ${THINKING_POP} { border-radius: 12px !important; border-color: var(--cp-rule) !important; }
 ${THINKING_POP}[data-cp-described] { width: 420px !important; }
-${THINKING_POP} button { min-height: 28px !important; margin: 0 4px !important; padding: 0 8px !important; border-radius: 6px !important; gap: 8px !important; }
+${THINKING_POP} button { min-height: 28px !important; margin: 0 4px !important; padding: 0 8px !important; gap: 8px !important; }
 ${THINKING_POP} button > div:nth-child(2) > :first-child, ${MODEL_POP} ${MODEL_ROW} > div > div:nth-child(2) > :first-child { font-size: 13px !important; font-weight: 500 !important; }
 ${THINKING_POP} button > div:first-child { visibility: hidden !important; }
 ${THINKING_POP} button[data-cp-part="checked"] > div:first-child { display: none !important; }
@@ -1343,6 +1402,13 @@ ${THINKING_POP} button > div:nth-child(2) { flex: 1 1 auto !important; min-width
 [data-cp-default] { flex-shrink: 0; padding: 0 6px; border: 1px solid var(--cp-rule); border-radius: 999px; font-size: 11px; line-height: 16px; color: var(--cp-muted); }
 [data-cp-desc] { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12px; color: var(--cp-muted); }
 [data-cp-hint] { position: absolute; right: 12px; bottom: calc(100% + 8px); padding: 3px 10px; border: 1px solid var(--cp-rule); border-radius: 999px; background: var(--cp-raised); font-size: 12px; line-height: 16px; white-space: nowrap; color: var(--cp-muted); pointer-events: none; }
+/* Pickers get continuous (squircle) corners where the browser draws them: a row's curve then runs parallel to the card's, which round
+   corners 4px apart can't. Concentric again: a 16px card, rows 4px inside its 1px border, 16 - 1 - 4 = 11px. Last, to win over the 12px above. */
+@supports (corner-shape: squircle) {
+  ${POP}, ${THINKING_POP}, ${MODEL_POP} { border-radius: 16px !important; corner-shape: squircle; }
+  ${POP}:not([${TAG}="models"]) button { border-radius: 11px !important; corner-shape: squircle; }
+  ${MODEL_POP} :is([data-cp-part="rows"], [data-testid="model-profiles-empty"]) { border-radius: 9px !important; corner-shape: squircle; }
+}
 `;
 
 let railProviders: RailProvider[] = [];
@@ -1366,9 +1432,20 @@ const iconFor = (p: RailProvider) => PROVIDER_ICONS[p.id] ?? safeSvg(p.iconSvg) 
 const railHtml = new WeakMap<DomElement, string>();
 let clickedThinking: { chip: DomElement; at: number } | undefined;
 let pickedModelAt = 0;
+/** The composer's picker chips, and the one whose picker is open. */
+const CHIPS = '[data-testid="combined-model-selector"], [data-testid="agent-thinking-selector"], [data-testid="mode-control"]';
+let openedBy: DomElement | undefined;
 
-function noteClick(event: { target: unknown }) {
+function noteClick(event: { target: unknown; clientX: number; clientY: number }) {
   const target = event.target as DomElement | null;
+  const picker = target?.closest?.(CHIPS);
+  if (picker) openedBy = picker;
+  // Paseo closes an open picker through a backdrop over the whole window, so clicking another chip only closed it. Open that one too,
+  // once Paseo is done closing; clicking the same chip still just closes its picker.
+  else if (openedBy && document.querySelector(POP) && !target?.closest?.(POP)) {
+    const under = document.elementsFromPoint(event.clientX, event.clientY).map((el) => el.closest(CHIPS)).find((el) => el);
+    if (under && under !== openedBy) setTimeout(() => under.click(), 0);
+  }
   const chip = target?.closest?.('[data-testid="agent-thinking-selector"]');
   if (chip) clickedThinking = { chip, at: Date.now() };
   // Any other click (the mode chip, a menu) means the next popover isn't the thinking list; clicks inside an open popover keep it.

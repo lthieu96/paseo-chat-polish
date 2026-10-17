@@ -42,8 +42,10 @@ export const planSchema = z.object({ text: z.string(), phase: z.enum(["streaming
 export const thoughtSchema = z.object({ text: z.string(), phase: z.enum(["streaming", "complete"]) });
 /** A merged run of steps, named by its first step's key (client/steps.ts holds the steps). */
 export const stepsSchema = z.object({ head: z.string() });
+/** A todo update on its own row: the list at that point, and the task then in progress (its active form). */
 export const todoSchema = z.object({
   items: z.array(z.object({ text: z.string(), status: z.enum(["pending", "in_progress", "completed"]) })),
+  active: z.string().optional(),
 });
 export const noticeSchema = z.object({
   variant: z.enum(["inline", "divider"]),
@@ -319,12 +321,11 @@ export function hideableKind(item: Item<"tool_call">): Hideable | undefined {
 }
 
 export function todoData(item: Item<"todo">) {
-  return {
-    items: item.items.map((t) => {
-      const status = t.status ?? (t.completed ? "completed" : "pending");
-      return { status, text: status === "in_progress" && t.activeForm ? t.activeForm : t.text };
-    }),
-  };
+  const items = item.items.map((t) => {
+    const status = t.status ?? (t.completed ? "completed" : "pending");
+    return { status, text: status === "in_progress" && t.activeForm ? t.activeForm : t.text };
+  });
+  return { items, active: items.find((t) => t.status === "in_progress")?.text };
 }
 
 export function noticeData(item: Item<"error"> | Item<"compaction">) {

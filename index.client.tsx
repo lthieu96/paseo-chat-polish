@@ -5,7 +5,7 @@ import { SidebarRow } from "@getpaseo/plugin/client/ui";
 import { useEffect } from "react";
 import { Dashboard } from "./client/dashboard";
 import { hideableKind, imageData, turnMarkdown, imagesSchema, noticeData, noticeSchema, planSchema, stepsSchema, thoughtSchema, todoData, todoSchema, toolData, toolSchema } from "./client/model";
-import { followAgent, onStaleSteps, onUnplacedStep, placeStep, resetMade, setStepSkip, type Phase } from "./client/steps";
+import { followAgent, isTodo, onStaleSteps, onUnplacedStep, placeStep, resetMade, setStepSkip, stepKey, type Phase } from "./client/steps";
 import { currentPrefs, savePrefs, setPrefs, subscribePrefs, usePrefsSaver } from "./client/prefs";
 import { bindThemeRegistry, currentTheme, registerTheme } from "./client/theme-registry";
 import { bindPromptKeys, clampUserMessages, jumpToPrompt, openAgentIds, paintSidebar, setCompactHandler, readHostAppearance, restyleNative, selectionCopyMenu, setNativeColors, setRailProviders, setRichText, watchDom } from "./client/web";
@@ -87,6 +87,18 @@ export default function contribute(client: PluginClientContext) {
     return placed.as === "none" ? { items: [] } : one("steps", { head: placed.key });
   };
 
+  // A todo update on its own row. Paseo splits one update that completes a task and starts the next into two rows with the same list;
+  // they are transformed one after the other in the same pass, so the second is left out. A later identical update (Paseo rewrites the row
+  // in place) comes in another pass and still shows.
+  let lastTodo: string | undefined;
+  const ownTodo = (item: Parameters<typeof todoData>[0]) => {
+    const key = stepKey(item);
+    if (key === lastTodo) return { items: [] };
+    if (lastTodo === undefined) queueMicrotask(() => (lastTodo = undefined));
+    lastTodo = key;
+    return one("todo", todoData(item));
+  };
+
   // Transformers read prefs when they run; re-register when hiding or images change so Paseo re-transforms.
   const addTransformers = () => {
     const removers = [
@@ -118,7 +130,15 @@ export default function contribute(client: PluginClientContext) {
           return data ? one("images", data) : undefined;
         },
       }),
-      client.addTimelineTransformer({ id: `${KIND}-todo`, query: { itemType: "todo" }, transform: ({ item }) => one("todo", todoData(item)) }),
+      // Todo updates fold into the merged row around them (what changed comes from the followed timeline); otherwise each is one row.
+      client.addTimelineTransformer({
+        id: `${KIND}-todo`,
+        query: { itemType: "todo" },
+        transform: ({ item, phase }) => {
+          if (currentPrefs().hidden.includes("todo") || (merging() && placeStep(item, phase)?.as === "none")) return { items: [] };
+          return ownTodo(item);
+        },
+      }),
       client.addTimelineTransformer({ id: `${KIND}-error`, query: { itemType: "error" }, transform: ({ item }) => one("notice", noticeData(item)) }),
       client.addTimelineTransformer({ id: `${KIND}-compaction`, query: { itemType: "compaction" }, transform: ({ item }) => one("notice", noticeData(item)) }),
     ];
@@ -142,7 +162,7 @@ export default function contribute(client: PluginClientContext) {
       retransform(true);
     }, 50);
   });
-  const skipHidden = () => setStepSkip((item) => item.type === "tool_call" && currentPrefs().hidden.includes(hideableKind(item)!));
+  const skipHidden = () => setStepSkip((item) => (isTodo(item) ? currentPrefs().hidden.includes("todo") : item.type === "tool_call" && currentPrefs().hidden.includes(hideableKind(item)!)));
   skipHidden();
   // Follows the timelines of agents with an open tab (none when merging is off, or on native, where tabs can't be read).
   const followed = new Map<string, () => void>();

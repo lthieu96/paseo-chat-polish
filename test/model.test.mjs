@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { errorText, hideableKind, imageData, noticeData, todoData, toolData, toolSchema } from "../client/model.ts";
+import { errorText, hideableKind, imageData, noticeData, toolData, toolSchema } from "../client/model.ts";
 
 const tool = (detail, extra = {}) => ({ type: "tool_call", callId: "1", name: "Bash", status: "completed", error: null, detail, ...extra });
 
@@ -51,11 +51,6 @@ test("task notifications drop raw XML and keep the summary", () => {
   assert.equal(d.verb, "Background task");
   assert.equal(d.target, "Fix ids");
   assert.equal(d.detail, undefined);
-});
-
-test("todo uses activeForm while in progress; legacy completed flag maps to status", () => {
-  const d = todoData({ type: "todo", items: [{ text: "Write tests", completed: false, status: "in_progress", activeForm: "Writing tests" }, { text: "Ship", completed: true }] });
-  assert.deepEqual(d.items, [{ status: "in_progress", text: "Writing tests" }, { status: "completed", text: "Ship" }]);
 });
 
 test("notices", () => {
@@ -255,7 +250,7 @@ test("untyped tools read as words: MCP server › tool, known built-ins, labels 
 });
 
 test("steps: Claude's task tools are passed over, todo-list calls and agent messages end a run", async () => {
-  const { stepRuns, stepKey } = await import("../client/steps.ts");
+  const { isTodo, stepRuns, stepKey } = await import("../client/steps.ts");
   const entries = [
     tool({ type: "unknown", input: null, output: null }, { callId: "t1", name: "TaskUpdate" }),
     tool({ type: "shell", command: "ls" }, { callId: "a" }),
@@ -266,6 +261,9 @@ test("steps: Claude's task tools are passed over, todo-list calls and agent mess
     tool({ type: "plain_text", text: "hi" }, { callId: "m", name: "agent_message" }),
   ].map((item, i) => ({ item, at: i }));
   assert.deepEqual(stepRuns(entries, () => false).map((r) => r.steps.map(stepKey)), [["t:a", "t:b"], ["t:c"]]);
+  // Hidden todo lists (the call or the daemon's own todo item) are passed over, so the steps around them stay one run.
+  const withTodo = [...entries.slice(0, 4), { item: { type: "todo", items: [] }, at: 4 }, ...entries.slice(5)];
+  for (const list of [entries, withTodo]) assert.deepEqual(stepRuns(list, isTodo).map((r) => r.steps.map(stepKey)), [["t:a", "t:b", "t:c"]]);
 });
 
 test("steps: a step transformed before its timeline catches up leads its run in place, with no re-transform", async () => {
@@ -316,4 +314,42 @@ test("css guard: positional selectors get a :where() precheck on their subject, 
   assert.equal(guardPositional('[data-x] > :last-child *'), '[data-x] > :last-child *:where([data-x] >  *)');
   assert.equal(guardPositional('[data-x] div:nth-child(2)::before'), '[data-x] div:where([data-x] div):nth-child(2)::before');
   assert.equal(guardPositional('[a="b c"] > p:not(:last-child)'), '[a="b c"] > p:where([a="b c"] > p):not(:last-child)');
+});
+
+test("todo updates: what changed, folded into the run around them, never leading it", async () => {
+  const { followAgent, placeStep, runOf, stepKey, stepRuns, stepSummary, taskChanges, changesOfTodo } = await import("../client/steps.ts");
+  const todo = (...s) => ({ type: "todo", items: s.map((status, i) => ({ text: `t${i}`, completed: status === "completed", status })) });
+  const t0 = todo("in_progress", "pending");
+  const t1 = todo("completed", "in_progress");
+  assert.deepEqual(taskChanges([], t0.items), [{ type: "created", count: 2 }]);
+  assert.deepEqual(taskChanges(t0.items, t1.items), [{ type: "completed", text: "t0" }, { type: "started", text: "t1" }]);
+  assert.deepEqual(taskChanges(t1.items, [...t1.items, { text: "t2", completed: false }]), [{ type: "added", text: "t2" }]);
+
+  const a = tool({ type: "shell", command: "ls" }, { callId: "a" });
+  const b = tool({ type: "shell", command: "pwd" }, { callId: "b" });
+  const reply = { type: "assistant_message", text: "ok" };
+  const at = (items) => items.map((item, i) => ({ item, at: i }));
+  // A todo update joins the run; one with no steps around it isn't a run.
+  assert.deepEqual(stepRuns(at([t0, a, t1, b, reply, t1, reply]), () => false).map((r) => r.steps.map(stepKey)), [[stepKey(t0), "t:a", stepKey(t1), "t:b"]]);
+  assert.equal(stepSummary([a, t1, b], () => [{ type: "completed", text: "t0" }]), "Ran 2 commands and completed 1 task");
+  // The same list sent again isn't another step.
+  assert.deepEqual(stepRuns(at([a, t1, t1, b]), () => false).map((r) => r.steps.map(stepKey)), [["t:a", stepKey(t1), "t:b"]]);
+
+  // Placed: the run's first tool call heads the merged row, the todo updates around it are left out; a lone update stays on its own.
+  const lone = todo("completed", "completed");
+  const entries = at([{ type: "user_message", text: "go" }, t0, a, t1, b, reply, lone, reply]).map((e) => ({ item: e.item, timestamp: new Date(e.at).toISOString() }));
+  let ready;
+  const subscription = Object.assign(() => {}, { ready: new Promise((r) => (ready = r)) });
+  const paseo = { agents: { ref: () => ({ timeline: { refetch: async () => ({ entries, endCursor: { seq: 0 } }), subscribe: () => subscription } }) } };
+  const stop = followAgent(paseo, "todo-agent");
+  ready();
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(placeStep(t0, "complete").as, "none");
+  assert.equal(placeStep(a, "complete").as, "head");
+  assert.equal(placeStep(t1, "complete").as, "none");
+  assert.equal(placeStep(lone, "complete").as, "head");
+  assert.deepEqual(runOf("t:a").steps.map((s) => stepKey(s.item)), [stepKey(t0), "t:a", stepKey(t1), "t:b"]);
+  assert.deepEqual(changesOfTodo(stepKey(t1)), [{ type: "completed", text: "t0" }, { type: "started", text: "t1" }]);
+  assert.equal(stepSummary(runOf("t:a").steps.map((s) => s.item)), "Ran 2 commands and completed 1 task");
+  stop();
 });

@@ -8,8 +8,8 @@ import type { z } from "zod";
 import { readImage } from "../shared/image";
 import type { Recap } from "../shared/recap";
 import type { IconKind } from "../shared/timeline";
-import { toolData, type imagesSchema, type noticeSchema, type planSchema, type stepsSchema, type thoughtSchema, type todoSchema, type ToolData, type Tone } from "./model";
-import { runOf, runVersion, stepKey, stepSummary, subscribeRun } from "./steps";
+import { todoData, toolData, type imagesSchema, type noticeSchema, type planSchema, type stepsSchema, type thoughtSchema, type todoSchema, type ToolData, type Tone } from "./model";
+import { changesOfTodo, runOf, runVersion, stepKey, stepSummary, subscribeRun, type TaskChange } from "./steps";
 import { contrast, isHex } from "../shared/theme";
 import { highlight, highlightShell, highlightShellBlock, SYNTAX_THEMES, type Span, type SyntaxColors } from "./highlight";
 import { usePrefs } from "./prefs";
@@ -378,7 +378,9 @@ function ToolDetail({ data, theme }: { data: NonNullable<ToolData["detail"]>; th
           ) : null}
         </View>
       );
-    case "diff":
+    case "diff": {
+      // An edit without hunk headers has no line numbers: no empty gutter then.
+      const numbered = data.lines.some((l) => l.n);
       return (
         <View style={s.block}>
           <Scroll>
@@ -387,9 +389,16 @@ function ToolDetail({ data, theme }: { data: NonNullable<ToolData["detail"]>; th
                 const color = l.sign === "+" ? c.statusSuccess : l.sign === "-" ? c.statusDanger : undefined;
                 return (
                   <View key={i} style={{ flexDirection: "row", gap: 12, paddingHorizontal: 12, paddingVertical: 1, backgroundColor: color ? alpha(color, 0.12) : undefined }}>
-                    <Text {...PMONO} style={s.gutter}>{l.n ?? ""}</Text>
+                    {numbered ? <Text {...PMONO} style={s.gutter}>{l.n ?? ""}</Text> : null}
                     <Text {...PMONO} style={[s.code, { color: color ?? c.foregroundMuted, width: 10, marginRight: -6 }]}>{l.sign}</Text>
-                    <CodeLine text={l.text} theme={theme} style={[s.code, { flex: 1 }]} />
+                    {/* Added and removed lines read in their color, as in the design; context lines keep the highlight theme. */}
+                    {color ? (
+                      <Text {...PMONO} selectable style={[s.code, { flex: 1, color }]}>
+                        {l.text}
+                      </Text>
+                    ) : (
+                      <CodeLine text={l.text} theme={theme} style={[s.code, { flex: 1 }]} />
+                    )}
                   </View>
                 );
               })}
@@ -397,6 +406,7 @@ function ToolDetail({ data, theme }: { data: NonNullable<ToolData["detail"]>; th
           </Scroll>
         </View>
       );
+    }
     case "io":
       return (
         <View style={s.block}>
@@ -522,11 +532,16 @@ export function MergedSteps(
       <ToolItem key={stepKey(step)} {...props} nested={nested} item={{ ...item, data: toolData(step) }} />
     ) : step.type === "reasoning" ? (
       <ThoughtItem key={stepKey(step)} {...props} nested={nested} item={{ ...item, data: { text: step.text, phase } }} />
+    ) : step.type === "todo" ? (
+      <TodoSteps key={stepKey(step)} {...props} step={step} />
     ) : null;
   // The step in progress, or between steps of a run the agent is still adding to, the one just done (not the summary, which would flash).
   const live = steps.findLast((s) => s.phase === "streaming" || (s.item.type === "tool_call" && s.item.status === "running")) ?? (growing ? steps.at(-1) : undefined);
-  const now = live?.item.type === "tool_call" ? toolData(live.item) : undefined;
-  const fresh = live
+  const change = live?.item.type === "todo" ? changesOfTodo(stepKey(live.item)!).at(-1) : undefined;
+  const words = change && changeWords(change);
+  const now: Pick<ToolData, "verb" | "target" | "mono" | "shell"> | undefined =
+    live?.item.type === "tool_call" ? toolData(live.item) : words ? { verb: words[0], target: words[1], mono: false } : undefined;
+  const fresh = live && (live.item.type !== "todo" || now)
     ? { verb: now?.verb ?? (live.phase === "streaming" ? "Thinking" : "Thought"), target: now?.target, mono: now?.mono, shell: now?.shell }
     : { verb: stepSummary(steps.map((s) => s.item)) };
   const holdLabel = !!live && !(live.item.type === "tool_call" && (live.item.status === "failed" || live.item.status === "canceled"));
@@ -627,6 +642,33 @@ export function PlanItem({ item, theme }: PluginTimelineItemProps<z.output<typeo
   );
 }
 
+const changeWords = (c: TaskChange): [string, string | undefined] =>
+  c.type === "created" ? [`Created ${c.count} ${c.count === 1 ? "task" : "tasks"}`, undefined] : [c.type.charAt(0).toUpperCase() + c.type.slice(1), c.text];
+
+/** A todo update inside a merged run: one row per change ("Completed Inspect its source"); open, a row shows the list at that point. */
+function TodoSteps(props: PluginTimelineItemProps<unknown> & { step: Extract<AgentTimelineItem, { type: "todo" }> }) {
+  const changes = changesOfTodo(stepKey(props.step)!);
+  return <>{changes.map((change, i) => <TaskChangeRow key={i} {...props} change={change} />)}</>;
+}
+
+function TaskChangeRow({ theme, layout, step, change }: PluginTimelineItemProps<unknown> & { step: Extract<AgentTimelineItem, { type: "todo" }>; change: TaskChange }) {
+  const [open, toggle] = useDisclosure();
+  const indent = useIndent("tool");
+  const [verb, target] = changeWords(change);
+  const { items } = todoData(step);
+  const done = items.filter((t) => t.status === "completed").length;
+  return (
+    <View>
+      <Row theme={theme} compact={layout.compact} kind="tool" icon="ListChecks" verb={verb} target={target} meta={`${done}/${items.length}`} open={open} onToggle={toggle} />
+      {open ? (
+        <FadeIn style={{ paddingLeft: indent, paddingTop: 2, paddingBottom: 8 }}>
+          <TodoList theme={theme} items={items} />
+        </FadeIn>
+      ) : null}
+    </View>
+  );
+}
+
 function TodoLine({ theme, status, text }: { theme: PluginTheme; status: "pending" | "in_progress" | "completed"; text: string }) {
   const s = useStyles(theme);
   const c = theme.colors;
@@ -649,15 +691,36 @@ function TodoLine({ theme, status, text }: { theme: PluginTheme; status: "pendin
   );
 }
 
+function TodoList({ theme, items }: { theme: PluginTheme; items: z.output<typeof todoSchema>["items"] }) {
+  return (
+    <View style={{ gap: 6 }}>
+      {items.map((t, i) => (
+        <TodoLine key={i} theme={theme} status={t.status} text={t.text} />
+      ))}
+    </View>
+  );
+}
+
+/** A todo update on its own row (merging off, or no steps around it): "Tasks 1 / 3", progress and the task in progress; open, the list. */
 export function TodoItem({ item, theme }: PluginTimelineItemProps<z.output<typeof todoSchema>>) {
   const s = useStyles(theme);
   const c = theme.colors;
-  const items = item.data.items;
+  const [open, toggle] = useDisclosure();
+  const [hovered, setHovered] = useState(false);
+  const { items, active } = item.data;
   const done = items.filter((t) => t.status === "completed").length;
   const progress = useTween(items.length ? done / items.length : 0, 300);
+  const rotation = useTween(open ? 1 : 0, 200);
   return (
-    <View style={{ gap: 8 }}>
-      <View style={[s.row, { gap: 10, paddingVertical: 0, minHeight: 20 }]}>
+    <View>
+      <Pressable
+        onPress={toggle}
+        onHoverIn={() => setHovered(true)}
+        onHoverOut={() => setHovered(false)}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+        style={[s.row, { gap: 10, borderRadius: 6 }]}
+      >
         <View style={s.slot}>
           <Icon name="ListChecks" size={15} color={c.foregroundMuted} />
         </View>
@@ -665,15 +728,24 @@ export function TodoItem({ item, theme }: PluginTimelineItemProps<z.output<typeo
         <Text {...PMONO} style={[s.code, { color: c.foregroundMuted }]}>
           {done} / {items.length}
         </Text>
-        <View style={{ width: 120, height: 3, borderRadius: 2, overflow: "hidden", backgroundColor: c.surface2 }}>
-          <Animated.View style={{ width: 120, height: 3, borderRadius: 2, backgroundColor: c.accent, transformOrigin: "left center", transform: [{ scaleX: progress }] }} />
+        <View style={{ width: 56, height: 3, borderRadius: 2, overflow: "hidden", backgroundColor: c.surface2 }}>
+          <Animated.View style={{ width: 56, height: 3, borderRadius: 2, backgroundColor: c.accent, transformOrigin: "left center", transform: [{ scaleX: progress }] }} />
         </View>
-      </View>
-      <View style={{ paddingLeft: INDENT, gap: 6 }}>
-        {items.map((t, i) => (
-          <TodoLine key={i} theme={theme} status={t.status} text={t.text} />
-        ))}
-      </View>
+        {active ? (
+          <Text numberOfLines={1} style={[s.target, hovered && { color: c.foreground }]}>
+            {active}
+          </Text>
+        ) : null}
+        <View style={{ flex: 1 }} />
+        <Animated.View style={{ opacity: hovered || open ? 0.7 : 0, transform: [{ rotate: rotation.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "90deg"] }) }] }}>
+          <Icon name="ChevronRight" size={12} color={c.foregroundMuted} />
+        </Animated.View>
+      </Pressable>
+      {open ? (
+        <FadeIn style={{ paddingLeft: INDENT, paddingTop: 2, paddingBottom: 6 }}>
+          <TodoList theme={theme} items={items} />
+        </FadeIn>
+      ) : null}
     </View>
   );
 }
