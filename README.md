@@ -58,7 +58,7 @@ paseo plugin add git:lthieu96/paseo-chat-polish
 Or install a specific GitHub release:
 
 ```sh
-paseo plugin add git:lthieu96/paseo-chat-polish --ref v0.3.0
+paseo plugin add git:lthieu96/paseo-chat-polish --ref v0.3.1
 ```
 
 For the reviewed Paseo Registry revision:

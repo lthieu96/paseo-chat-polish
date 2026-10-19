@@ -648,6 +648,9 @@ ${SURFACE} :is(button, [role="button"], [role="menuitem"], [role="option"], a[hr
 [data-cp-part="ws-card"][data-cp-swap="b"] [dir] { animation: cp-swap-text-b 100ms cubic-bezier(0.33, 1, 0.68, 1) both; }
 @media (prefers-reduced-motion: reduce) { [data-cp-part="ws-card"]:is([data-cp-glide], [data-cp-swap]), [data-cp-part="ws-card"][data-cp-swap] :is(svg, [dir]) { animation: none !important; } }
 /* Command Center keeps its taller palette rows, inset like every other surface's. */
+/* Command Center marks a query's match with a filled box (a nested Text, the only spans there with a style class besides the
+   file row's name and path, which carry testIDs). Draw it as accent text instead, like the plugin's other menus. */
+[data-testid="command-center-panel"] [dir] > span[class*="unistyles"]:not([data-testid]) { background-color: transparent !important; color: var(--cp-accent, var(--colors-accent-bright)) !important; }
 [data-testid="command-center-panel"] button { margin: 0 6px !important; padding: 8px 10px !important; border-radius: 6px !important; }
 [data-testid="combobox-desktop-container"]:not([${TAG}]) > div:first-child > div { padding: 4px 12px !important; }
 [data-testid="combobox-desktop-container"]:not([${TAG}]) > div:nth-child(2) button { min-height: 28px !important; margin: 0 4px !important; padding: 0 8px !important; }
@@ -695,7 +698,8 @@ ${QUESTION} [role="radio"][aria-checked="true"] { background-color: var(--cp-con
 ${QUESTION} [role="radio"] > div > div:first-child { width: 14px !important; height: 14px !important; margin-top: 4px !important; }
 ${QUESTION} [role="radio"][aria-checked="true"] > div > div:first-child { border-color: var(--cp-accent) !important; background-color: var(--cp-accent) !important; box-shadow: inset 0 0 0 3px var(--cp-control) !important; }
 ${QUESTION} [role="radio"] > div > div:nth-child(2) > :first-child { color: var(--cp-fg) !important; }
-${QUESTION} [role="radio"] > div > div:nth-child(2) > :nth-child(2) { font-size: 12px !important; line-height: 18px !important; }
+/* An option's description; an option with only a preview (0.12) has that in this slot, and it keeps Paseo's size. */
+${QUESTION} [role="radio"] > div > div:nth-child(2) > :nth-child(2):not([data-testid="question-form-option-preview"]) { font-size: 12px !important; line-height: 18px !important; }
 ${PLAN} { border-radius: 12px !important; padding: 0 !important; gap: 0 !important; border-color: var(--cp-rule) !important; overflow: hidden !important; }
 ${PLAN} > button:first-child { padding: 12px 16px !important; border-bottom: 1px solid var(--cp-rule) !important; }
 [data-cp-part="plan-head"] * { font-weight: 600 !important; }
@@ -1352,7 +1356,7 @@ function markCompact(card: DomElement, pct: number) {
 // ---- Rich text variants ----
 
 const CALLOUT_MARK = /^\[!(note|tip|important|warning|caution)\]$/i;
-const CALLOUT_KIND: Record<string, [string, string]> = { note: ["note", "Note"], important: ["note", "Important"], tip: ["tip", "Tip"], warning: ["warning", "Warning"], caution: ["warning", "Caution"] };
+const CALLOUT_KIND: Record<string, [string, string]> = { note: ["note", "Note"], important: ["important", "Important"], tip: ["tip", "Tip"], warning: ["warning", "Warning"], caution: ["caution", "Caution"] };
 const TASK_MARK = /^\[([ xX])\]\s+/;
 
 /**
@@ -1408,6 +1412,8 @@ const INFO_MASK = mask('<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><pa
 const ALERT_MASK = mask('<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>');
 const TIP_MASK = mask('<path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/>');
 const CHECK_MASK = mask('<path d="M20 6 9 17l-5-5"/>');
+const IMPORTANT_MASK = mask('<path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"/><path d="M12 15h.01"/><path d="M12 7v4"/>');
+const CAUTION_MASK = mask('<path d="M12 16h.01"/><path d="M12 8v4"/><path d="M15.312 2a2 2 0 0 1 1.414.586l4.688 4.688A2 2 0 0 1 22 8.688v6.624a2 2 0 0 1-.586 1.414l-4.688 4.688a2 2 0 0 1-1.414.586H8.688a2 2 0 0 1-1.414-.586l-4.688-4.688A2 2 0 0 1 2 15.312V8.688a2 2 0 0 1 .586-1.414l4.688-4.688A2 2 0 0 1 8.688 2z"/>');
 
 const RT = (element: string, variant: string) => `:root[data-cp-rt-${element}="${variant}"] ${MSG}`;
 const QUOTE = `${md("blockquote")}:not([data-cp-callout])`;
@@ -1525,12 +1531,16 @@ ${TASK_BOX}:checked::after { content: ""; position: absolute; inset: 1px; backgr
 :root[data-cp-rt-list="b"] ${TASK_BOX}:checked { background: transparent !important; border-color: var(--cp-ok) !important; }
 :root[data-cp-rt-list="b"] ${TASK_BOX}:checked::after { background: var(--cp-ok); }
 
-${ADMONITION} { --cp-tone: var(--cp-accent); position: relative !important; border-inline-start-width: 0 !important; border-radius: 8px !important; padding: 10px 14px 10px 36px !important; background: color-mix(in srgb, var(--cp-tone) 12%, transparent) !important; }
-${ADMONITION}[data-cp-callout="warning"] { --cp-tone: var(--cp-warn); }
-${ADMONITION}[data-cp-callout="tip"] { --cp-tone: var(--cp-ok); }
+${ADMONITION} { --cp-tone: var(--cp-accent); --cp-icon: ${INFO_MASK}; position: relative !important; border-inline-start-width: 0 !important; border-radius: 8px !important; padding: 10px 14px 10px 36px !important; background: color-mix(in srgb, var(--cp-tone) 12%, transparent) !important; }
+${ADMONITION}[data-cp-callout="important"] { --cp-tone: var(--colors-status-merged); --cp-icon: ${IMPORTANT_MASK}; }
+${ADMONITION}[data-cp-callout="tip"] { --cp-tone: var(--cp-ok); --cp-icon: ${TIP_MASK}; }
+${ADMONITION}[data-cp-callout="warning"] { --cp-tone: var(--cp-warn); --cp-icon: ${ALERT_MASK}; }
+${ADMONITION}[data-cp-callout="caution"] { --cp-tone: var(--colors-status-danger); --cp-icon: ${CAUTION_MASK}; }
 ${ADMONITION} p { color: var(--cp-fg) !important; }
 ${ADMONITION} [data-cp-callout-head] { margin-bottom: 2px !important; font-size: 13px !important; font-weight: 600 !important; line-height: 1.6 !important; color: var(--cp-tone) !important; }
-${ADMONITION} [data-cp-callout-head] svg { position: absolute; left: 13px; top: 13px; width: 14px; height: 14px; fill: var(--cp-tone); }
+/* Paseo's markdown library draws Octicons; the svg box stays as the slot and shows the plugin's Lucide icon instead. */
+${ADMONITION} [data-cp-callout-head] svg { position: absolute; left: 13px; top: 13px; width: 14px; height: 14px; background: var(--cp-tone); -webkit-mask: var(--cp-icon) center / contain no-repeat; mask: var(--cp-icon) center / contain no-repeat; }
+${ADMONITION} [data-cp-callout-head] svg > * { display: none; }
 ${RT("callout", "b")} .enrm-admonition { background: transparent !important; border-radius: 0 !important; border-inline-start: 2px solid var(--cp-tone) !important; padding: 2px 0 2px 14px !important; }
 ${RT("callout", "b")} .enrm-admonition [data-cp-callout-head] { font-size: 11px !important; text-transform: uppercase; letter-spacing: 0.06em; }
 ${RT("callout", "b")} .enrm-admonition [data-cp-callout-head] svg { display: none; }
