@@ -314,6 +314,8 @@ test("css guard: positional selectors get a :where() precheck on their subject, 
   assert.equal(guardPositional('[data-x] > div > div:first-child'), '[data-x] > div > div:where([data-x] > div > div):first-child');
   assert.equal(guardPositional('[data-x] > :last-child *'), '[data-x] > :last-child *:where([data-x] >  *)');
   assert.equal(guardPositional('[data-x] div:nth-child(2)::before'), '[data-x] div:where([data-x] div):nth-child(2)::before');
+  assert.equal(guardPositional('[data-x] > :first-child'), '[data-x] > :where([data-x] > *):first-child');
+  assert.equal(guardPositional('[data-x] :last-child'), '[data-x] :where([data-x] *):last-child');
   assert.equal(guardPositional('[a="b c"] > p:not(:last-child)'), '[a="b c"] > p:where([a="b c"] > p):not(:last-child)');
 });
 

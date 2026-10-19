@@ -29,11 +29,13 @@ export function guardPositional(complex: string) {
   const compounds = splitTop(complex, (ch) => ch === " " || ch === ">" || ch === "+" || ch === "~");
   const subject = compounds.at(-1)!;
   const head = complex.slice(0, complex.length - subject.length);
-  const pre = complex
+  let pre = complex
     .replace(/:not\(\s*:(?:first|last|only)-child\s*\)/g, "")
     .replace(new RegExp(POSITIONAL.source, "g"), "")
     .replace(/::?(?:before|after|placeholder|marker|selection)\b/g, "")
-    .trim();
+    .trimStart();
+  // A bare positional subject ("X > :first-child") leaves a dangling combinator; :where(X >) is invalid and matches nothing.
+  pre = (/[\s>+~]$/.test(pre) ? `${pre.trimEnd()} *` : pre).trim();
   if (!pre || !subject) return complex;
   const lead = /^(?:\*|[a-zA-Z][\w-]*)?/.exec(subject)![0];
   return `${head}${lead}:where(${pre})${subject.slice(lead.length)}`;

@@ -496,6 +496,11 @@ const MARK = "[data-paseo-markdown-list-marker]";
 const MARK_UL = `${md("ul")} > ${md("li")} > ${MARK}`;
 const MARK_OL = `${md("ol")} > ${md("li")} > ${MARK}`;
 const CODE_BLOCK = `${MSG} ${md("pre")}`;
+// Paseo 0.12 renders markdown as plain HTML (p, h1, li, table, …) inside .enrm-text, styled inline and without the marks above,
+// except code fences, which keep them. The md() rules for other elements only match 0.11's renderer (plugin v0.2.x).
+const MD = `${MSG} .enrm-text`;
+const TASK_BOX = `${MD} li > span > input[type="checkbox"]`;
+const ADMONITION = `${MD} .enrm-admonition`;
 // Fences that name a language (```ts); Paseo leaves the attribute off otherwise.
 const LANG = '[data-paseo-markdown-language]:not([data-paseo-markdown-language=""])';
 
@@ -656,11 +661,11 @@ ${SURFACE} :is(button, [role="button"], [role="menuitem"], [role="option"], a[hr
    scroller, which turns this off. Measured on a streaming reply: off-bottom frames went from 12/33 to 0/69. */
 [data-testid="agent-chat-scroll"] > div > :not(:last-child) { overflow-anchor: none !important; }
 
-[data-testid="message-input-root"] > div:first-child { border-radius: 12px !important; padding: 14px 10px 10px 16px !important; gap: 20px !important; }
-@supports (corner-shape: squircle) { [data-testid="message-input-root"] > div:first-child { border-radius: 28px !important; corner-shape: squircle; } }
+[data-cp-part="composer"] { border-radius: 12px !important; padding: 14px 10px 10px 16px !important; gap: 20px !important; }
+@supports (corner-shape: squircle) { [data-cp-part="composer"] { border-radius: 28px !important; corner-shape: squircle; } }
 /* Paseo keeps the box two lines tall even when empty; let it size to its text instead (one line, up to 400px). */
 /* Paseo pulls the toolbar 6px past both sides; keep it on the left (the + lines up with the text) but not the right, so Send sits as far from the edge as from the bottom. */
-[data-testid="message-input-root"] > div:first-child > div:last-child { margin-right: 0 !important; }
+[data-cp-part="composer"] > div:last-child { margin-right: 0 !important; }
 [data-testid="message-input-root"] textarea { field-sizing: content !important; height: auto !important; min-height: 21px !important; }
 [data-cp-part="input-extra"] { display: none !important; }
 ${CHIP} { height: 24px !important; padding: 0 7px !important; border-radius: 8px !important; }
@@ -884,6 +889,31 @@ ${THUMBS} > button { width: var(--cp-thumb-w) !important; height: var(--cp-thumb
 ${THUMBS} > button div { width: 100% !important; height: 100% !important; background-size: cover !important; }
 :root { --cp-thumb-w: 200px; --cp-thumb-h: 128px; }
 :root[data-cp-rt-images="large"] { --cp-thumb-w: 320px; --cp-thumb-h: 200px; }
+
+/* The same design on Paseo 0.12's renderer. A whole reply is one block now, so the gap between paragraphs is its children's
+   margin: the 0.11 spacing (item margin plus padding on both ends), with the 1.6 line height's leading on top. */
+${MD} > * { margin-bottom: calc(var(--cp-d-item) + 2 * var(--cp-d-pad)) !important; }
+${MD} > :last-child, ${MD} :is(blockquote, .enrm-admonition, li) > p:last-child { margin-bottom: 0 !important; }
+${MD} :is(p, li, blockquote) { line-height: 1.6 !important; }
+${MD} code { border-radius: 4px !important; padding: 2px 5px !important; }
+${MD} strong { font-weight: 600 !important; }
+${MD} h1 { font-size: 24px !important; line-height: 1.3 !important; }
+${MD} h2 { font-size: 20px !important; line-height: 1.3 !important; }
+${MD} h3 { font-size: 16px !important; line-height: 1.3 !important; }
+${MD} li { margin-top: 0 !important; }
+${MD} li:not(:last-child) { margin-bottom: var(--cp-d-li) !important; }
+${MD} ol > li::marker { font-family: var(--cp-mono); font-size: calc(var(--cp-code) + 1px); }
+${MD} blockquote { background: transparent !important; border-inline-start: 2px solid var(--cp-accent) !important; border-radius: 0 !important; padding: 2px 0 2px 14px !important; }
+${MD} blockquote p { font-style: italic !important; color: var(--cp-muted) !important; }
+${MD} table { border-collapse: separate !important; border-spacing: 0 !important; border: 1px solid var(--cp-rule) !important; border-radius: 8px !important; overflow: hidden !important; }
+${MD} > div:not(.enrm-admonition) { border-radius: 8px !important; }
+${MD} :is(th, td) { padding: 9px 14px !important; border-width: 0 0 1px !important; border-color: var(--cp-rule) !important; line-height: 1.45 !important; }
+${MD} tbody > tr:last-child > td { border-bottom-width: 0 !important; }
+${MD} tbody > tr { background: transparent !important; }
+${MD} td { font-size: calc(var(--cp-content) - 1px) !important; }
+${MD} th { background: var(--cp-raised) !important; font-size: 12px !important; font-weight: 600 !important; color: var(--cp-muted) !important; }
+${MD} hr { border-top-color: var(--cp-rule) !important; }
+:root:not([data-cp-rt-images="native"]) ${MD} img { width: var(--cp-thumb-w) !important; height: var(--cp-thumb-h) !important; object-fit: cover !important; border: 1px solid var(--cp-rule) !important; border-radius: 8px !important; background-color: var(--cp-raised) !important; margin: 6px 8px 2px 0 !important; }
 ${CHAT_CHROME_CSS}`;
 
 const MONO_FALLBACK = "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
@@ -1041,6 +1071,13 @@ const PARTS: Array<[string, (el: DomElement) => DomElement | null | undefined, s
   [CHIP, (el) => el, "chip"],
   // A queued message: the card around its text and its edit / send-now buttons.
   ['button[aria-label="Edit queued message"]', (el) => el.parentElement?.parentElement, "queued"],
+  // The composer's box: the textarea's nearest ancestor whose last child is the toolbar. Its depth differs by version (0.12 added
+  // wrappers above and below it), and the attach button is missing in terminal mode, so neither works as a fixed anchor.
+  ['[data-testid="message-input-root"] textarea', (el) => {
+    for (let child = el, box = el.parentElement; box && box.getAttribute("data-testid") !== "message-input-root"; child = box, box = box.parentElement) {
+      if (box.lastElementChild !== child && box.lastElementChild?.querySelector("button")) return box;
+    }
+  }, "composer"],
   // The row holding the textarea and, while it's empty and unfocused, the "⌘L to focus" hint.
   ['[data-testid="message-input-root"] textarea', (el) => el.parentElement?.parentElement, "input-row"],
   [PRIMARY, (el) => el, "primary"],
@@ -1331,6 +1368,14 @@ function markBlocks(roots: DomElement[]) {
     quote.setAttribute("data-cp-callout", kind[0]);
     mark.setAttribute("data-cp-callout-mark", kind[1]);
   }
+  // Paseo 0.12 draws callouts itself (an icon and the kind's name over the text); its kind is only in that name.
+  for (const box of find(`${ADMONITION}:not([data-cp-callout])`)) {
+    const head = box.firstElementChild;
+    const kind = CALLOUT_KIND[head?.textContent?.trim().toLowerCase() ?? ""];
+    if (!head || !kind) continue;
+    box.setAttribute("data-cp-callout", kind[0]);
+    head.setAttribute("data-cp-callout-head", "");
+  }
   for (const li of find(`${MSG} ${md("li")}`)) {
     // Paseo may rewrite the text node as the reply streams, so the "[x] " prefix is checked every time.
     const text = li.querySelector(":scope > div:last-child span")?.firstChild;
@@ -1440,6 +1485,64 @@ ${MSG} ${md("hr")} { margin: 8px 0 !important; background: var(--cp-rule) !impor
 ${RT("rule", "b")} ${md("hr")} { height: auto !important; background: transparent !important; text-align: center; }
 ${RT("rule", "b")} ${md("hr")}::before { content: "\\2022  \\2022  \\2022"; font-size: 12px; letter-spacing: 0.2em; color: var(--cp-muted); }
 ${RT("rule", "c")} ${md("hr")} { width: 48px !important; background: var(--cp-border, var(--cp-rule)) !important; }
+
+/* The variants on Paseo 0.12's renderer (see MD). Callouts and task boxes are Paseo's own there; markBlocks tags a callout's kind. */
+${RT("quote", "b")} .enrm-text blockquote { border-inline-start-width: 0 !important; border-radius: 8px !important; background: var(--cp-raised) !important; padding: 10px 14px 10px 36px !important; position: relative !important; }
+${RT("quote", "b")} .enrm-text blockquote::before { content: "\\201C"; position: absolute; left: 13px; top: 6px; font-size: 24px; line-height: 1; font-weight: 600; color: var(--cp-accent); }
+${RT("quote", "b")} .enrm-text blockquote p { font-style: normal !important; color: var(--cp-fg) !important; }
+${RT("quote", "c")} .enrm-text blockquote { border-inline-start-width: 0 !important; padding: 0 0 0 20px !important; }
+
+${RT("table", "b")} .enrm-text table { border-width: 0 !important; border-radius: 6px !important; }
+${RT("table", "b")} .enrm-text th { background: transparent !important; }
+${RT("table", "b")} .enrm-text :is(th, td) { border-bottom-width: 0 !important; }
+${RT("table", "b")} .enrm-text tbody > tr:nth-child(odd) > td { background: var(--cp-raised) !important; }
+${RT("table", "b")} .enrm-text td:first-child { border-radius: 6px 0 0 6px !important; }
+${RT("table", "b")} .enrm-text td:last-child { border-radius: 0 6px 6px 0 !important; }
+${RT("table", "c")} .enrm-text table { border-width: 0 !important; border-radius: 0 !important; }
+${RT("table", "c")} .enrm-text th { background: transparent !important; }
+${RT("table", "c")} .enrm-text td { border-bottom-width: 0 !important; }
+${RT("table", "c")} .enrm-text :is(th, td) { padding: 7px 12px 7px 0 !important; }
+${RT("table", "d")} .enrm-text :is(th, td):not(:last-child) { border-right: 1px solid var(--cp-rule) !important; }
+
+${RT("inline", "b")} .enrm-text code { background: transparent !important; padding: 0 1px !important; color: var(--cp-warn) !important; }
+${RT("inline", "c")} .enrm-text code { background: transparent !important; box-shadow: inset 0 0 0 1px var(--cp-rule) !important; }
+
+${RT("heading", "b")} .enrm-text h1 { font-size: 18px !important; padding-bottom: 6px !important; border-bottom: 1px solid var(--cp-rule) !important; }
+${RT("heading", "b")} .enrm-text h2 { font-size: 15px !important; }
+${RT("heading", "b")} .enrm-text h3 { font-size: 12px !important; text-transform: uppercase !important; letter-spacing: 0.06em !important; color: var(--cp-muted) !important; }
+${RT("heading", "c")} .enrm-text :is(h1, h2) { border-left: 3px solid var(--cp-accent) !important; padding-left: 10px !important; }
+${RT("heading", "c")} .enrm-text h3::before { content: "### "; font-family: var(--cp-mono); font-size: var(--cp-code); font-weight: 400; color: var(--cp-muted); }
+
+${RT("list", "b")} .enrm-text ul > li::marker { content: "\\2013  "; color: var(--cp-muted); }
+${RT("list", "b")} .enrm-text ol > li::marker { content: counter(list-item) ") "; color: var(--cp-muted); }
+${RT("list", "c")} .enrm-text li::marker { content: "\\00B7  "; font-weight: 700; color: var(--cp-muted); }
+${RT("list", "c")} .enrm-text li:not(:last-child) { margin-bottom: 2px !important; }
+
+${TASK_BOX} { appearance: none !important; position: relative !important; flex: none; box-sizing: border-box !important; border: 1.5px solid var(--cp-muted) !important; border-radius: 3px !important; margin: 0 10px 0 0 !important; vertical-align: -2px !important; }
+${TASK_BOX}:checked { background: var(--cp-accent) !important; border-color: var(--cp-accent) !important; }
+${TASK_BOX}:checked::after { content: ""; position: absolute; inset: 1px; background: var(--cp-accent-fg); -webkit-mask: ${CHECK_MASK} center / contain no-repeat; mask: ${CHECK_MASK} center / contain no-repeat; }
+:root[data-cp-rt-list="b"] ${TASK_BOX} { border-radius: 999px !important; }
+:root[data-cp-rt-list="b"] ${TASK_BOX}:checked { background: transparent !important; border-color: var(--cp-ok) !important; }
+:root[data-cp-rt-list="b"] ${TASK_BOX}:checked::after { background: var(--cp-ok); }
+
+${ADMONITION} { --cp-tone: var(--cp-accent); position: relative !important; border-inline-start-width: 0 !important; border-radius: 8px !important; padding: 10px 14px 10px 36px !important; background: color-mix(in srgb, var(--cp-tone) 12%, transparent) !important; }
+${ADMONITION}[data-cp-callout="warning"] { --cp-tone: var(--cp-warn); }
+${ADMONITION}[data-cp-callout="tip"] { --cp-tone: var(--cp-ok); }
+${ADMONITION} p { color: var(--cp-fg) !important; }
+${ADMONITION} [data-cp-callout-head] { margin-bottom: 2px !important; font-size: 13px !important; font-weight: 600 !important; line-height: 1.6 !important; color: var(--cp-tone) !important; }
+${ADMONITION} [data-cp-callout-head] svg { position: absolute; left: 13px; top: 13px; width: 14px; height: 14px; fill: var(--cp-tone); }
+${RT("callout", "b")} .enrm-admonition { background: transparent !important; border-radius: 0 !important; border-inline-start: 2px solid var(--cp-tone) !important; padding: 2px 0 2px 14px !important; }
+${RT("callout", "b")} .enrm-admonition [data-cp-callout-head] { font-size: 11px !important; text-transform: uppercase; letter-spacing: 0.06em; }
+${RT("callout", "b")} .enrm-admonition [data-cp-callout-head] svg { display: none; }
+${RT("callout", "c")} .enrm-admonition { background: transparent !important; border-radius: 0 !important; padding: 0 0 0 24px !important; }
+${RT("callout", "c")} .enrm-admonition [data-cp-callout-head] { display: inline !important; }
+${RT("callout", "c")} .enrm-admonition [data-cp-callout-head] svg { left: 0; top: calc(var(--cp-content) * 0.8 - 7px); }
+${RT("callout", "c")} .enrm-admonition [data-cp-callout-head]::after { content: " \\2014  "; }
+${RT("callout", "c")} .enrm-admonition p { display: inline !important; }
+
+${RT("rule", "b")} .enrm-text hr { border-top-width: 0 !important; height: auto !important; text-align: center; }
+${RT("rule", "b")} .enrm-text hr::before { content: "\\2022  \\2022  \\2022"; font-size: 12px; letter-spacing: 0.2em; color: var(--cp-muted); }
+${RT("rule", "c")} .enrm-text hr { width: 48px !important; border-top-color: var(--cp-border, var(--cp-rule)) !important; }
 `;
 
 /**
