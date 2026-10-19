@@ -303,8 +303,24 @@ function expected(key: string) {
   return (places.get(key)?.index ?? 0) > 0 ? "none" : "head";
 }
 
+// ponytail: any followed agent counts, so a new call of an agent opened next to a busy one waits for its event too (~50ms late, no split).
+const GROWING_MS = 60_000;
+/** A followed agent is mid-run: its timeline ends in a step that changed within the last minute. */
+function runGrowing() {
+  const now = Date.now();
+  for (const list of lists.values()) {
+    const last = list.at(-1);
+    if (last && last.at !== undefined && now - last.at < GROWING_MS && stepKey(last.item) && !skip(last.item)) return true;
+  }
+  return false;
+}
+
 /** Called by the transformer for every step: "head" (render the merged row) or "none" (leave it out). A step the followed timelines don't
- * have yet (a tab just opened, the subscription a beat behind) leads a run of one until they catch up. */
+ * have yet (a tab just opened, the subscription a beat behind) leads a run of one until they catch up. Except a tool call while a run is
+ * growing: Paseo sometimes transforms it before the plugin's event arrives, and as a run of one it showed as its own row for ~80ms, then
+ * merged (the split-then-merge flicker). It almost always joins that run, so it stays out until its event places it; if it turns out to
+ * start a run instead, it is stale and the re-transform shows it. Calls only: their callId is the same in both timelines, while a
+ * thought's key is its opening words, which may never match, and a thought kept out would then stay out. */
 export function placeStep(item: Item, phase: Phase): { key: string; as: "head" | "none" } | undefined {
   const key = stepKey(item);
   if (!key) return undefined;
@@ -312,10 +328,10 @@ export function placeStep(item: Item, phase: Phase): { key: string; as: "head" |
   seen.delete(key);
   seen.set(key, { item, phase });
   if (seen.size > SEEN_MAX) for (const old of [...seen.keys()].slice(0, SEEN_MAX / 4)) forget(old);
-  const as = expected(key);
+  const place = places.get(key);
+  const as = !place && item.type === "tool_call" && runGrowing() ? "none" : expected(key);
   const changed = previous?.item !== item || previous.phase !== phase || made.get(key) !== as;
   made.set(key, as);
-  const place = places.get(key);
   if (!place) onUnplaced();
   if (changed) touch(place?.head ?? key);
   return { key, as };

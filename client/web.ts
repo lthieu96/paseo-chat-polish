@@ -95,6 +95,7 @@ declare class ResizeObserver {
   disconnect(): void;
 }
 declare function getSelection(): { toString(): string } | null;
+declare function matchMedia(query: string): { matches: boolean };
 declare class MutationObserver {
   constructor(cb: (records: Array<{ addedNodes: ArrayLike<unknown>; removedNodes: ArrayLike<unknown>; target: unknown; attributeName?: string | null; type: string }>) => void);
   observe(target: unknown, options: { childList: boolean; subtree: boolean; characterData?: boolean; attributes?: boolean; attributeFilter?: string[] }): void;
@@ -508,6 +509,8 @@ const FOOTER = '[data-cp-part="footer"]';
 const FOOTER_ICON = ':is(button[aria-label="Copy turn"], [data-testid="assistant-fork-menu-trigger"])';
 const COMPOSER_BUTTON =
   ':is([data-testid="message-input-attach-button"], [data-testid^="agent-feature-"], [data-testid="workspace-create-submit"], [data-testid="context-window-meter"], button:is([aria-label="Open agent features"], [aria-label="Start dictation"], [aria-label="Send message"], [aria-label="Queue message"], [aria-label="Stop agent"], [aria-label$="Voice mode"]))';
+const SLASH = '[data-testid="composer-autocomplete-popover"]';
+const SLASH_GLIDE_MS = 140;
 const CHIP = ':is([data-testid="combined-model-selector"], [data-testid="agent-thinking-selector"], [data-testid="mode-control"])';
 const PERMISSION = '[data-cp-part="permission"]';
 const PLAN = '[data-testid="permission-plan-card"]';
@@ -671,6 +674,23 @@ ${SURFACE} :is(button, [role="button"], [role="menuitem"], [role="option"], a[hr
 [data-cp-part="composer"] > div:last-child { margin-right: 0 !important; }
 [data-testid="message-input-root"] textarea { field-sizing: content !important; height: auto !important; min-height: 21px !important; }
 [data-cp-part="input-extra"] { display: none !important; }
+/* The / popup: one card like the plugin's pickers. Paseo stacks a detail card for the highlighted command over the list; the card
+   turns them around so the detail is the list's footer, next to the input, with the argument hint as a mono chip beside the name. */
+${SLASH} > div { background-color: var(--cp-raised, var(--colors-surface1)) !important; border: 1px solid var(--cp-rule, var(--colors-border)) !important; border-radius: 16px !important; padding: 4px !important; gap: 0 !important; flex-direction: column-reverse !important; overflow: hidden !important; box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35) !important; }
+${SLASH} > div > div { background-color: transparent !important; border-width: 0 !important; border-radius: 0 !important; box-shadow: none !important; }
+${SLASH} > div[data-cp-glide] { transition: height ${SLASH_GLIDE_MS}ms cubic-bezier(0.2, 0.8, 0.2, 1) !important; }
+[data-cp-part="slash-list"] > div > div { padding: 0 !important; }
+[data-cp-part="slash-list"] > div > div > div { min-height: 32px !important; padding: 0 10px !important; border-radius: 11px !important; }
+@supports (corner-shape: squircle) {
+  ${SLASH} > div { border-radius: 28px !important; corner-shape: squircle; }
+  [data-cp-part="slash-list"] > div > div > div { border-radius: 18px !important; corner-shape: squircle; }
+}
+[data-cp-part="slash-list"] > div > div > div > div > :first-child { font-size: 13px !important; font-weight: 500 !important; color: var(--cp-fg, var(--colors-foreground)) !important; }
+[data-cp-part="slash-detail"] { display: grid !important; grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 8px; row-gap: 4px; margin-top: 4px !important; padding: 10px 10px 8px !important; border-top: 1px solid var(--cp-rule, var(--colors-border)) !important; }
+[data-cp-part="slash-detail"] > :first-child { grid-area: 1 / 1; font-family: var(--cp-mono, ui-monospace, monospace) !important; font-size: 12px !important; color: var(--cp-accent, var(--colors-accent-bright)) !important; }
+/* Skill descriptions run to paragraphs; three lines, like the row above shows one. */
+[data-cp-part="slash-detail"] > :nth-child(2) { grid-area: 2 / 1 / 3 / 3; margin-top: 0 !important; font-size: 12px !important; line-height: 1.45 !important; display: -webkit-box !important; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden !important; }
+[data-cp-part="slash-detail"] > :nth-child(3) { grid-area: 1 / 2; justify-self: start; max-width: 100%; margin-top: 0 !important; padding: 1px 5px !important; border: 1px solid var(--cp-rule, var(--colors-border)) !important; border-radius: 4px !important; background-color: var(--cp-sunken, var(--colors-surface0)) !important; font-family: var(--cp-mono, ui-monospace, monospace) !important; font-size: 11px !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
 ${CHIP} { height: 24px !important; padding: 0 7px !important; border-radius: 8px !important; }
 [data-cp-part="chip"] * { font-size: 13px !important; font-weight: 500 !important; }
 [data-cp-part="chip"] > div > div:last-child:nth-child(3) { display: none !important; }
@@ -1110,6 +1130,55 @@ const PARTS: Array<[string, (el: DomElement) => DomElement | null | undefined, s
   ['[data-testid^="model-row-"] > div > div:nth-child(2)', (el) => el, "model-text"],
 ];
 
+const slashCards = new WeakSet<DomElement>();
+const boxHeight = (el: DomElement) => (el as unknown as { getBoundingClientRect(): { height: number } }).getBoundingClientRect().height;
+
+/**
+ * Tags the / popup's detail card (there while the highlighted command has a description) and its list. Retagged on every change:
+ * React reuses these divs when the popup switches to "Loading" or "No results", so a tag set once would stick to the wrong one.
+ */
+function tagSlash(card: DomElement) {
+  const children = Array.from(card.children);
+  const detail = children.length > 1 ? children[0] : undefined;
+  for (const child of children) {
+    const part = child === detail ? "slash-detail" : child === children[children.length - 1] ? "slash-list" : null;
+    if (part && child.getAttribute("data-cp-part") !== part) child.setAttribute("data-cp-part", part);
+    else if (!part) child.removeAttribute("data-cp-part");
+  }
+}
+
+/**
+ * Keeps the / popup tagged, and eases its height: Paseo resizes it at once whenever the filter or the highlighted command
+ * changes, which flickers. The card sits on the input, so it grows and shrinks upward. ResizeObserver runs after layout and before
+ * paint, so the jump to the new height is never drawn: the card is put back at the height on screen and transitions from there.
+ * Changes that land mid-glide are picked up when it ends and its height returns to auto.
+ */
+function watchSlash(card: DomElement) {
+  if (slashCards.has(card) || typeof ResizeObserver === "undefined") return;
+  slashCards.add(card);
+  tagSlash(card);
+  let shown = boxHeight(card);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const observer = new ResizeObserver(() => {
+    if (!card.isConnected) return observer.disconnect();
+    tagSlash(card);
+    if (card.hasAttribute("data-cp-glide")) return;
+    const from = shown;
+    shown = boxHeight(card);
+    if (Math.abs(shown - from) < 1 || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    card.style.setProperty("height", `${from}px`, "important");
+    boxHeight(card);
+    card.setAttribute("data-cp-glide", "");
+    card.style.setProperty("height", `${shown}px`, "important");
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      card.removeAttribute("data-cp-glide");
+      card.style.removeProperty("height");
+    }, SLASH_GLIDE_MS + 20);
+  });
+  observer.observe(card);
+}
+
 /** Tags the parts above, for selectors that would otherwise need :has() or a slow "X *". */
 const SETTINGS_PANE = '[data-testid="settings-detail-pane"]';
 const CLEAR = "rgba(0, 0, 0, 0)";
@@ -1211,6 +1280,7 @@ function tagSettings(roots: DomElement[]) {
 function tagParts(roots: DomElement[]) {
   tagSettings(roots);
   for (const [child, parentOf, part] of PARTS) for (const el of within(roots, child)) parentOf(el)?.setAttribute("data-cp-part", part);
+  for (const card of within(roots, `${SLASH} > div`)) watchSlash(card);
   for (const body of within(roots, '[data-testid="permission-plan-card"] > div:nth-child(2)')) body.setAttribute("data-cp-plan-md", "");
   // The turn footer sits close under a reply block. Decided once per pair, not with a sibling combinator: the virtual list mounts and
   // drops rows in either order, and a gap that flips with it makes Paseo re-measure the list.

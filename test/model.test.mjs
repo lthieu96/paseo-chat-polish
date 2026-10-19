@@ -300,10 +300,22 @@ test("steps: a step transformed before its timeline catches up leads its run in 
   // The second joins it; the first row grows into the merged row without Paseo transforming again.
   assert.deepEqual(placeStep(b, "streaming"), { key: "t:b", as: "none" });
   assert.equal(stale, 0);
-  // Only a step that turns out not to lead its run needs a fresh transform.
+  // A call that comes before its event while the run is growing waits for the event instead of flashing as a row of its own.
   const c = tool({ type: "shell", command: "id" }, { callId: "c", status: "running" });
-  assert.equal(placeStep(c, "streaming").as, "head");
+  assert.equal(placeStep(c, "streaming").as, "none");
   send(c, 3);
+  assert.equal(stale, 0);
+  // After a reply nothing is growing, so the next run's first call leads at once.
+  send({ type: "assistant_message", text: "done" }, 4);
+  const d = tool({ type: "shell", command: "whoami" }, { callId: "d", status: "running" });
+  assert.equal(placeStep(d, "streaming").as, "head");
+  send(d, 5);
+  assert.equal(stale, 0);
+  // A call kept out that turns out to start a run is stale, so the re-transform shows it.
+  const e = tool({ type: "shell", command: "date" }, { callId: "e", status: "running" });
+  assert.equal(placeStep(e, "streaming").as, "none");
+  send({ type: "assistant_message", text: "next" }, 6);
+  send(e, 7);
   assert.equal(stale, 1);
   stop();
 });
