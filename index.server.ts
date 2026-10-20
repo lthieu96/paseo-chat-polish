@@ -1,5 +1,7 @@
 import type { PluginServerContext } from "@getpaseo/plugin/server";
+import { renderDiagramSvg } from "./server/diagram";
 import { readImageFile } from "./server/image";
+import { renderDiagram } from "./shared/diagram";
 import { readImage } from "./shared/image";
 import { recapData } from "./shared/recap";
 import { getTheme, themeSchema, themeSettings } from "./shared/theme";
@@ -10,6 +12,7 @@ import { checkForUpdate, installUpdate } from "./server/update";
 export default function contribute(server: PluginServerContext) {
   const theme = server.registerSettings(themeSettings);
   server.handle(readImage, readImageFile);
+  server.handle(renderDiagram, renderDiagramSvg);
   server.handle(getTheme, async () => {
     const current = await theme.read();
     return current.status === "ready" ? current.values : themeSchema.parse({});

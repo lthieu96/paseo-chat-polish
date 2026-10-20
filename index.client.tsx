@@ -8,9 +8,10 @@ import { clearImageCache } from "./client/images";
 import { sidebarIcon } from "./client/mark";
 import { hideableKind, imageData, turnMarkdown, imagesSchema, noticeData, noticeSchema, planSchema, stepsSchema, thoughtSchema, todoData, todoSchema, toolData, toolSchema } from "./client/model";
 import { followAgent, isTodo, onStaleSteps, onUnplacedStep, placeStep, resetMade, setStepSkip, stepKey, type Phase } from "./client/steps";
+import { renderDiagram } from "./shared/diagram";
 import { currentPrefs, savePrefs, setPrefs, subscribePrefs, usePrefsSaver } from "./client/prefs";
 import { bindThemeRegistry, currentTheme, registerTheme } from "./client/theme-registry";
-import { bindPromptKeys, clampUserMessages, jumpToPrompt, openAgentIds, paintSidebar, setCompactHandler, readHostAppearance, restyleNative, selectionCopyMenu, setNativeColors, setRailProviders, setRichText, stylePluginViews, watchDom } from "./client/web";
+import { bindPromptKeys, clampUserMessages, jumpToPrompt, openAgentIds, paintSidebar, redrawDiagrams, setCompactHandler, readHostAppearance, restyleNative, selectionCopyMenu, setNativeColors, setRailProviders, setRichText, stylePluginViews, watchDom } from "./client/web";
 import { getTheme, THEME_CATALOG_ID, themeSchema } from "./shared/theme";
 import { getPrefs, type Prefs } from "./shared/timeline";
 import { ImagesItem, NoticeItem, PlanItem, RecapItem, StepsItem, ThoughtItem, TodoItem, ToolItem } from "./client/views";
@@ -47,7 +48,7 @@ export default function contribute(client: PluginClientContext) {
     return active && theme?.sidebar ? { sidebar: theme.sidebar } : undefined;
   });
 
-  const unrestyle = restyleNative(() => currentPrefs().nativeStyle === "design");
+  const unrestyle = restyleNative(() => currentPrefs().nativeStyle === "design", { render: (source) => client.rpc(renderDiagram, { source }), on: () => currentPrefs().diagrams === "pele" });
   const unstylePluginViews = stylePluginViews();
   const unclamp = clampUserMessages(() => currentPrefs().userMessages === "clamp");
   const unselect = selectionCopyMenu(() => currentPrefs().selectionCopy === "on");
@@ -187,8 +188,13 @@ export default function contribute(client: PluginClientContext) {
   // Prefs Paseo's own rows follow too reach the restyle as <html> attributes.
   const markRoot = (p: Prefs) => setRichText({ ...p.richText, images: p.images, steps: p.steps, density: p.density === "normal" ? "a" : p.density, "icon-steps": p.rowIcons.steps === "hide" ? "hide" : "a", "icon-tool": p.rowIcons.tool === "hide" ? "hide" : "a", loader: p.loader === "dots" ? "a" : p.loader, "loader-size": p.loaderSize === "s" ? "a" : p.loaderSize });
   markRoot(currentPrefs());
+  let diagrams = currentPrefs().diagrams;
   const unsubscribePrefs = subscribePrefs(() => {
     markRoot(currentPrefs());
+    if (diagrams !== currentPrefs().diagrams) {
+      diagrams = currentPrefs().diagrams;
+      redrawDiagrams();
+    }
     skipHidden();
     retransform();
     follow();
@@ -253,6 +259,7 @@ export default function contribute(client: PluginClientContext) {
       ["reads", hidesReads ? "Show finished reads and searches" : "Hide finished reads and searches", "EyeOff", { hidden: hidesReads ? p.hidden.filter((h) => h !== "read" && h !== "search") : [...new Set([...p.hidden, "read", "search"] as const)] }],
       ["copy", p.selectionCopy === "on" ? "Turn off the copy popup on selected text" : "Turn on the copy popup on selected text", "ClipboardCopy", { selectionCopy: p.selectionCopy === "on" ? "off" : "on" }],
       ["recap", p.recap === "on" ? "Turn off turn recaps" : "Turn on turn recaps", "FileDiff", { recap: p.recap === "on" ? "off" : "on" }],
+      ["diagrams", p.diagrams === "pele" ? "Draw diagrams with Paseo's mermaid" : "Draw diagrams with Pele", "Workflow", { diagrams: p.diagrams === "pele" ? "mermaid" : "pele" }],
       ["native", p.nativeStyle === "design" ? "Leave Paseo's own items as Paseo draws them" : "Restyle Paseo's own items", "Paintbrush", { nativeStyle: p.nativeStyle === "design" ? "paseo" : "design" }],
     ];
   };

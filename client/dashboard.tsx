@@ -14,7 +14,7 @@ import { PrefsOverride, setPrefs, usePrefs } from "./prefs";
 import { registerTheme, useCurrentTheme } from "./theme-registry";
 import { PLAIN_SYNTAX, SYNTAX_THEMES } from "./highlight";
 import { alpha, AppearanceOverride, CodeLine, ImagesItem, MergedSteps, PMONO, sunken, SyntaxOverride, ThoughtItem, TodoItem, ToolItem, useReducedMotion, useStyles } from "./views";
-import { canSetAppTheme, DEFAULTS, PASEO_FONT_STACKS, readHostAppearance, readSyntaxTheme, setAppTheme, updateAppSettings } from "./web";
+import { canSetAppTheme, DEFAULTS, diagramDoc, drawDiagram, loadMermaidDoc, PASEO_FONT_STACKS, readHostAppearance, readSyntaxTheme, setAppTheme, updateAppSettings } from "./web";
 
 type ToolCall = Extract<AgentTimelineItem, { type: "tool_call" }>;
 const SQUIRCLE_CARD = { dataSet: { cpSquircle: "card" } } as object;
@@ -1317,6 +1317,20 @@ function PrefsEditor({ theme, page, prefs, onChange }: { theme: PluginTheme; pag
           </Grid>
         </View>
       ))}
+      <Group theme={theme} title="Diagrams">
+        <Row theme={theme} first label="Renderer" hint="Pele draws the same mermaid source in its own layout and the theme's colors.">
+          <Segmented
+            theme={theme}
+            value={prefs.diagrams}
+            onChange={set("diagrams")}
+            options={[
+              ["pele", "", "Pele"],
+              ["mermaid", "", "Mermaid", true],
+            ]}
+          />
+        </Row>
+      </Group>
+      <Legend theme={theme} />
     </View>
   );
 }
@@ -1575,7 +1589,59 @@ const SAMPLE_TABLE = [
 const SAMPLE_CODE = ["export function requireAuth(req, next) {", "  const token = verifyToken(req);", "  if (!token) return deny(401);", "  next();", "}"];
 
 /** A reply using every markdown element, drawn with the chosen variants, as the Rich text page's preview. */
-function RichSample({ theme, rt }: { theme: PluginTheme; rt: Prefs["richText"] }) {
+const SAMPLE_DIAGRAM = `flowchart LR
+  req[Request] --> auth{requireAuth}
+  auth -- valid --> router[Router]
+  auth -- skipAuth --> router
+  auth -- expired --> refresh[Refresh token]
+  refresh --> auth`;
+
+/** The sample reply's diagram, drawn the way chats draw it (desktop and web, with the restyle on). */
+function DiagramSample({ theme, pele }: { theme: PluginTheme; pele: boolean }) {
+  const s = useStyles(theme);
+  const c = theme.colors;
+  const [frame, setFrame] = useState<unknown>(null);
+  const [size, setSize] = useState<{ width: number; height: number } | null>(null);
+  const [failed, setFailed] = useState(false);
+  // Paseo's mermaid: undefined while it loads, null if it can't be found.
+  const [mermaid, setMermaid] = useState<string | null | undefined>(() => diagramDoc(false));
+  useEffect(() => {
+    if (pele || mermaid !== undefined) return;
+    let live = true;
+    void loadMermaidDoc().then((doc) => live && setMermaid(doc ?? null));
+    return () => {
+      live = false;
+    };
+  }, [pele, mermaid]);
+  const doc = pele ? diagramDoc(true) : (mermaid ?? undefined);
+  // The drawing takes the applied app theme's colors (not an unapplied draft), so a theme change draws it again.
+  const key = `${pele}:${Object.values(c).join()}`;
+  useEffect(() => {
+    setSize(null);
+    setFailed(false);
+  }, [key]);
+  // A failed drawing unmounts the frame, which leaves it failed rather than drawing again.
+  useEffect(() => (frame ? drawDiagram(frame, SAMPLE_DIAGRAM, (drawn) => (drawn ? setSize(drawn) : setFailed(true))) : undefined), [frame]);
+  const note = failed ? "Couldn't draw the diagram." : doc ? null : mermaid === null ? "Couldn't find Paseo's mermaid in this version of Paseo." : "Loading Paseo's mermaid…";
+  return (
+    <View style={{ padding: 12, borderRadius: 8, backgroundColor: sunken(c.surface0), borderWidth: 1, borderColor: alpha(c.border, 0.6), alignItems: "center" }}>
+      {note ? (
+        <Text style={[s.small, { fontSize: 12, paddingVertical: 24 }]}>{note}</Text>
+      ) : (
+        <iframe
+          key={key}
+          ref={setFrame}
+          title="Diagram preview"
+          sandbox="allow-scripts"
+          srcDoc={doc}
+          style={{ display: "block", border: 0, width: "100%", pointerEvents: "none", background: "transparent", ...(size ? { maxWidth: size.width, aspectRatio: `${size.width} / ${size.height}` } : { height: 120, opacity: 0 }) }}
+        />
+      )}
+    </View>
+  );
+}
+
+function RichSample({ theme, rt, pele }: { theme: PluginTheme; rt: Prefs["richText"]; pele?: boolean }) {
   const s = useStyles(theme);
   const c = theme.colors;
   const rule = alpha(c.border, 0.6);
@@ -1767,6 +1833,7 @@ function RichSample({ theme, rt }: { theme: PluginTheme; rt: Prefs["richText"] }
       {divider}
       {table}
       {codeBlock}
+      {pele === undefined ? null : <DiagramSample theme={theme} pele={pele} />}
     </View>
   );
 }
@@ -1778,7 +1845,7 @@ function RichPreview({ theme, draft, prefs, layout }: { theme: PluginTheme; draf
     <View style={{ gap: 14 }}>
       <PreviewHead theme={theme} layout={layout} viewport={viewport} setViewport={setViewport} />
       <MockChat theme={pt} layout={layout} viewport={viewport}>
-        <RichSample theme={pt} rt={prefs.richText} />
+        <RichSample theme={pt} rt={prefs.richText} pele={Platform.OS === "web" && prefs.nativeStyle === "design" ? prefs.diagrams === "pele" : undefined} />
       </MockChat>
     </View>
   );

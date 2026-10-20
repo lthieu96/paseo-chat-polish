@@ -15,7 +15,10 @@ test("DOM restyling, accordion transitions, and bottom following stay stable", {
   let server;
   try {
     const sources = Object.fromEntries(["css-guard", "provider-icons", "web"].map((name) => [name, ts.transpileModule(readFileSync(new URL(`../client/${name}.ts`, import.meta.url), "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText]));
-    const html = `<!doctype html><html><head><title>pending</title></head><body><img src="/hold" hidden>
+    // Paseo's bundle exports its mermaid document as a minified string literal, with JS-only escapes like \xHH.
+    const bundle = String.raw`Object.defineProperty(a,"mermaidRuntimeHtml",{get:function(){return o}});const o='<!doctype html>\n<p class="x" title=\'y\'>\x3c!-- __PASEO_MERMAID_RUNTIME_RECEIVE__ \\x41 \u0041 \u{1F600} \v \/ --\x3e</p>';`;
+    const mermaidDoc = "<!doctype html>\n<p class=\"x\" title='y'><!-- __PASEO_MERMAID_RUNTIME_RECEIVE__ \\x41 A \u{1F600} \v / --></p>";
+    const html = `<!doctype html><html><head><title>pending</title><script type="text/plain" src="/bundle.js"></script></head><body><img src="/hold" hidden>
       <div data-testid="settings-detail-pane"></div>
       <div data-testid="context-window-details" style="position:absolute;border:1px solid black;border-radius:12px;background:white"><div><span>Context</span><span>35% used</span></div><div data-testid="usage-report-test" style="height:180px">Usage</div></div>
       <div data-testid="assistant-message"><div data-paseo-markdown-tag="blockquote"><span id="marker">[!NO</span></div></div>
@@ -53,6 +56,7 @@ test("DOM restyling, accordion transitions, and bottom following stay stable", {
           localStorage.removeItem('chat-polish:context-card-heights');
           const first = prompts(); const web = load('web');
           const restyle = web.restyleNative(() => true); const clamp = web.clampUserMessages(() => true);
+          checks.mermaidDocFromBundle = (await web.loadMermaidDoc()) === new TextDecoder().decode(Uint8Array.from(atob("${Buffer.from(mermaidDoc).toString("base64")}"), (ch) => ch.charCodeAt(0)));
           await wait(); checks.observerSettles = !capped;
           first.remove(); await wait(); checks.detachedReleased = released === 10;
           const card = document.querySelector('[data-testid="context-window-details"]');
@@ -166,6 +170,7 @@ test("DOM restyling, accordion transitions, and bottom following stay stable", {
     server = createServer((request, response) => {
       if (request.url === "/hold") { held = response; return; }
       if (request.url === "/done") { held?.end(); response.end(); return; }
+      if (request.url === "/bundle.js") { response.end(bundle); return; }
       response.setHeader("Content-Type", "text/html"); response.end(html);
     });
     await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -176,7 +181,7 @@ test("DOM restyling, accordion transitions, and bottom following stay stable", {
     assert.equal(report.error, undefined, report.error);
     assert.deepEqual(report.errors, []);
     for (const [check, passed] of Object.entries(report.checks)) assert.equal(passed, true, check);
-    assert.equal(Object.keys(report.checks).length, 15);
+    assert.equal(Object.keys(report.checks).length, 16);
   } finally {
     server?.closeAllConnections(); server?.close();
     rmSync(temp, { recursive: true, force: true });

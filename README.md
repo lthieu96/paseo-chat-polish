@@ -11,6 +11,7 @@ A [Paseo](https://paseo.sh) plugin that redraws the agent chat as one quiet colu
 - **Steps merged between replies.** The thoughts and tool calls before an answer fold into one row, such as "Edited 1 file and ran 1 command", which opens to each step.
 - **Themes.** Pick one of Paseo's built-in themes or a Chat Polish one (Mariana, Paper, Dusk), or edit the colors with contrast checks. Fonts and sizes are set from the same page.
 - **Rich text styles.** Three or four looks each for quotes, tables, code blocks, inline code, headings, lists, callouts and rules.
+- **Diagrams.** Mermaid diagrams drawn by [Pele](https://pele.run) in the theme's colors, or by Paseo's mermaid with the same chart colors. Switch on the Rich text page, which previews both.
 - **Working indicator.** Paseo's dots, or a sparkle, spokes, dot ring, orb, matrix or snake loader.
 - **Extras.** Turn recaps, ⌥⌘↑/↓ to jump between your prompts, and Command Center (⌘K) toggles.
 
@@ -58,7 +59,7 @@ paseo plugin add git:lthieu96/paseo-chat-polish
 Or install a specific GitHub release:
 
 ```sh
-paseo plugin add git:lthieu96/paseo-chat-polish --ref v0.3.2
+paseo plugin add git:lthieu96/paseo-chat-polish --ref v0.4.0
 ```
 
 For the reviewed Paseo Registry revision:
@@ -98,6 +99,7 @@ To update the Paseo Registry listing, submit the new GitHub tag as a revision th
 - Fonts, theme picks and the restyle write Paseo's own settings and DOM, which aren't a public API and may change.
 - Previews of Paseo's built-in themes and font stacks are copied from Paseo 0.11.2 and can drift in later versions.
 - Plain tool rows need Settings → Appearance → Tool call display set to Detailed; Summary keeps Paseo's grouped calls.
+- Pele lays diagrams out its own way and labels them in Helvetica/Arial. Mermaid's user journey keeps its own actor colors.
 
 ## Develop
 

@@ -57,6 +57,8 @@ export const prefsSchema = z.object({
   nativeStyle: z.enum(["design", "paseo"]).default("design"),
   /** A recap row the daemon adds after each turn that changed files or had a failing command. */
   recap: z.enum(["on", "off"]).default("on"),
+  /** Mermaid diagrams in Paseo's own replies drawn by Pele (pele.run) in the theme's colors, or by Paseo's mermaid (desktop and web, with nativeStyle "design"). */
+  diagrams: z.enum(["pele", "mermaid"]).default("pele"),
   /** Image-only replies as thumbnails; "native" leaves them to Paseo. */
   images: z.enum(["small", "large", "native"]).default("small"),
   /** One style variant per markdown element in Paseo's own replies (desktop, with nativeStyle "design"); "a" is the base design. */

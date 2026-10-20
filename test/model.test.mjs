@@ -147,7 +147,7 @@ test("hideable kinds: only completed reads, searches, fetches and background tas
   assert.equal(hideableKind(tool({ type: "read", filePath: "a.ts" }, { status: "failed" })), undefined);
   assert.equal(hideableKind(tool({ type: "read", filePath: "a.ts" }, { status: "running" })), undefined);
   assert.equal(hideableKind(tool({ type: "shell", command: "ls" })), undefined);
-  assert.deepEqual(prefsSchema.parse({}), { reasoning: "paseo", toolDetails: "collapsed", commandColors: "expanded", diffWrap: "off", hidden: [], userMessages: "clamp", steps: "faded", selectionCopy: "on", density: "normal", rowIcons: { steps: "show", tool: "show", thought: "show" }, merge: "on", loader: "dots", loaderSize: "s", nativeStyle: "design", recap: "on", images: "small", richText: { quote: "a", table: "a", code: "a", inline: "a", heading: "a", list: "a", callout: "a", rule: "a" } });
+  assert.deepEqual(prefsSchema.parse({}), { reasoning: "paseo", toolDetails: "collapsed", commandColors: "expanded", diffWrap: "off", hidden: [], userMessages: "clamp", steps: "faded", selectionCopy: "on", density: "normal", rowIcons: { steps: "show", tool: "show", thought: "show" }, merge: "on", loader: "dots", loaderSize: "s", nativeStyle: "design", recap: "on", diagrams: "pele", images: "small", richText: { quote: "a", table: "a", code: "a", inline: "a", heading: "a", list: "a", callout: "a", rule: "a" } });
   assert.equal(prefsSchema.parse({ diffWrap: "on" }).diffWrap, "on");
   // A saved single choice from before icons were per kind applies to all three.
   assert.deepEqual(prefsSchema.parse({ rowIcons: "hide" }).rowIcons, { steps: "hide", tool: "hide", thought: "hide" });
