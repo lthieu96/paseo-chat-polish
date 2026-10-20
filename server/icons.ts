@@ -121,9 +121,10 @@ export function hugeicon(set: IconifySet, name: string) {
   return roundPath(body).replace(/ stroke="currentColor"/g, "");
 }
 
-/** The regular files in a tar archive by path (ustar: 512-byte headers, octal sizes, name prefix for long paths). */
+/** The regular files in a tar archive by path: ustar (name prefix for long paths), with pax and GNU long-name records. */
 export function untar(tar: Buffer) {
   const files = new Map<string, string>();
+  let longName: string | undefined;
   for (let at = 0; at + 512 <= tar.length; ) {
     const field = (from: number, length: number) => tar.subarray(at + from, at + from + length).toString("utf8").replace(/\0.*$/s, "");
     const name = field(0, 100);
@@ -131,7 +132,14 @@ export function untar(tar: Buffer) {
     const size = parseInt(field(124, 12).trim() || "0", 8);
     const prefix = field(345, 155);
     const type = field(156, 1);
-    if (type === "0" || type === "") files.set(prefix ? `${prefix}/${name}` : name, tar.subarray(at + 512, at + 512 + size).toString("utf8"));
+    const body = tar.subarray(at + 512, at + 512 + size).toString("utf8");
+    // A pax "x" or GNU "L" record names the entry that follows it.
+    if (type === "x") longName = /(?:^|\n)\d+ path=([^\n]*)/.exec(body)?.[1] ?? longName;
+    else if (type === "L") longName = body.replace(/\0.*$/s, "");
+    else {
+      if (type === "0" || type === "") files.set(longName ?? (prefix ? `${prefix}/${name}` : name), body);
+      longName = undefined;
+    }
     at += 512 + Math.ceil(size / 512) * 512;
   }
   return files;

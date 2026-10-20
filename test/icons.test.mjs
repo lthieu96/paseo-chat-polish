@@ -20,10 +20,13 @@ test("untar reads a package's files, long paths included", () => {
   mkdirSync(join(dir, deep), { recursive: true });
   writeFileSync(join(dir, "package/icons.json"), '{"icons":{}}');
   writeFileSync(join(dir, deep, "Check.mjs"), "x".repeat(700));
-  execFileSync("tar", ["-czf", join(dir, "p.tgz"), "-C", dir, "package"]);
-  const files = untar(gunzipSync(readFileSync(join(dir, "p.tgz"))));
-  assert.equal(files.get("package/icons.json"), '{"icons":{}}');
-  assert.equal(files.get(`${deep}/Check.mjs`), "x".repeat(700));
+  // npm packs ustar with pax records for long names; GNU and BSD tar both write either on request.
+  for (const format of ["ustar", "pax"]) {
+    execFileSync("tar", [`--format=${format}`, "-czf", join(dir, `${format}.tgz`), "-C", dir, "package"]);
+    const files = untar(gunzipSync(readFileSync(join(dir, `${format}.tgz`))));
+    assert.equal(files.get("package/icons.json"), '{"icons":{}}', format);
+    assert.equal(files.get(`${deep}/Check.mjs`), "x".repeat(700), format);
+  }
 });
 
 test("icons read from each package's format", () => {
