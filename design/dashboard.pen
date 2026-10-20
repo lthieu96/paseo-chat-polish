@@ -99645,6 +99645,1908 @@
           ]
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "g2U7U",
+      "x": 20280,
+      "y": 0,
+      "name": "Slash Commands — Redesign",
+      "clip": true,
+      "width": 1440,
+      "fill": "$ui-bg",
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "WtGvh",
+          "name": "Header",
+          "width": "fill_container",
+          "stroke": "$ui-border",
+          "strokeWidth": {
+            "bottom": 1
+          },
+          "layout": "vertical",
+          "gap": 8,
+          "padding": [
+            56,
+            64,
+            40,
+            64
+          ],
+          "children": [
+            {
+              "type": "text",
+              "id": "ekiwY",
+              "name": "Eyebrow",
+              "fill": "$ui-muted",
+              "content": "CHAT POLISH · COMPOSER · SLASH COMMANDS",
+              "fontFamily": "$font-ui",
+              "fontSize": 11,
+              "fontWeight": "600",
+              "letterSpacing": 1
+            },
+            {
+              "type": "text",
+              "id": "dFXA6",
+              "name": "Title",
+              "fill": "$ui-fg",
+              "content": "The / popup",
+              "fontFamily": "$font-ui",
+              "fontSize": 32,
+              "fontWeight": "600",
+              "letterSpacing": -0.5
+            },
+            {
+              "type": "text",
+              "id": "M2kR0A",
+              "name": "Lede",
+              "fill": "$ui-muted",
+              "textGrowth": "fixed-width",
+              "width": 920,
+              "content": "Paseo draws a detail card for the highlighted command above a list of rows (name, then a one-line description). The plugin can restyle and reorder those parts, not add data: no grouping by source, the argument hint lives only in the detail card. A is today.",
+              "lineHeight": 1.5,
+              "fontFamily": "$font-ui",
+              "fontSize": 15,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "K5bPAL",
+          "name": "Variants",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 48,
+          "padding": [
+            40,
+            64,
+            64,
+            64
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "V482Mt",
+              "name": "Row 1",
+              "width": "fill_container",
+              "gap": 40,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "y4DBk",
+                  "name": "Variant A · Today",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "uvoTI",
+                      "name": "Label",
+                      "width": "fill_container",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "dzypG",
+                          "name": "Letter",
+                          "width": 20,
+                          "height": 20,
+                          "fill": "$ui-accent",
+                          "cornerRadius": 4,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "tBPnW",
+                              "name": "L",
+                              "fill": "$ui-accent-fg",
+                              "content": "A",
+                              "fontFamily": "$font-ui",
+                              "fontSize": 11,
+                              "fontWeight": "700"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "RLyi9",
+                          "name": "Name",
+                          "fill": "$ui-fg-strong",
+                          "content": "Today",
+                          "fontFamily": "$font-ui",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "ZS1Fn",
+                      "name": "Description",
+                      "fill": "$ui-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Paseo 0.12: a separate detail card floats above the list; rows are name + muted description; the highlighted row is a flat fill.",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$font-ui",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Yw171",
+                      "name": "Stage",
+                      "width": "fill_container",
+                      "fill": "#1E222780",
+                      "cornerRadius": 12,
+                      "stroke": "$ui-hairline",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "gap": 6,
+                      "padding": [
+                        24,
+                        20,
+                        20,
+                        20
+                      ],
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "MiU5H",
+                          "name": "Detail card",
+                          "width": "fill_container",
+                          "fill": "$ui-raised",
+                          "cornerRadius": 8,
+                          "stroke": "$ui-border",
+                          "strokeWidth": 1,
+                          "layout": "vertical",
+                          "gap": 4,
+                          "padding": 12,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "YEd9l",
+                              "name": "Label",
+                              "fill": "$ui-fg",
+                              "content": "/compact",
+                              "fontFamily": "$font-ui",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "RMdOu",
+                              "name": "Description",
+                              "fill": "$ui-muted",
+                              "content": "Clear history but keep a summary in context",
+                              "fontFamily": "$font-ui",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "M1brXy",
+                              "name": "Hint",
+                              "fill": "$ui-muted",
+                              "content": "[instructions]",
+                              "fontFamily": "$font-ui",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Whxgc",
+                          "name": "List",
+                          "clip": true,
+                          "width": "fill_container",
+                          "fill": "$ui-raised",
+                          "cornerRadius": 8,
+                          "stroke": "$ui-border",
+                          "strokeWidth": 1,
+                          "layout": "vertical",
+                          "padding": [
+                            4,
+                            0
+                          ],
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "Ckx29",
+                              "name": "Row /clear",
+                              "width": "fill_container",
+                              "height": 36,
+                              "fill": "#00000000",
+                              "gap": 8,
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "NVbiT",
+                                  "name": "Label",
+                                  "fill": "$ui-fg",
+                                  "content": "/clear",
+                                  "fontFamily": "$font-ui",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "BZObZ",
+                                  "name": "Description",
+                                  "fill": "$ui-muted",
+                                  "content": "Clear conversation history and free up context",
+                                  "fontFamily": "$font-ui",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "muWP1",
+                              "name": "Row /code-review",
+                              "width": "fill_container",
+                              "height": 36,
+                              "fill": "#00000000",
+                              "gap": 8,
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "yBigH",
+                                  "name": "Label",
+                                  "fill": "$ui-fg",
+                                  "content": "/code-review",
+                                  "fontFamily": "$font-ui",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "IonVo",
+                                  "name": "Description",
+                                  "fill": "$ui-muted",
+                                  "content": "Review the current diff for correctness bugs",
+                                  "fontFamily": "$font-ui",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "yQrO2",
+                              "name": "Row /commit",
+                              "width": "fill_container",
+                              "height": 36,
+                              "fill": "#00000000",
+                              "gap": 8,
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "yY1tm",
+                                  "name": "Label",
+                                  "fill": "$ui-fg",
+                                  "content": "/commit",
+                                  "fontFamily": "$font-ui",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "isA1z",
+                                  "name": "Description",
+                                  "fill": "$ui-muted",
+                                  "content": "Create a git commit from the staged changes",
+                                  "fontFamily": "$font-ui",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "b4bAY",
+                              "name": "Row /compact",
+                              "width": "fill_container",
+                              "height": 36,
+                              "fill": "$ui-control",
+                              "gap": 8,
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "xh8g0",
+                                  "name": "Label",
+                                  "fill": "$ui-fg",
+                                  "content": "/compact",
+                                  "fontFamily": "$font-ui",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "yYolt",
+                                  "name": "Description",
+                                  "fill": "$ui-muted",
+                                  "content": "Clear history but keep a summary in context",
+                                  "fontFamily": "$font-ui",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "kx75f",
+                              "name": "Row /context",
+                              "width": "fill_container",
+                              "height": 36,
+                              "fill": "#00000000",
+                              "gap": 8,
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "UK8aB",
+                                  "name": "Label",
+                                  "fill": "$ui-fg",
+                                  "content": "/context",
+                                  "fontFamily": "$font-ui",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "XbXSI",
+                                  "name": "Description",
+                                  "fill": "$ui-muted",
+                                  "content": "Visualize current context usage as a colored grid",
+                                  "fontFamily": "$font-ui",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "j5QGS",
+                              "name": "Row /cost",
+                              "width": "fill_container",
+                              "height": 36,
+                              "fill": "#00000000",
+                              "gap": 8,
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "cOYCx",
+                                  "name": "Label",
+                                  "fill": "$ui-fg",
+                                  "content": "/cost",
+                                  "fontFamily": "$font-ui",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "Z6VzL",
+                                  "name": "Description",
+                                  "fill": "$ui-muted",
+                                  "content": "Show the total cost and duration of the session",
+                                  "fontFamily": "$font-ui",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "gnJey",
+                          "name": "Gap",
+                          "width": "fill_container",
+                          "height": 6
+                        },
+                        {
+                          "id": "rheE3",
+                          "type": "ref",
+                          "ref": "gbeA2",
+                          "name": "Composer",
+                          "width": "fill_container",
+                          "cornerRadius": 20,
+                          "descendants": {
+                            "zkwWY": {
+                              "content": "/co",
+                              "fill": "$ui-fg"
+                            },
+                            "NrFZ2": {
+                              "enabled": false
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Ait6C",
+                  "name": "Variant B · Attached card",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "XMTWT",
+                      "name": "Label",
+                      "width": "fill_container",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "wsjQX",
+                          "name": "Letter",
+                          "width": 20,
+                          "height": 20,
+                          "fill": "$ui-control",
+                          "cornerRadius": 4,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "iOyOb",
+                              "name": "L",
+                              "fill": "$ui-fg",
+                              "content": "B",
+                              "fontFamily": "$font-ui",
+                              "fontSize": 11,
+                              "fontWeight": "700"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "dTXYN",
+                          "name": "Name",
+                          "fill": "$ui-fg-strong",
+                          "content": "Attached card",
+                          "fontFamily": "$font-ui",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "UJuCM",
+                      "name": "Description",
+                      "fill": "$ui-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "One card like the plugin's pickers (radius 16, 4px inset, 11px rows). The detail moves under the list as its footer, next to the input, with the argument hint as a mono chip.",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$font-ui",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "fb1d8",
+                      "name": "Stage",
+                      "width": "fill_container",
+                      "fill": "#1E222780",
+                      "cornerRadius": 12,
+                      "stroke": "$ui-hairline",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "gap": 6,
+                      "padding": [
+                        24,
+                        20,
+                        20,
+                        20
+                      ],
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "ycns6",
+                          "name": "Card",
+                          "width": "fill_container",
+                          "fill": "$ui-raised",
+                          "cornerRadius": 16,
+                          "stroke": "$ui-border",
+                          "strokeWidth": 1,
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000059",
+                            "offset": {
+                              "x": 0,
+                              "y": 10
+                            },
+                            "blur": 28
+                          },
+                          "layout": "vertical",
+                          "padding": 4,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "YPLVp",
+                              "name": "Row /clear",
+                              "width": "fill_container",
+                              "height": 32,
+                              "fill": "#00000000",
+                              "cornerRadius": 11,
+                              "gap": 10,
+                              "padding": [
+                                0,
+                                10
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "vJylU",
+                                  "name": "Label",
+                                  "fill": "$ui-fg",
+                                  "content": "/clear",
+                                  "fontFamily": "$font-ui",
+                                  "fontSize": 13,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "yWDap",
+                                  "name": "Description",
+                                  "fill": "$ui-muted",
+                                  "content": "Clear conversation history and free up context",
+                                  "fontFamily": "$font-ui",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "e0s8pI",
+                              "name": "Row /code-review",
+                              "width": "fill_container",
+                              "height": 32,
+                              "fill": "#00000000",
+                              "cornerRadius": 11,
+                              "gap": 10,
+                              "padding": [
+                                0,
+                                10
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "aSB9y",
+                                  "name": "Label",
+                                  "fill": "$ui-fg",
+                                  "content": "/code-review",
+                                  "fontFamily": "$font-ui",
+                                  "fontSize": 13,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "QM9Et",
+                                  "name": "Description",
+                                  "fill": "$ui-muted",
+                                  "content": "Review the current diff for correctness bugs",
+                                  "fontFamily": "$font-ui",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "NOkss",
+                              "name": "Row /commit",
+                              "width": "fill_container",
+                              "height": 32,
+                              "fill": "#00000000",
+                              "cornerRadius": 11,
+                              "gap": 10,
+                              "padding": [
+                                0,
+                                10
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "MPtLR",
+                                  "name": "Label",
+                                  "fill": "$ui-fg",
+                                  "content": "/commit",
+                                  "fontFamily": "$font-ui",
+                                  "fontSize": 13,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "hILeq",
+                                  "name": "Description",
+                                  "fill": "$ui-muted",
+                                  "content": "Create a git commit from the staged changes",
+                                  "fontFamily": "$font-ui",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "gyoks",
+                              "name": "Row /compact",
+                              "width": "fill_container",
+                              "height": 32,
+                              "fill": "$ui-control",
+                              "cornerRadius": 11,
+                              "gap": 10,
+                              "padding": [
+                                0,
+                                10
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "i8Z5L",
+                                  "name": "Label",
+                                  "fill": "$ui-fg-strong",
+                                  "content": "/compact",
+                                  "fontFamily": "$font-ui",
+                                  "fontSize": 13,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "FMhVU",
+                                  "name": "Description",
+                                  "fill": "$ui-muted",
+                                  "content": "Clear history but keep a summary in context",
+                                  "fontFamily": "$font-ui",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "mlsoF",
+                              "name": "Row /context",
+                              "width": "fill_container",
+                              "height": 32,
+                              "fill": "#00000000",
+                              "cornerRadius": 11,
+                              "gap": 10,
+                              "padding": [
+                                0,
+                                10
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "rYe40",
+                                  "name": "Label",
+                                  "fill": "$ui-fg",
+                                  "content": "/context",
+                                  "fontFamily": "$font-ui",
+                                  "fontSize": 13,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "y6Ey6H",
+                                  "name": "Description",
+                                  "fill": "$ui-muted",
+                                  "content": "Visualize current context usage as a colored grid",
+                                  "fontFamily": "$font-ui",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "bz35D",
+                              "name": "Row /cost",
+                              "width": "fill_container",
+                              "height": 32,
+                              "fill": "#00000000",
+                              "cornerRadius": 11,
+                              "gap": 10,
+                              "padding": [
+                                0,
+                                10
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "aPDkx",
+                                  "name": "Label",
+                                  "fill": "$ui-fg",
+                                  "content": "/cost",
+                                  "fontFamily": "$font-ui",
+                                  "fontSize": 13,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "f5clj",
+                                  "name": "Description",
+                                  "fill": "$ui-muted",
+                                  "content": "Show the total cost and duration of the session",
+                                  "fontFamily": "$font-ui",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "tVr8I",
+                              "name": "Detail footer",
+                              "width": "fill_container",
+                              "stroke": "$ui-hairline",
+                              "strokeWidth": {
+                                "top": 1
+                              },
+                              "layout": "vertical",
+                              "gap": 4,
+                              "padding": [
+                                10,
+                                10,
+                                8,
+                                10
+                              ],
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "ZRJ9B",
+                                  "name": "Head",
+                                  "gap": 8,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "uLzgv",
+                                      "name": "Name",
+                                      "fill": "$ui-accent",
+                                      "content": "/compact",
+                                      "fontFamily": "$font-mono",
+                                      "fontSize": 12,
+                                      "fontWeight": "normal"
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "DNyUV",
+                                      "name": "Hint chip",
+                                      "fill": "$ui-sunken",
+                                      "cornerRadius": 4,
+                                      "stroke": "$ui-hairline",
+                                      "strokeWidth": 1,
+                                      "padding": [
+                                        1,
+                                        5
+                                      ],
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "wwFkm",
+                                          "name": "Hint",
+                                          "fill": "$ui-muted",
+                                          "content": "[instructions]",
+                                          "fontFamily": "$font-mono",
+                                          "fontSize": 11,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "ShzqI",
+                                  "name": "Description",
+                                  "fill": "$ui-muted",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Clear history but keep a summary in context. Pass instructions to steer what the summary keeps.",
+                                  "lineHeight": 1.45,
+                                  "fontFamily": "$font-ui",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Y1dwBq",
+                          "name": "Gap",
+                          "width": "fill_container",
+                          "height": 6
+                        },
+                        {
+                          "id": "BxB0v",
+                          "type": "ref",
+                          "ref": "gbeA2",
+                          "name": "Composer",
+                          "width": "fill_container",
+                          "cornerRadius": 20,
+                          "descendants": {
+                            "zkwWY": {
+                              "content": "/co",
+                              "fill": "$ui-fg"
+                            },
+                            "NrFZ2": {
+                              "enabled": false
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "c8wxnL",
+              "name": "Row 2",
+              "width": "fill_container",
+              "gap": 40,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "kwMas",
+                  "name": "Variant C · Aligned columns",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "f1cHf",
+                      "name": "Label",
+                      "width": "fill_container",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "W3ChLp",
+                          "name": "Letter",
+                          "width": 20,
+                          "height": 20,
+                          "fill": "$ui-control",
+                          "cornerRadius": 4,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "OdTlL",
+                              "name": "L",
+                              "fill": "$ui-fg",
+                              "content": "C",
+                              "fontFamily": "$font-ui",
+                              "fontSize": 11,
+                              "fontWeight": "700"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "MVeWw",
+                          "name": "Name",
+                          "fill": "$ui-fg-strong",
+                          "content": "Aligned columns",
+                          "fontFamily": "$font-ui",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "xgQpy",
+                      "name": "Description",
+                      "fill": "$ui-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Names in a mono column so descriptions line up and scan like a man page. The detail card shrinks to a footer line: the full usage on the left, keys on the right.",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$font-ui",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Cl1J1",
+                      "name": "Stage",
+                      "width": "fill_container",
+                      "fill": "#1E222780",
+                      "cornerRadius": 12,
+                      "stroke": "$ui-hairline",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "gap": 6,
+                      "padding": [
+                        24,
+                        20,
+                        20,
+                        20
+                      ],
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "p7UfL",
+                          "name": "Card",
+                          "clip": true,
+                          "width": "fill_container",
+                          "fill": "$ui-raised",
+                          "cornerRadius": 12,
+                          "stroke": "$ui-border",
+                          "strokeWidth": 1,
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000059",
+                            "offset": {
+                              "x": 0,
+                              "y": 10
+                            },
+                            "blur": 28
+                          },
+                          "layout": "vertical",
+                          "padding": [
+                            4,
+                            0,
+                            0,
+                            0
+                          ],
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "GYw4I",
+                              "name": "Row /clear",
+                              "width": "fill_container",
+                              "height": 30,
+                              "fill": "#00000000",
+                              "gap": 12,
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "PeJpq",
+                                  "name": "Name column",
+                                  "width": 120,
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "Xcj30",
+                                      "name": "Label",
+                                      "fill": "$ui-fg",
+                                      "content": "/clear",
+                                      "fontFamily": "$font-mono",
+                                      "fontSize": 12.5,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "ESRfe",
+                                  "name": "Description",
+                                  "fill": "$ui-muted",
+                                  "content": "Clear conversation history and free up context",
+                                  "fontFamily": "$font-ui",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "X8xyF",
+                              "name": "Row /code-review",
+                              "width": "fill_container",
+                              "height": 30,
+                              "fill": "#00000000",
+                              "gap": 12,
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "gB00c",
+                                  "name": "Name column",
+                                  "width": 120,
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "xz9tQ",
+                                      "name": "Label",
+                                      "fill": "$ui-fg",
+                                      "content": "/code-review",
+                                      "fontFamily": "$font-mono",
+                                      "fontSize": 12.5,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "S5A77",
+                                  "name": "Description",
+                                  "fill": "$ui-muted",
+                                  "content": "Review the current diff for correctness bugs",
+                                  "fontFamily": "$font-ui",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "IxWuo",
+                              "name": "Row /commit",
+                              "width": "fill_container",
+                              "height": 30,
+                              "fill": "#00000000",
+                              "gap": 12,
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "NEMIl",
+                                  "name": "Name column",
+                                  "width": 120,
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "V8Qg4",
+                                      "name": "Label",
+                                      "fill": "$ui-fg",
+                                      "content": "/commit",
+                                      "fontFamily": "$font-mono",
+                                      "fontSize": 12.5,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "ZQw1W",
+                                  "name": "Description",
+                                  "fill": "$ui-muted",
+                                  "content": "Create a git commit from the staged changes",
+                                  "fontFamily": "$font-ui",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "UaHie",
+                              "name": "Row /compact",
+                              "width": "fill_container",
+                              "height": 30,
+                              "fill": "$ui-control",
+                              "stroke": "$ui-accent",
+                              "strokeWidth": {
+                                "left": 2
+                              },
+                              "gap": 12,
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "JqdyT",
+                                  "name": "Name column",
+                                  "width": 120,
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "tiwUf",
+                                      "name": "Label",
+                                      "fill": "$ui-accent",
+                                      "content": "/compact",
+                                      "fontFamily": "$font-mono",
+                                      "fontSize": 12.5,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "Jhyb4",
+                                  "name": "Description",
+                                  "fill": "$ui-muted",
+                                  "content": "Clear history but keep a summary in context",
+                                  "fontFamily": "$font-ui",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "xX3O0",
+                              "name": "Row /context",
+                              "width": "fill_container",
+                              "height": 30,
+                              "fill": "#00000000",
+                              "gap": 12,
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "VrywE",
+                                  "name": "Name column",
+                                  "width": 120,
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "Y7Yw8K",
+                                      "name": "Label",
+                                      "fill": "$ui-fg",
+                                      "content": "/context",
+                                      "fontFamily": "$font-mono",
+                                      "fontSize": 12.5,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "T3SIk",
+                                  "name": "Description",
+                                  "fill": "$ui-muted",
+                                  "content": "Visualize current context usage as a colored grid",
+                                  "fontFamily": "$font-ui",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "rvmV3",
+                              "name": "Row /cost",
+                              "width": "fill_container",
+                              "height": 30,
+                              "fill": "#00000000",
+                              "gap": 12,
+                              "padding": [
+                                0,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "v1LOou",
+                                  "name": "Name column",
+                                  "width": 120,
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "TYezQ",
+                                      "name": "Label",
+                                      "fill": "$ui-fg",
+                                      "content": "/cost",
+                                      "fontFamily": "$font-mono",
+                                      "fontSize": 12.5,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "MVRcg",
+                                  "name": "Description",
+                                  "fill": "$ui-muted",
+                                  "content": "Show the total cost and duration of the session",
+                                  "fontFamily": "$font-ui",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "O3Fpl",
+                              "name": "Footer line",
+                              "width": "fill_container",
+                              "fill": "$ui-sunken",
+                              "stroke": "$ui-hairline",
+                              "strokeWidth": {
+                                "top": 1
+                              },
+                              "gap": 16,
+                              "padding": [
+                                7,
+                                12
+                              ],
+                              "justifyContent": "space_between",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "f0eGZ",
+                                  "name": "Usage",
+                                  "gap": 6,
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "S4Haph",
+                                      "name": "Name",
+                                      "fill": "$ui-fg",
+                                      "content": "/compact",
+                                      "fontFamily": "$font-mono",
+                                      "fontSize": 11.5,
+                                      "fontWeight": "normal"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "YP05g",
+                                      "name": "Args",
+                                      "fill": "$ui-muted",
+                                      "content": "[instructions]",
+                                      "fontFamily": "$font-mono",
+                                      "fontSize": 11.5,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "itXCB",
+                                  "name": "Keys",
+                                  "gap": 12,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "u4mvg",
+                                      "name": "Key move",
+                                      "gap": 5,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "E0QXA",
+                                          "name": "Cap",
+                                          "fill": "$ui-control",
+                                          "cornerRadius": 4,
+                                          "padding": [
+                                            1,
+                                            5
+                                          ],
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "JR8gz",
+                                              "name": "K",
+                                              "fill": "$ui-fg",
+                                              "content": "↑↓",
+                                              "fontFamily": "$font-ui",
+                                              "fontSize": 10,
+                                              "fontWeight": "600"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "cCVVM",
+                                          "name": "T",
+                                          "fill": "$ui-muted",
+                                          "content": "move",
+                                          "fontFamily": "$font-ui",
+                                          "fontSize": 11,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "cqrQQ",
+                                      "name": "Key insert",
+                                      "gap": 5,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "w4769",
+                                          "name": "Cap",
+                                          "fill": "$ui-control",
+                                          "cornerRadius": 4,
+                                          "padding": [
+                                            1,
+                                            5
+                                          ],
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "n5WXK",
+                                              "name": "K",
+                                              "fill": "$ui-fg",
+                                              "content": "⇥",
+                                              "fontFamily": "$font-ui",
+                                              "fontSize": 10,
+                                              "fontWeight": "600"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "KurLv",
+                                          "name": "T",
+                                          "fill": "$ui-muted",
+                                          "content": "insert",
+                                          "fontFamily": "$font-ui",
+                                          "fontSize": 11,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "kVRNL",
+                                      "name": "Key close",
+                                      "gap": 5,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "DmBwV",
+                                          "name": "Cap",
+                                          "fill": "$ui-control",
+                                          "cornerRadius": 4,
+                                          "padding": [
+                                            1,
+                                            5
+                                          ],
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "nGwF0",
+                                              "name": "K",
+                                              "fill": "$ui-fg",
+                                              "content": "esc",
+                                              "fontFamily": "$font-ui",
+                                              "fontSize": 10,
+                                              "fontWeight": "600"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "iUFGl",
+                                          "name": "T",
+                                          "fill": "$ui-muted",
+                                          "content": "close",
+                                          "fontFamily": "$font-ui",
+                                          "fontSize": 11,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "k5AqK",
+                          "name": "Gap",
+                          "width": "fill_container",
+                          "height": 6
+                        },
+                        {
+                          "id": "c1jchf",
+                          "type": "ref",
+                          "ref": "gbeA2",
+                          "name": "Composer",
+                          "width": "fill_container",
+                          "cornerRadius": 20,
+                          "descendants": {
+                            "zkwWY": {
+                              "content": "/co",
+                              "fill": "$ui-fg"
+                            },
+                            "NrFZ2": {
+                              "enabled": false
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "LSlp0",
+                  "name": "Variant D · Inline detail",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "c5sCp",
+                      "name": "Label",
+                      "width": "fill_container",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "cKNID",
+                          "name": "Letter",
+                          "width": 20,
+                          "height": 20,
+                          "fill": "$ui-control",
+                          "cornerRadius": 4,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "JgrmW",
+                              "name": "L",
+                              "fill": "$ui-fg",
+                              "content": "D",
+                              "fontFamily": "$font-ui",
+                              "fontSize": 11,
+                              "fontWeight": "700"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "q5Flyy",
+                          "name": "Name",
+                          "fill": "$ui-fg-strong",
+                          "content": "Inline detail",
+                          "fontFamily": "$font-ui",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "daEI4",
+                      "name": "Description",
+                      "fill": "$ui-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "No detail card. Rows are compact; the highlighted row opens in place: hint chip beside the name, the full description wrapped under it.",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$font-ui",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "N70Fg",
+                      "name": "Stage",
+                      "width": "fill_container",
+                      "fill": "#1E222780",
+                      "cornerRadius": 12,
+                      "stroke": "$ui-hairline",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "gap": 6,
+                      "padding": [
+                        24,
+                        20,
+                        20,
+                        20
+                      ],
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "pHy10",
+                          "name": "Card",
+                          "width": "fill_container",
+                          "fill": "$ui-raised",
+                          "cornerRadius": 12,
+                          "stroke": "$ui-border",
+                          "strokeWidth": 1,
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000059",
+                            "offset": {
+                              "x": 0,
+                              "y": 10
+                            },
+                            "blur": 28
+                          },
+                          "layout": "vertical",
+                          "padding": 4,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "oapXd",
+                              "name": "Row /clear",
+                              "width": "fill_container",
+                              "height": 28,
+                              "cornerRadius": 8,
+                              "gap": 10,
+                              "padding": [
+                                0,
+                                10
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "SgR6u",
+                                  "name": "Label",
+                                  "fill": "$ui-fg",
+                                  "content": "/clear",
+                                  "fontFamily": "$font-ui",
+                                  "fontSize": 13,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "q8sArv",
+                                  "name": "Description",
+                                  "fill": "$ui-muted",
+                                  "content": "Clear conversation history and free up context",
+                                  "fontFamily": "$font-ui",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "P1WmJ",
+                              "name": "Row /code-review",
+                              "width": "fill_container",
+                              "height": 28,
+                              "cornerRadius": 8,
+                              "gap": 10,
+                              "padding": [
+                                0,
+                                10
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "IVKte",
+                                  "name": "Label",
+                                  "fill": "$ui-fg",
+                                  "content": "/code-review",
+                                  "fontFamily": "$font-ui",
+                                  "fontSize": 13,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "mji1y",
+                                  "name": "Description",
+                                  "fill": "$ui-muted",
+                                  "content": "Review the current diff for correctness bugs",
+                                  "fontFamily": "$font-ui",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "YKZoV",
+                              "name": "Row /commit",
+                              "width": "fill_container",
+                              "height": 28,
+                              "cornerRadius": 8,
+                              "gap": 10,
+                              "padding": [
+                                0,
+                                10
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "q8hSmv",
+                                  "name": "Label",
+                                  "fill": "$ui-fg",
+                                  "content": "/commit",
+                                  "fontFamily": "$font-ui",
+                                  "fontSize": 13,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "SrBXa",
+                                  "name": "Description",
+                                  "fill": "$ui-muted",
+                                  "content": "Create a git commit from the staged changes",
+                                  "fontFamily": "$font-ui",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "xhWBE",
+                              "name": "Row /compact (open)",
+                              "width": "fill_container",
+                              "fill": "$ui-control",
+                              "cornerRadius": 8,
+                              "layout": "vertical",
+                              "gap": 4,
+                              "padding": [
+                                8,
+                                10
+                              ],
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "o2iSx",
+                                  "name": "Head",
+                                  "gap": 8,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "h4AyD",
+                                      "name": "Label",
+                                      "fill": "$ui-fg-strong",
+                                      "content": "/compact",
+                                      "fontFamily": "$font-ui",
+                                      "fontSize": 13,
+                                      "fontWeight": "500"
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "sFAje",
+                                      "name": "Hint chip",
+                                      "fill": "$ui-sunken",
+                                      "cornerRadius": 4,
+                                      "stroke": "$ui-hairline",
+                                      "strokeWidth": 1,
+                                      "padding": [
+                                        1,
+                                        5
+                                      ],
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "u1UFnY",
+                                          "name": "Hint",
+                                          "fill": "$ui-muted",
+                                          "content": "[instructions]",
+                                          "fontFamily": "$font-mono",
+                                          "fontSize": 11,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "bpz8B",
+                                  "name": "Description",
+                                  "fill": "$ui-muted",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Clear history but keep a summary in context. Pass instructions to steer what the summary keeps.",
+                                  "lineHeight": 1.45,
+                                  "fontFamily": "$font-ui",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "yiwsG",
+                              "name": "Row /context",
+                              "width": "fill_container",
+                              "height": 28,
+                              "cornerRadius": 8,
+                              "gap": 10,
+                              "padding": [
+                                0,
+                                10
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "xzBfW",
+                                  "name": "Label",
+                                  "fill": "$ui-fg",
+                                  "content": "/context",
+                                  "fontFamily": "$font-ui",
+                                  "fontSize": 13,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "kScYk",
+                                  "name": "Description",
+                                  "fill": "$ui-muted",
+                                  "content": "Visualize current context usage as a colored grid",
+                                  "fontFamily": "$font-ui",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "ubozY",
+                              "name": "Row /cost",
+                              "width": "fill_container",
+                              "height": 28,
+                              "cornerRadius": 8,
+                              "gap": 10,
+                              "padding": [
+                                0,
+                                10
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "c6rQJ8",
+                                  "name": "Label",
+                                  "fill": "$ui-fg",
+                                  "content": "/cost",
+                                  "fontFamily": "$font-ui",
+                                  "fontSize": 13,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "oRFNY",
+                                  "name": "Description",
+                                  "fill": "$ui-muted",
+                                  "content": "Show the total cost and duration of the session",
+                                  "fontFamily": "$font-ui",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "l7ONzX",
+                          "name": "Gap",
+                          "width": "fill_container",
+                          "height": 6
+                        },
+                        {
+                          "id": "Bw2Ge",
+                          "type": "ref",
+                          "ref": "gbeA2",
+                          "name": "Composer",
+                          "width": "fill_container",
+                          "cornerRadius": 20,
+                          "descendants": {
+                            "zkwWY": {
+                              "content": "/co",
+                              "fill": "$ui-fg"
+                            },
+                            "NrFZ2": {
+                              "enabled": false
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ],
   "variables": {

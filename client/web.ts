@@ -36,6 +36,7 @@ interface DomElement {
   scrollBy(options: { top: number }): void;
   appendChild(el: DomElement): void;
   insertAdjacentElement(where: "afterend" | "beforeend", el: DomElement): void;
+  insertAdjacentHTML(where: "beforeend", html: string): void;
   click(): void;
   cloneNode(deep: true): DomElement;
   getBoundingClientRect(): { top: number; left: number; right: number; bottom: number; width: number; height: number };
@@ -489,8 +490,36 @@ const MSG = ':is([data-testid="assistant-message"], [data-cp-plan-md])';
 const ROW = ':is([data-testid="tool-call-group"], [data-testid="tool-call-badge"])';
 const ROW_ICON = `${ROW} > button > div > div:first-child`;
 const mask = (paths: string) => `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`)}")`;
+// Icon sets the daemon has sent (getIconSet): Lucide name → the twin's 24px SVG markup.
+const iconSets: Record<string, Record<string, string>> = {};
+const iconSetListeners = new Set<() => void>();
+export const iconTwins = (set: string): Record<string, string> | undefined => iconSets[set];
+export const subscribeIconSets = (listener: () => void) => (iconSetListeners.add(listener), () => void iconSetListeners.delete(listener));
+// A Lucide mask as a CSS var that the Icon set pref (data-cp-rt-icons on <html>) swaps for its twin once the set arrives.
+const ICON_VARS: string[] = [];
+const MASK_NAMES: string[] = [];
+let iconSetStyle: DomElement | undefined;
+const icon = (name: string, paths: string) => {
+  ICON_VARS.push(`:root { --cp-i-${name}: ${mask(paths)}; }`);
+  MASK_NAMES.push(name);
+  return `var(--cp-i-${name})`;
+};
+
+/** Keeps a set the daemon sent: its masks join the CSS vars, and Paseo's icons and the plugin's redraw with it. */
+export function addIconSet(set: string, twins: Record<string, string>) {
+  iconSets[set] = twins;
+  if (Platform.OS === "web" && typeof document !== "undefined") {
+    if (!iconSetStyle) {
+      iconSetStyle = document.createElement("style");
+      document.head.appendChild(iconSetStyle);
+    }
+    const vars = MASK_NAMES.filter((name) => twins[name]).map((name) => `--cp-i-${name}: ${mask(twins[name]!)};`);
+    iconSetStyle.textContent += `:root[data-cp-rt-icons="${set}"] { ${vars.join(" ")} }\n`;
+  }
+  iconSetListeners.forEach((listener) => listener());
+}
 // Shown when a row was first drawn open, so its own icon was never seen.
-const WRENCH_MASK = mask('<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>');
+const WRENCH_MASK = icon("Wrench", '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>');
 const THUMBS = `:root:not([data-cp-rt-images="native"]) ${MSG} [data-paseo-markdown-tag="img"]`;
 // Parts Paseo marks only through a child, and containers whose every descendant is restyled, are tagged by tagParts.
 // :has(), and "X *" where X is only known by data-testid (on nearly every ancestor), re-match the whole timeline
@@ -568,7 +597,7 @@ ${L("snake")} > i { animation: cp-snake 1.35s linear infinite; animation-delay: 
 @keyframes cp-snake { 0% { opacity: 1; } 33% { opacity: 0.35; } 55%, 100% { opacity: 0.12; } }
 @media (prefers-reduced-motion: reduce) { [data-cp-loader] > i, [data-cp-loader]::before { animation: none !important; } }`;
 
-const CLOCK_MASK = `url("data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16.5 12"/></svg>')}")`;
+const CLOCK_MASK = icon("Clock", '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16.5 12"/>');
 // Paseo renders a popover once hidden (inline opacity 0, or parked at -9999px) to measure it, then places it. Animating
 // that first frame would override the hiding and flash the popover in the window corner, so motion starts once placed.
 // On close, the context card is swapped for an exit copy without its FadeIn; animating that copy made it blink, so only
@@ -1522,9 +1551,7 @@ function tagParts(roots: DomElement[]) {
     if (svg.querySelector('path[d="m9 18 6-6-6-6"]')) slot.setAttribute("data-cp-chev", "");
     else {
       slot.removeAttribute("data-cp-chev");
-      // Some of Paseo's icons (its own logo) omit xmlns, without which an SVG image doesn't render.
-      const markup = svg.outerHTML.replace(/^<svg(?![^>]*\sxmlns=)/, '<svg xmlns="http://www.w3.org/2000/svg"');
-      slot.style.setProperty("--cp-row-icon", `url("data:image/svg+xml,${encodeURIComponent(markup)}")`);
+      slot.style.setProperty("--cp-row-icon", rowIconMask(svg));
     }
   }
   // The context card's percent is plain text ("35% used"); the redesign draws it large, with a bar.
@@ -1683,12 +1710,12 @@ export function setRichText(choices: Record<string, string>) {
   }
 }
 
-const INFO_MASK = mask('<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>');
-const ALERT_MASK = mask('<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>');
-const TIP_MASK = mask('<path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/>');
-const CHECK_MASK = mask('<path d="M20 6 9 17l-5-5"/>');
-const IMPORTANT_MASK = mask('<path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"/><path d="M12 15h.01"/><path d="M12 7v4"/>');
-const CAUTION_MASK = mask('<path d="M12 16h.01"/><path d="M12 8v4"/><path d="M15.312 2a2 2 0 0 1 1.414.586l4.688 4.688A2 2 0 0 1 22 8.688v6.624a2 2 0 0 1-.586 1.414l-4.688 4.688a2 2 0 0 1-1.414.586H8.688a2 2 0 0 1-1.414-.586l-4.688-4.688A2 2 0 0 1 2 15.312V8.688a2 2 0 0 1 .586-1.414l4.688-4.688A2 2 0 0 1 8.688 2z"/>');
+const INFO_MASK = icon("Info", '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>');
+const ALERT_MASK = icon("TriangleAlert", '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>');
+const TIP_MASK = icon("Lightbulb", '<path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/>');
+const CHECK_MASK = icon("Check", '<path d="M20 6 9 17l-5-5"/>');
+const IMPORTANT_MASK = icon("MessageSquareWarning", '<path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"/><path d="M12 15h.01"/><path d="M12 7v4"/>');
+const CAUTION_MASK = icon("OctagonAlert", '<path d="M12 16h.01"/><path d="M12 8v4"/><path d="M15.312 2a2 2 0 0 1 1.414.586l4.688 4.688A2 2 0 0 1 22 8.688v6.624a2 2 0 0 1-.586 1.414l-4.688 4.688a2 2 0 0 1-1.414.586H8.688a2 2 0 0 1-1.414-.586l-4.688-4.688A2 2 0 0 1 2 15.312V8.688a2 2 0 0 1 .586-1.414l4.688-4.688A2 2 0 0 1 8.688 2z"/>');
 
 const RT = (element: string, variant: string) => `:root[data-cp-rt-${element}="${variant}"] ${MSG}`;
 const QUOTE = `${md("blockquote")}:not([data-cp-callout])`;
@@ -1865,7 +1892,7 @@ export function restyleNative(enabled: () => boolean, pele?: PeleDiagrams) {
       if (!enabled()) return off();
       if (!style) {
         style = document.createElement("style");
-        style.textContent = NATIVE_CSS + RICH_TEXT_CSS + MODEL_SELECTOR_CSS;
+        style.textContent = NATIVE_CSS + RICH_TEXT_CSS + MODEL_SELECTOR_CSS + ICON_VARS.join("\n");
         document.head.appendChild(style);
         const sheet = (style as unknown as { sheet?: { cssRules: ArrayLike<CssRuleLike> } }).sheet;
         if (sheet) guardRules(sheet.cssRules);
@@ -1893,6 +1920,73 @@ export function restyleNative(enabled: () => boolean, pele?: PeleDiagrams) {
   return () => {
     stop();
     unthemeMermaid();
+  };
+}
+
+/** A row icon as a mask; a swapped icon leaves out the Lucide shapes it hides. */
+function rowIconMask(svg: DomElement) {
+  let markup = svg.outerHTML;
+  if (svg.hasAttribute(UUI)) {
+    const copy = svg.cloneNode(true);
+    for (const child of Array.from(copy.children)) if (!child.hasAttribute(UUI)) child.remove();
+    markup = copy.outerHTML;
+  }
+  // Some of Paseo's icons (its own logo) omit xmlns, without which an SVG image doesn't render.
+  markup = markup.replace(/^<svg(?![^>]*\sxmlns=)/, '<svg xmlns="http://www.w3.org/2000/svg"');
+  return `url("data:image/svg+xml,${encodeURIComponent(markup)}")`;
+}
+
+const UUI = "data-cp-uui";
+// Lucide's shapes are hidden rather than removed: React still owns them and would fail to remove a missing child.
+const UUI_CSS = ["path", "circle", "rect", "line", "polyline", "polygon", "ellipse"].map((tag) => `svg[${UUI}] > ${tag}`).join(", ") + " { display: none; }";
+// "lucide-folder-git-2" → "FolderGit2"
+const lucideName = (svg: DomElement) => (svg.getAttribute("class") ?? "").match(/\blucide-([a-z0-9-]+)/)?.[1]?.replace(/(?:^|-)([a-z0-9])/g, (_, c: string) => c.toUpperCase());
+
+/** Paseo's own Lucide icons (`svg.lucide-<name>`) drawn with their twin in the chosen icon set once it has arrived;
+ * icons without one, and "lucide", stay Lucide. */
+export function nativeIconSet(chosen: () => string) {
+  if (Platform.OS !== "web" || typeof document === "undefined") return () => {};
+  let style: DomElement | undefined;
+  let shown = "lucide";
+  const current = () => (iconSets[chosen()] ? chosen() : "lucide");
+  const swap = (svg: DomElement, set: string) => {
+    const from = svg.getAttribute(UUI) ?? "lucide";
+    const paths = iconSets[set]?.[lucideName(svg) ?? ""];
+    if (from === (paths ? set : "lucide")) return;
+    svg.querySelector(`g[${UUI}]`)?.remove();
+    svg.removeAttribute(UUI);
+    if (paths) {
+      svg.insertAdjacentHTML("beforeend", `<g ${UUI}="">${paths}</g>`);
+      svg.setAttribute(UUI, set);
+    }
+    const slot = svg.closest(ROW_ICON);
+    if (slot && !slot.hasAttribute("data-cp-chev")) slot.style.setProperty("--cp-row-icon", rowIconMask(svg));
+  };
+  const sync = (roots: DomElement[]) => {
+    const set = current();
+    if (set !== shown) {
+      shown = set;
+      if (set === "lucide") {
+        style?.remove();
+        style = undefined;
+      } else if (!style) {
+        style = document.createElement("style");
+        style.textContent = UUI_CSS;
+        document.head.appendChild(style);
+      }
+      roots = [document.body as DomElement];
+    }
+    if (set !== "lucide" || roots[0] === document.body) for (const svg of within(roots, "svg.lucide")) swap(svg, set);
+  };
+  // Settled catches a pref change that added nothing new; a set arriving redraws too.
+  const unsubscribe = subscribeIconSets(() => sync([]));
+  const stop = watchDom({ added: sync, settled: () => current() !== shown && sync([]) }, () => {
+    for (const svg of Array.from(document.querySelectorAll(`svg[${UUI}]`))) swap(svg, "lucide");
+    style?.remove();
+  });
+  return () => {
+    unsubscribe();
+    stop();
   };
 }
 

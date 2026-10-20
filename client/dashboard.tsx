@@ -1,12 +1,13 @@
 import type { PluginTheme } from "@getpaseo/plugin";
 import { useRpc, useSettings, type PluginScreenProps } from "@getpaseo/plugin/client";
-import { Icon, ScrollView, TextInput } from "@getpaseo/plugin/client/react-native";
+import { ScrollView, TextInput } from "@getpaseo/plugin/client/react-native";
 import type { AgentTimelineItem } from "@getpaseo/protocol/agent-types";
 import { useEffect, useMemo, useState, type ComponentProps, type CSSProperties, type ReactNode } from "react";
 import { ActivityIndicator, Image, Linking, Platform, Pressable, StyleSheet, Text, View, type DimensionValue, type LayoutChangeEvent } from "react-native";
 import { contrast, isHex, PRESETS, THEME_CATALOG_ID, themeSchema, themeSettings, TOKEN_ROLES, TOKENS, type ThemeDraft, type Token } from "../shared/theme";
 import { HIDEABLE, ICON_KINDS, LOADERS, prefsSettings, RICH_TEXT, type Hideable, type IconKind, type Loader, type Prefs, type RichText } from "../shared/timeline";
 import { applyUpdate, checkUpdate, type UpdateStatus } from "../shared/update";
+import { Icon } from "./icons";
 import { APP_ICON } from "./mark";
 import { hideableKind, todoData, toolData } from "./model";
 import { setTodoChanges } from "./steps";
@@ -1129,6 +1130,20 @@ function PrefsEditor({ theme, page, prefs, onChange }: { theme: PluginTheme; pag
                 ["compact", "", "Compact"],
                 ["normal", "", "Normal"],
                 ["spacious", "", "Spacious"],
+              ]}
+            />
+          </Row>
+        </Group>
+        <Group theme={theme} title="Icons">
+          <Row theme={theme} first stacked label="Icon set" hint="Paseo’s icons too; any without a twin stay Lucide. Desktop and web.">
+            <Segmented
+              theme={theme}
+              value={prefs.iconSet}
+              onChange={set("iconSet")}
+              options={[
+                ["lucide", "", "Lucide", true],
+                ["untitled", "", "Untitled UI"],
+                ["hugeicons", "", "Hugeicons"],
               ]}
             />
           </Row>

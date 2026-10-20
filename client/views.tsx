@@ -1,6 +1,6 @@
 import type { PluginTheme } from "@getpaseo/plugin";
 import { useAgent, useRpc, type PluginTimelineItemProps } from "@getpaseo/plugin/client";
-import { Icon, ScrollView, useRevealedText } from "@getpaseo/plugin/client/react-native";
+import { ScrollView, useRevealedText } from "@getpaseo/plugin/client/react-native";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { AccessibilityInfo, Animated, Easing, Image, LayoutAnimation, Modal, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View, type StyleProp, type TextStyle, type ViewStyle } from "react-native";
 import type { AgentTimelineItem } from "@getpaseo/protocol/agent-types";
@@ -13,6 +13,7 @@ import { todoData, toolData, type imagesSchema, type noticeSchema, type planSche
 import { changesOfTodo, runOf, runVersion, stepKey, stepSummary, subscribeRun, type TaskChange } from "./steps";
 import { contrast, isHex } from "../shared/theme";
 import { highlight, highlightShell, highlightShellBlock, SYNTAX_THEMES, type Span, type SyntaxColors } from "./highlight";
+import { Icon } from "./icons";
 import { usePrefs } from "./prefs";
 import { useCurrentTheme } from "./theme-registry";
 import { followExpansionAtBottom, readHostAppearance, type HostAppearance } from "./web";
@@ -1075,7 +1076,7 @@ export function RecapItem({ item, theme }: PluginTimelineItemProps<Recap>) {
                 <Text {...PMONO} numberOfLines={1} style={[mono, { flexShrink: 1 }]} selectable>
                   {f.command}
                 </Text>
-                {f.exit ? <Text {...PMONO} style={[mono, { color: c.statusDanger }]}>exit {f.exit}</Text> : null}
+                {f.exit ? <Text {...PMONO} numberOfLines={1} style={[mono, { flexShrink: 0, color: c.statusDanger }]}>exit {f.exit}</Text> : null}
               </View>
             ))}
           </View>

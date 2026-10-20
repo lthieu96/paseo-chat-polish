@@ -15,6 +15,9 @@ const shown = z.enum(["show", "hide"]).default("show");
 export const LOADERS = ["dots", "sparkle", "spokes", "dotring", "orb", "matrix", "snake"] as const;
 export type Loader = (typeof LOADERS)[number];
 
+/** Icon sets beside Lucide; the daemon downloads each from its npm package the first time it's picked (server/icons.ts). */
+export const ICON_SETS = ["untitled", "hugeicons"] as const;
+
 /** Rows whose leading icon can be hidden. */
 export const ICON_KINDS = ["steps", "tool", "thought"] as const;
 export type IconKind = (typeof ICON_KINDS)[number];
@@ -49,6 +52,9 @@ export const prefsSchema = z.object({
   ),
   /** Each run of thoughts and tool calls between two replies folded into one row that opens to the steps (desktop and web). */
   merge: z.enum(["on", "off"]).default("on"),
+  /** Every icon, Paseo's own and the plugin's: Lucide (Paseo's set), or Untitled UI or Hugeicons wherever they have a twin (desktop and web).
+   * An unknown saved set falls back to Lucide. */
+  iconSet: z.enum(["lucide", ...ICON_SETS]).catch("lucide"),
   /** The working indicator in the turn footer: Paseo's six dots (animated smoothly) or another loader, and its size (14, 16 or 18pt).
    * Desktop and web, with Paseo's own items restyled. */
   loader: z.enum(LOADERS).default("dots"),
@@ -71,3 +77,6 @@ export const prefsSettings = defineSettings({ id: "timeline", scope: "host", ver
 
 /** Lets the client entry fetch saved prefs before the first timeline row renders. */
 export const getPrefs = defineRpc({ name: "prefs.get", input: z.object({}), output: prefsSchema });
+
+/** One icon set's twins, Lucide name → 24px SVG markup, fetched when the Icon set pref picks it. */
+export const getIconSet = defineRpc({ name: "icons.get", input: z.object({ set: z.enum(ICON_SETS) }), output: z.record(z.string(), z.string()) });

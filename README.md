@@ -13,6 +13,7 @@ A [Paseo](https://paseo.sh) plugin that redraws the agent chat as one quiet colu
 - **Rich text styles.** Three or four looks each for quotes, tables, code blocks, inline code, headings, lists, callouts and rules.
 - **Diagrams.** Mermaid diagrams drawn by [Pele](https://pele.run) in the theme's colors, or by Paseo's mermaid with the same chart colors. Switch on the Rich text page, which previews both.
 - **Working indicator.** Paseo's dots, or a sparkle, spokes, dot ring, orb, matrix or snake loader.
+- **Icon sets.** Paseo's Lucide icons, or Untitled UI or Hugeicons ones across the app (desktop and web). Icons without a twin stay Lucide.
 - **Extras.** Turn recaps, ⌥⌘↑/↓ to jump between your prompts, and Command Center (⌘K) toggles.
 
 ![Merged steps, a diff and a shell run in the chat](images/chat.png)
@@ -99,6 +100,8 @@ To update the Paseo Registry listing, submit the new GitHub tag as a revision th
 - Fonts, theme picks and the restyle write Paseo's own settings and DOM, which aren't a public API and may change.
 - Previews of Paseo's built-in themes and font stacks are copied from Paseo 0.11.2 and can drift in later versions.
 - Plain tool rows need Settings → Appearance → Tool call display set to Detailed; Summary keeps Paseo's grouped calls.
+- Icon sets swap Paseo's icons by their `lucide-*` class; icons Paseo adds later fall back to Lucide until they are mapped.
+- Picking an icon set the first time needs internet (about a second); until it arrives, and offline, icons stay Lucide.
 - Pele lays diagrams out its own way and labels them in Helvetica/Arial. Mermaid's user journey keeps its own actor colors.
 
 ## Develop
@@ -115,4 +118,7 @@ Designs live in `design/dashboard.pen` (open it with [pen.dev](https://pen.dev))
 
 ## License
 
-MIT
+MIT. The icon sets aren't part of this repository or the install: the first time you pick one, the daemon downloads that set's official npm package, checks it against a pinned hash and keeps only the icons it maps (`server/icons.ts`).
+
+- [Hugeicons](https://hugeicons.com) free icons (`@iconify-json/hugeicons`), MIT.
+- [Untitled UI](https://www.untitledui.com/icons) icons (`@untitledui/icons`), under the [Untitled UI license](https://www.untitledui.com/license).

@@ -5,7 +5,8 @@ import { renderDiagram } from "./shared/diagram";
 import { readImage } from "./shared/image";
 import { recapData } from "./shared/recap";
 import { getTheme, themeSchema, themeSettings } from "./shared/theme";
-import { getPrefs, prefsSchema, prefsSettings } from "./shared/timeline";
+import { getIconSet, getPrefs, prefsSchema, prefsSettings } from "./shared/timeline";
+import { loadIconSet } from "./server/icons";
 import { applyUpdate, checkUpdate } from "./shared/update";
 import { checkForUpdate, installUpdate } from "./server/update";
 
@@ -22,6 +23,7 @@ export default function contribute(server: PluginServerContext) {
     const current = await prefs.read();
     return current.status === "ready" ? current.values : prefsSchema.parse({});
   });
+  server.handle(getIconSet, ({ set }) => loadIconSet(set));
   server.handle(checkUpdate, checkForUpdate);
   server.handle(applyUpdate, installUpdate);
   server.on("agent.turn_ended", async (event, { paseo }) => {
