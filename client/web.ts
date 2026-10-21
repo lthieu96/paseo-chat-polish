@@ -45,7 +45,7 @@ declare const document: {
   documentElement: DomElement;
   querySelector(selector: string): DomElement | null;
   querySelectorAll(selector: string): ArrayLike<DomElement>;
-  createElement(tag: "style" | "div" | "span" | "button"): DomElement;
+  createElement(tag: "style" | "div" | "span" | "button" | "iframe"): DomElement;
   createElement(tag: "canvas"): { getContext(kind: "2d", options: { willReadFrequently: boolean }): Canvas2d | null };
   addEventListener(type: "click", listener: (event: { target: unknown; clientX: number; clientY: number }) => void, capture?: boolean): void;
   removeEventListener(type: "click", listener: (event: { target: unknown; clientX: number; clientY: number }) => void, capture?: boolean): void;
@@ -598,6 +598,7 @@ ${L("snake")} > i { animation: cp-snake 1.35s linear infinite; animation-delay: 
 @media (prefers-reduced-motion: reduce) { [data-cp-loader] > i, [data-cp-loader]::before { animation: none !important; } }`;
 
 const CLOCK_MASK = icon("Clock", '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16.5 12"/>');
+const REDRAW_MASK = icon("RefreshCw", '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>');
 // Paseo renders a popover once hidden (inline opacity 0, or parked at -9999px) to measure it, then places it. Animating
 // that first frame would override the hiding and flash the popover in the window corner, so motion starts once placed.
 // On close, the context card is swapped for an exit copy without its FadeIn; animating that copy made it blink, so only
@@ -945,6 +946,17 @@ ${CODE_BLOCK} :is(div, span) { line-height: 1.5 !important; }
 [data-cp-part="diagram-toggle"] { right: 34px !important; opacity: 0.6; }
 [data-cp-part="diagram-toggle"]:hover { opacity: 1; }
 :root:not([data-cp-rt-code="b"]):not([data-cp-rt-code="c"]) [data-cp-part="diagram-toggle"] { top: 5px !important; }
+/* Redraw (redrawDiagram) takes the toggle's spot; when Paseo adds its toggle after it, the toggle moves one further left. */
+[data-cp-redraw] { position: absolute; top: 8px; right: 34px; width: 22px; height: 22px; padding: 0; border: 0; cursor: pointer; opacity: 0.6; background-color: var(--cp-muted); -webkit-mask: ${REDRAW_MASK} center / 14px no-repeat; mask: ${REDRAW_MASK} center / 14px no-repeat; }
+:root:not([data-cp-rt-code="b"]):not([data-cp-rt-code="c"]) [data-cp-redraw] { top: 5px; }
+[data-cp-redraw]:hover { opacity: 1; }
+[data-cp-redraw="failed"] { background-color: var(--cp-warn); opacity: 1; }
+[data-cp-part="diagram-toggle"] ~ [data-cp-redraw], [data-cp-redrawn] > :is([data-paseo-markdown-language], [data-cp-redraw], [data-cp-part="diagram-toggle"]) { display: none !important; }
+[data-cp-redraw] ~ [data-cp-part="diagram-toggle"] { right: 58px !important; }
+[data-cp-redraw-card] { display: flex; justify-content: center; padding: 12px; cursor: zoom-in; border: 1px solid var(--cp-rule); border-radius: 8px; background-color: var(--cp-sunken); }
+[data-cp-redraw-card] > iframe { display: block; width: 100%; height: 120px; border: 0; background: transparent; pointer-events: none; }
+[data-cp-diagram-full] { position: fixed; inset: 0; z-index: 2147483000; padding: 32px; background-color: var(--cp-sunken); cursor: zoom-out; }
+[data-cp-diagram-full] > iframe { display: block; width: 100%; height: 100%; border: 0; background: transparent; pointer-events: none; }
 /* Images in a reply that also has text (tool screenshots land at the end of the text before them) get the plugin's thumbnail size; Paseo's own button still opens the full image. */
 ${THUMBS} { width: auto !important; min-height: 0 !important; margin: 6px 8px 2px 0 !important; }
 :root:not([data-cp-rt-images="native"]) ${MSG} [data-cp-part="image-text"] > [dir] { flex-basis: 100% !important; }
@@ -1029,6 +1041,7 @@ const MERMAID_CSS = [
 const DIAGRAM_FONT = '-apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif';
 let mermaidTheme = "";
 let rethemeMermaid: (() => void) | undefined;
+let claimDiagram: ((viewport: DomElement, source: string) => Promise<boolean>) | undefined;
 /** Redraws the diagrams on screen after the renderer pref changes. */
 export const redrawDiagrams = () => rethemeMermaid?.();
 
@@ -1054,7 +1067,7 @@ addEventListener("message", ({ source, data: m }) => {
     if (typeof m.svg !== "string") return parent.postMessage({ type: "renderError", revision: m.revision }, "*");
     t.textContent = m.css;
     d.innerHTML = m.svg;
-    parent.postMessage({ type: "rendered", revision: m.revision, source: m.source, colorScheme: m.colorScheme, width: m.width, height: m.height }, "*");
+    for (const revision of m.revisions || [m.revision]) parent.postMessage({ type: "rendered", revision, source: m.source, colorScheme: m.colorScheme, width: m.width, height: m.height }, "*");
   }
 });
 parent.postMessage({ type: "bridgeReady" }, "*");
@@ -1283,7 +1296,14 @@ function themeMermaid(enabled: () => boolean, pele?: PeleDiagrams) {
       requests.set(source, request);
       // The colors may have changed while this frame was still loading.
       refresh(source);
-    } else if (d.type === "bridgeReady" && reloading.delete(source)) (source as Frame).postMessage(requests.get(source), "*");
+    } else if (d.type === "bridgeReady") {
+      if (reloading.delete(source)) (source as Frame).postMessage(requests.get(source), "*");
+      // Paseo's full screen viewer starts a model of its own, which won't draw a redrawn diagram either.
+      else if (fullscreenSource !== undefined && Array.from(document.querySelectorAll('[data-testid="mermaid-fullscreen-viewport"] iframe')).some((f) => frameWindow(f) === source)) {
+        void claim(source as Frame, fullscreenSource, [1]);
+        fullscreenSource = undefined;
+      }
+    }
   };
   window.addEventListener("message", onMessage);
   const refresh = (only?: object) => {
@@ -1308,10 +1328,42 @@ function themeMermaid(enabled: () => boolean, pele?: PeleDiagrams) {
     }
   };
   rethemeMermaid = () => refresh();
+  const frameWindow = (frame: unknown) => (frame as { contentWindow?: Frame | null } | null)?.contentWindow ?? null;
+  /**
+   * Has Paseo take a Pele drawing for a diagram it won't draw itself: the frame reports it drawn under every revision the
+   * block may be at, for the fence's source with and without its last newline, in both color schemes. Paseo keeps the one
+   * reply that matches its state and ignores the rest.
+   * ponytail: leans on Paseo's render model (revisions count from 1 on mount; "rendered" must match revision, source and
+   * scheme); if that changes, nothing takes and redraw falls back to its own card.
+   */
+  const claim = async (win: Frame, text: string, revisions: number[]) => {
+    const drawn = await pele?.render(text).catch(() => null);
+    if (!drawn) return false;
+    for (const source of [text, `${text}\n`]) for (const colorScheme of ["dark", "light"]) win.postMessage({ type: "cp-pele-svg", revisions, source, colorScheme, ...drawn, css: peleCss }, "*");
+    return true;
+  };
+  // Each redrawn block's viewport and its source, for the full screen viewer it opens.
+  const claimed = new WeakMap<object, string>();
+  let fullscreenSource: string | undefined;
+  claimDiagram = (viewport, text) => {
+    const win = frameWindow(viewport.querySelector("iframe"));
+    if (!win) return Promise.resolve(false);
+    claimed.set(viewport, text);
+    // Past the last revision this frame was asked for; a block that remounted since is back at 1.
+    const last = (requests.get(win) as { revision?: unknown } | undefined)?.revision;
+    return claim(win, text, Array.from({ length: (typeof last === "number" ? last : 0) + 256 }, (_, i) => i + 1));
+  };
+  const onClick = ({ target }: { target: unknown }) => {
+    const viewport = (target as DomElement | null)?.closest?.('[data-testid="mermaid-fullscreen"]')?.closest('[data-testid="mermaid-viewport"]');
+    fullscreenSource = viewport ? claimed.get(viewport) : undefined;
+  };
+  document.addEventListener("click", onClick, true);
   return () => {
     delete (proto as { setAttribute?: unknown }).setAttribute;
     window.removeEventListener("message", onMessage);
+    document.removeEventListener("click", onClick, true);
     rethemeMermaid = undefined;
+    claimDiagram = undefined;
   };
 }
 
@@ -1663,7 +1715,8 @@ const TASK_MARK = /^\[([ xX])\]\s+/;
 
 /**
  * Marks what markdown leaves as plain text: "> [!NOTE]" quotes become callouts, "[x] item" bullets become tasks,
- * ordered list marks keep their number, and code blocks get their line numbers. Runs on added nodes and again once streaming settles.
+ * ordered list marks keep their number, code blocks get their line numbers, and a diagram's source gets a redraw button.
+ * Runs on added nodes and again once streaming settles.
  */
 function markBlocks(roots: DomElement[]) {
   const find = (selector: string) => roots.flatMap((root) => (root === document.documentElement ? Array.from(root.querySelectorAll(selector)) : [root.closest(selector) ?? null, ...within([root], selector)].filter((el): el is DomElement => !!el)));
@@ -1699,6 +1752,79 @@ function markBlocks(roots: DomElement[]) {
     const count = (code.textContent ?? "").replace(/\n$/, "").split("\n").length;
     if (code.getAttribute("data-cp-lines")?.split("\n").length !== count) code.setAttribute("data-cp-lines", Array.from({ length: count }, (_, i) => i + 1).join("\n"));
   }
+  for (const pre of find('[data-paseo-markdown-language="mermaid"]')) {
+    const box = pre.parentElement;
+    if (!box || box.querySelector(":scope > [data-cp-redraw]")) continue;
+    const button = document.createElement("button");
+    button.setAttribute("data-cp-redraw", "");
+    button.setAttribute("aria-label", "Redraw diagram");
+    button.setAttribute("title", "Redraw diagram");
+    button.addEventListener("click", () => redrawDiagram(box, button));
+    box.appendChild(button);
+  }
+}
+
+/**
+ * Paseo can leave a diagram showing its source until the block remounts: once a render goes unanswered or fails as the
+ * reply completes, it never asks again, and it never draws a source its safety check rejects. Redraw has Pele draw it and
+ * hands the drawing to Paseo (claimDiagram), so it becomes Paseo's own diagram with its zoom, source toggle and full screen.
+ * If Paseo doesn't take it, the drawing shows in a card of the plugin's own over the source.
+ */
+function redrawDiagram(box: DomElement, button: DomElement) {
+  const source = (box.querySelector('[data-paseo-markdown-language="mermaid"] > div:first-child')?.textContent ?? "").replace(/\n$/, "");
+  box.querySelector(":scope > [data-cp-redraw-card]")?.remove();
+  button.setAttribute("data-cp-redraw", "");
+  button.setAttribute("title", "Redraw diagram");
+  const viewport = box.nextElementSibling;
+  const taken = viewport?.matches('[data-testid="mermaid-viewport"]') && claimDiagram ? claimDiagram(viewport, source) : Promise.resolve(false);
+  // Once Paseo takes the drawing, it unmounts the source block.
+  void taken.then((ok) => setTimeout(() => box.isConnected && drawCard(box, button, source), ok ? 800 : 0));
+}
+
+function drawCard(box: DomElement, button: DomElement, source: string) {
+  const card = document.createElement("div");
+  card.setAttribute("data-cp-redraw-card", "");
+  card.setAttribute("title", "Open full screen");
+  card.addEventListener("click", () => openDiagram(source));
+  const frame = peleFrame();
+  card.appendChild(frame);
+  box.appendChild(card);
+  const stop = drawDiagram(frame, source, (size) => {
+    stop();
+    if (!size) {
+      card.remove();
+      button.setAttribute("data-cp-redraw", "failed");
+      button.setAttribute("title", "Pele couldn't draw this diagram");
+      return;
+    }
+    frame.setAttribute("style", `height: auto; max-width: ${size.width}px; aspect-ratio: ${size.width} / ${size.height}`);
+    box.setAttribute("data-cp-redrawn", "");
+  });
+}
+
+function peleFrame() {
+  const frame = document.createElement("iframe");
+  frame.setAttribute("sandbox", "allow-scripts");
+  frame.setAttribute("srcdoc", PELE_DOC);
+  return frame;
+}
+
+/** A redrawn diagram over the whole window, fit to it; a click or Escape closes it. */
+function openDiagram(source: string) {
+  const overlay = document.createElement("div");
+  overlay.setAttribute("data-cp-diagram-full", "");
+  const frame = peleFrame();
+  overlay.appendChild(frame);
+  (document.body as DomElement).appendChild(overlay);
+  const onKey = (event: KeyEvent) => event.key === "Escape" && close();
+  const close = () => {
+    stop();
+    overlay.remove();
+    document.removeEventListener("keydown", onKey, true);
+  };
+  overlay.addEventListener("click", close);
+  document.addEventListener("keydown", onKey, true);
+  const stop = drawDiagram(frame, source, (size) => size || close());
 }
 
 /** Shows the chosen variant of each markdown element, and the image size; "a" needs no attribute. */
@@ -1885,7 +2011,8 @@ export function restyleNative(enabled: () => boolean, pele?: PeleDiagrams) {
     document.removeEventListener("click", noteClick, true);
     document.removeEventListener("pointerover", notePointer, true);
     dropGhost(false);
-    for (const el of Array.from(document.querySelectorAll("[data-cp-rail], [data-cp-tip], [data-cp-hint]"))) el.remove();
+    for (const el of Array.from(document.querySelectorAll("[data-cp-rail], [data-cp-tip], [data-cp-hint], [data-cp-redraw], [data-cp-redraw-card], [data-cp-diagram-full]"))) el.remove();
+    for (const el of Array.from(document.querySelectorAll("[data-cp-redrawn]"))) el.removeAttribute("data-cp-redrawn");
   };
   const stop = watchDom({
     added: (roots) => {
