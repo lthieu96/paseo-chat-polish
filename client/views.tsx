@@ -39,10 +39,10 @@ const ICON_SLOT = 20;
 export const PMONO = { dataSet: { pmono: "" } } as object;
 const INDENT = 28;
 // Paseo puts 16pt between timeline items; rows are 26pt tall, so 6pt less gives the design's 36pt pitch (normal density). The split puts a row
-// 20pt from reply text on both sides, with the tighter reply blocks in web.ts (6pt item gap, 4pt padding).
-// Compact and spacious move rows 6pt closer or 8pt further apart; web.ts sets the same values for Paseo's rows.
+// 20pt from reply text on both sides, with the tighter reply blocks in web/restyle-css.ts (6pt item gap, 4pt padding).
+// Compact and spacious move rows 6pt closer or 8pt further apart; web/restyle-css.ts sets the same values for Paseo's rows.
 const TIGHT = { compact: { marginTop: 0, marginBottom: -12 }, normal: { marginTop: 2, marginBottom: -8 }, spacious: { marginTop: 5, marginBottom: -3 } };
-/** How far faded thought and tool rows step back, per strength (Paseo's own rows match it in web.ts). */
+/** How far faded thought and tool rows step back, per strength (Paseo's own rows match it in web/restyle-css.ts). */
 const QUIET = { dim: 0.3, faded: 0.45, soft: 0.65, full: 1 };
 
 function toneColor(c: Colors, tone: Tone | undefined) {

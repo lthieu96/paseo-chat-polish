@@ -22,7 +22,7 @@ export function splitTop(text: string, at: (ch: string) => boolean) {
  * Prefixes the subject of a selector that uses a positional pseudo-class with the same selector minus those pseudo-classes, in
  * :where() so specificity is unchanged. Chrome then tests :first-child / :nth-child only on elements already in the right place;
  * otherwise testing them on every div of the timeline flags its rows, and each row Paseo's virtual list mounts restyles its siblings.
- * Measured on a long chat: 6.9ms → 1.2ms to mount a row, with the parts web.ts tags instead of picking them by position.
+ * Measured on a long chat: 6.9ms → 1.2ms to mount a row, with the parts web/parts.ts tags instead of picking them by position.
  */
 export function guardPositional(complex: string) {
   if (!POSITIONAL.test(complex)) return complex;

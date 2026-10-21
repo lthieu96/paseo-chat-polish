@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
 import { execFile } from "node:child_process";
@@ -14,7 +14,8 @@ test("DOM restyling, accordion transitions, and bottom following stay stable", {
   const temp = mkdtempSync(join(tmpdir(), "chat-polish-web-test-"));
   let server;
   try {
-    const sources = Object.fromEntries(["css-guard", "provider-icons", "web"].map((name) => [name, ts.transpileModule(readFileSync(new URL(`../client/${name}.ts`, import.meta.url), "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText]));
+    const names = ["css-guard", "provider-icons", "web", ...readdirSync(new URL("../client/web/", import.meta.url)).map((file) => `web/${file.replace(/\.ts$/, "")}`)];
+    const sources = Object.fromEntries(names.map((name) => [name, ts.transpileModule(readFileSync(new URL(`../client/${name}.ts`, import.meta.url), "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText]));
     // Paseo's bundle exports its mermaid document as a minified string literal, with JS-only escapes like \xHH.
     const bundle = String.raw`Object.defineProperty(a,"mermaidRuntimeHtml",{get:function(){return o}});const o='<!doctype html>\n<p class="x" title=\'y\'>\x3c!-- __PASEO_MERMAID_RUNTIME_RECEIVE__ \\x41 \u0041 \u{1F600} \v \/ --\x3e</p>';`;
     const mermaidDoc = "<!doctype html>\n<p class=\"x\" title='y'><!-- __PASEO_MERMAID_RUNTIME_RECEIVE__ \\x41 A \u{1F600} \v / --></p>";
@@ -49,7 +50,9 @@ test("DOM restyling, accordion transitions, and bottom following stay stable", {
         function load(name) {
           if (modules[name]) return modules[name];
           const exports = modules[name] = {};
-          new Function('exports', 'require', sources[name])(exports, (id) => id === 'react-native' ? { Platform: { OS: 'web' } } : load(id.slice(2)));
+          // "./dom" from "web/parts" is "web/dom"; "../css-guard" is "css-guard".
+          const resolve = (id) => id.split('/').reduce((path, part) => part === '..' ? path.slice(0, -1) : part === '.' ? path : [...path, part], name.split('/').slice(0, -1)).join('/');
+          new Function('exports', 'require', sources[name])(exports, (id) => id === 'react-native' ? { Platform: { OS: 'web' } } : load(resolve(id)));
           return exports;
         }
         (async () => {

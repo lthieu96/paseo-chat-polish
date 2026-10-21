@@ -42,7 +42,7 @@ export const prefsSchema = z.object({
   steps: z.enum(["dim", "faded", "soft", "full"]).catch("faded"),
   /** The "Copy  Text  Markdown" popup over text selected in a reply (desktop and web). */
   selectionCopy: z.enum(["on", "off"]).default("on"),
-  /** Space between replies, prompts and step rows, for Paseo's items (web.ts) and the plugin's rows (views.tsx). */
+  /** Space between replies, prompts and step rows, for Paseo's items (web/restyle-css.ts) and the plugin's rows (views.tsx). */
   density: z.enum(["compact", "normal", "spacious"]).default("normal"),
   /** The icon at the start of merged, tool call and thought rows, per kind; hidden, a failed row's verb turns red instead.
    * An older single "show" or "hide" applies to all three. */
