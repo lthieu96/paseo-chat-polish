@@ -105,8 +105,11 @@ function launch(executable: string, profile: string) {
   // Chrome refuses to sandbox as root, the one case its sandbox has to go.
   const root = process.getuid?.() === 0 ? ["--no-sandbox"] : [];
   const child = spawn(executable, [...root, "--remote-debugging-pipe", "--no-first-run", "--no-default-browser-check", "--disable-gpu", "--hide-scrollbars", "--mute-audio", `--user-data-dir=${profile}`, "about:blank"], {
-    stdio: ["ignore", "ignore", "ignore", "pipe", "pipe"],
+    stdio: ["ignore", "ignore", "pipe", "pipe", "pipe"],
   });
+  // The end of what the browser printed, which says why when it quits at start (a missing library, no usable sandbox).
+  let said = "";
+  (child.stderr as Readable).setEncoding("utf8").on("data", (chunk: string) => (said = (said + chunk).slice(-600)));
   const commands = child.stdio[3] as Writable;
   const events = child.stdio[4] as Readable;
   const waiting = new Map<number, (message: { result?: unknown; error?: { message: string } }) => void>();
@@ -125,8 +128,9 @@ function launch(executable: string, profile: string) {
   });
   // A browser that quits (it crashed) fails what it was asked, rather than leaving it to the timeout; one that can't start (removed while
   // this check waited its turn) emits only "error", which would otherwise take the daemon down.
-  child.once("exit", (code) => {
-    for (const settle of waiting.values()) settle({ error: { message: `the browser exited (${code})` } });
+  child.once("exit", (code, signal) => {
+    const why = said.trim().split("\n").filter((line) => !/^\s*$/.test(line)).slice(-3).join(" | ");
+    for (const settle of waiting.values()) settle({ error: { message: `the browser exited (${code ?? signal})${why ? `: ${why}` : ""}` } });
   });
   child.once("error", (error) => {
     for (const settle of waiting.values()) settle({ error: { message: `the browser couldn't start: ${error.message}` } });

@@ -180,6 +180,8 @@ test("MCP over HTTP: lists the tool, rejects vh pages, accepts a good one; confi
 test("page check: lays the page out in a browser and names what a reader would see wrong", async (t) => {
   const { checkPage } = await import("../server/page-check.ts");
   const clean = await checkPage('<div class="stack"><h2>Sales</h2><svg viewBox="0 0 200 60" width="100%" height="60"><text x="8" y="20">Mon</text><text x="8" y="44">Tue</text></svg></div><script>console.log("drawn")</script>');
+  // CI installs the shell first, so there a missing check is a failure, not a skip.
+  if (clean === undefined && process.env.CI) assert.fail("the page couldn't be checked; see the [chat-polish] warning above");
   if (clean === undefined) return t.skip("the headless shell isn't installed: download it from the dashboard's HTML pages tab");
   assert.deepEqual(clean.problems, []);
   assert.deepEqual(clean.console, ["log: drawn"]);
