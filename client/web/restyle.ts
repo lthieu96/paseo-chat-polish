@@ -56,6 +56,7 @@ function guardRules(rules: ArrayLike<CssRuleLike>) {
  * a Paseo layout change can silently stop parts of it applying. Turn it off from the dashboard if it misfires.
  */
 export function restyleNative(enabled: () => boolean, pele?: PeleDiagrams) {
+  if (Platform.OS !== "web" || typeof document === "undefined") return () => {};
   let style: DomElement | undefined;
   const unthemeMermaid = themeMermaid(() => !!style, pele);
   const off = () => {

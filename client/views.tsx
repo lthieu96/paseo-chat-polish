@@ -10,7 +10,7 @@ import { loadImage } from "./images";
 import type { Recap } from "../shared/recap";
 import type { IconKind } from "../shared/timeline";
 import { todoData, toolData, type imagesSchema, type noticeSchema, type planSchema, type stepsSchema, type thoughtSchema, type todoSchema, type ToolData, type Tone } from "./model";
-import { changesOfTodo, runOf, runVersion, stepKey, stepSummary, subscribeRun, type TaskChange } from "./steps";
+import { changesOfTodo, noteShownAgent, runOf, runVersion, stepKey, stepSummary, subscribeRun, type TaskChange } from "./steps";
 import { contrast, isHex } from "../shared/theme";
 import { highlight, highlightShell, highlightShellBlock, SYNTAX_THEMES, type Span, type SyntaxColors } from "./highlight";
 import { Icon } from "./icons";
@@ -567,6 +567,7 @@ export function StepsItem(props: PluginTimelineItemProps<z.output<typeof stepsSc
   useSyncExternalStore(subscribe, () => runVersion(head));
   const { steps, ms, open: tail } = runOf(head);
   const working = useAgent(props.agentId, (a) => a.status === "running") ?? false;
+  useEffect(() => noteShownAgent(props.agentId), [props.agentId]);
   return <MergedSteps {...props} steps={steps} ms={ms} growing={!!tail && working} />;
 }
 

@@ -148,7 +148,8 @@ export function Group({ theme, title, top, children }: { theme: PluginTheme; tit
 export function Row({ theme, label, hint, stacked, first, children }: { theme: PluginTheme; label: string; hint: string; stacked?: boolean; first?: boolean; children: ReactNode }) {
   const s = useStyles(theme);
   const text = (
-    <View style={{ flex: stacked ? undefined : 1, gap: 2 }}>
+    // A basis rather than flex: 1, so on a phone a wide control wraps under the label instead of squeezing it to a word per line.
+    <View style={stacked ? { gap: 2 } : { flexGrow: 1, flexShrink: 1, flexBasis: 140, gap: 2 }}>
       <Text style={[s.verb, { fontSize: 13 }]}>{label}</Text>
       <Text style={[s.small, { fontSize: 12 }]}>{hint}</Text>
     </View>
@@ -161,7 +162,7 @@ export function Row({ theme, label, hint, stacked, first, children }: { theme: P
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>{children}</View>
         </View>
       ) : (
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 16 }}>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", columnGap: 16, rowGap: 10 }}>
           {text}
           {children}
         </View>
@@ -183,14 +184,18 @@ export function Legend({ theme }: { theme: PluginTheme }) {
 
 const chunk = <T,>(a: T[], n: number) => Array.from({ length: Math.ceil(a.length / n) }, (_, i) => a.slice(i * n, i * n + n));
 
-/** Tiles in rows of `n`; a short last row is padded so its tiles keep the same width. */
+const TILE_MIN = 96;
+
+/** Tiles in rows of `n`, fewer when that would make a tile narrower than TILE_MIN (phones); a short last row is padded so its tiles keep the same width. */
 export function Grid({ n, gap = 8, children }: { n: number; gap?: number; children: ReactNode[] }) {
+  const [width, setWidth] = useState(0);
+  const cols = width ? Math.max(1, Math.min(n, Math.floor((width + gap) / (TILE_MIN + gap)))) : n;
   return (
-    <View style={{ gap }}>
-      {chunk(children, n).map((row, i) => (
+    <View onLayout={(e) => setWidth(e.nativeEvent.layout.width)} style={{ gap }}>
+      {chunk(children, cols).map((row, i) => (
         <View key={i} style={{ flexDirection: "row", gap }}>
           {row}
-          {Array.from({ length: n - row.length }, (_, j) => (
+          {Array.from({ length: cols - row.length }, (_, j) => (
             <View key={`pad${j}`} style={{ flex: 1 }} />
           ))}
         </View>
@@ -202,15 +207,16 @@ export function Grid({ n, gap = 8, children }: { n: number; gap?: number; childr
 export function TopBar({ theme, layout, title, badge, subtitle, children }: { theme: PluginTheme; layout: PluginScreenProps["layout"]; title: string; badge?: string; subtitle: string; children?: ReactNode }) {
   const s = useStyles(theme);
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 16, paddingHorizontal: layout.compact ? 16 : 32, paddingVertical: 18, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme.colors.border }}>
-      <View style={{ flex: 1, gap: 4 }}>
+    // Phones stack the actions under the subtitle, which beside them wrapped to a narrow column.
+    <View style={{ flexDirection: layout.compact ? "column" : "row", alignItems: layout.compact ? "stretch" : "center", gap: layout.compact ? 12 : 16, paddingHorizontal: layout.compact ? 16 : 32, paddingVertical: 18, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme.colors.border }}>
+      <View style={{ flex: layout.compact ? undefined : 1, gap: 4 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
           <Text style={[s.title, { fontSize: 20 }]}>{title}</Text>
           {badge ? <Badge theme={theme} label={badge} tone={theme.colors.statusWarning} /> : null}
         </View>
         <Text style={[s.small, { fontSize: 13 }]}>{subtitle}</Text>
       </View>
-      {children}
+      {layout.compact && children ? <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8 }}>{children}</View> : children}
     </View>
   );
 }

@@ -204,6 +204,7 @@ const dirty = new Set<string>();
 let flushQueued = false;
 let onStale: () => void = () => {};
 let onUnplaced: () => void = () => {};
+let onShown: (agentId: string) => void = () => {};
 let skip: (item: Item) => boolean = () => false;
 
 /** Steps the transformer hides (prefs) are left out of runs; re-splits every agent when that changes. */
@@ -394,6 +395,9 @@ export const resetMade = () => made.clear();
 export const onStaleSteps = (fn: () => void) => void (onStale = fn);
 /** A step came before its agent's timeline was followed or caught up; lets the entry follow newly opened tabs right away. */
 export const onUnplacedStep = (fn: () => void) => void (onUnplaced = fn);
+/** A merged row rendered for an agent: the only way the entry learns which timelines to follow on native, where tabs can't be read. */
+export const noteShownAgent = (agentId: string) => onShown(agentId);
+export const onShownAgent = (fn: (agentId: string) => void) => void (onShown = fn);
 
 /** A run's steps as the app last saw them and its duration; a single step when the head isn't known (yet). */
 export function runOf(head: string): { steps: Array<{ item: Item; phase: Phase }>; ms?: number; open?: boolean } {

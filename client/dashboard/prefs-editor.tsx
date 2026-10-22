@@ -187,38 +187,43 @@ export function PrefsEditor({ theme, page, prefs, onChange }: { theme: PluginThe
             />
           </Row>
         </Group>
-        <Group theme={theme} title="Icons">
-          <Row theme={theme} first stacked label="Icon set" hint="Paseo’s icons too; any without a twin stay Lucide. Desktop and web.">
-            <Segmented
-              theme={theme}
-              value={prefs.iconSet}
-              onChange={set("iconSet")}
-              options={[
-                ["lucide", "", "Lucide", true],
-                ["untitled", "", "Untitled UI"],
-                ["hugeicons", "", "Hugeicons"],
-              ]}
-            />
-          </Row>
-        </Group>
-        <Group theme={theme} title="Replies">
-          <Row theme={theme} first label="Copy popup" hint="Selecting text offers Copy text or Markdown.">
-            <Switch theme={theme} label="Copy popup" value={prefs.selectionCopy === "on"} onChange={(on) => set("selectionCopy")(on ? "on" : "off")} />
-          </Row>
-        </Group>
-        <Group theme={theme} title="Your messages">
-          <Row theme={theme} first label="Long messages" hint="Over 8 lines; clamp shows six.">
-            <Segmented
-              theme={theme}
-              value={prefs.userMessages}
-              onChange={set("userMessages")}
-              options={[
-                ["clamp", "", "Clamp"],
-                ["full", "", "Full", true],
-              ]}
-            />
-          </Row>
-        </Group>
+        {/* These change Paseo's own icons, replies and bubbles, which native apps draw without a DOM to restyle. */}
+        {canSetAppTheme ? (
+          <>
+            <Group theme={theme} title="Icons">
+              <Row theme={theme} first stacked label="Icon set" hint="Paseo’s icons too; any without a twin stay Lucide. Desktop and web.">
+                <Segmented
+                  theme={theme}
+                  value={prefs.iconSet}
+                  onChange={set("iconSet")}
+                  options={[
+                    ["lucide", "", "Lucide", true],
+                    ["untitled", "", "Untitled UI"],
+                    ["hugeicons", "", "Hugeicons"],
+                  ]}
+                />
+              </Row>
+            </Group>
+            <Group theme={theme} title="Replies">
+              <Row theme={theme} first label="Copy popup" hint="Selecting text offers Copy text or Markdown.">
+                <Switch theme={theme} label="Copy popup" value={prefs.selectionCopy === "on"} onChange={(on) => set("selectionCopy")(on ? "on" : "off")} />
+              </Row>
+            </Group>
+            <Group theme={theme} title="Your messages">
+              <Row theme={theme} first label="Long messages" hint="Over 8 lines; clamp shows six.">
+                <Segmented
+                  theme={theme}
+                  value={prefs.userMessages}
+                  onChange={set("userMessages")}
+                  options={[
+                    ["clamp", "", "Clamp"],
+                    ["full", "", "Full", true],
+                  ]}
+                />
+              </Row>
+            </Group>
+          </>
+        ) : null}
         <Group theme={theme} title="Images">
           <Row theme={theme} first label="Image-only replies" hint="Thumbnails open full size.">
             <Segmented

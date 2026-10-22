@@ -21,8 +21,8 @@ export function ThemePage({ theme, layout }: Pick<PluginScreenProps, "theme" | "
   const saved = settings.status === "ready" ? settings.values : undefined;
   const host = readHostAppearance();
   const hostTypo: Typography = { uiFont: host.uiFont ?? "", contentSize: host.contentSize, monoFont: host.monoFont ?? "", codeSize: host.codeSize };
-  // The app theme in use: this plugin's, a Paseo one (unset means Paseo's default, System), or another plugin's.
-  const appId = host.pluginThemeId ? (host.pluginThemeId === THEME_CATALOG_ID ? "plugin" : "other") : (host.theme ?? "auto");
+  // The app theme in use: this plugin's, a Paseo one (unset means Paseo's default, System), or another plugin's; unknown on native, which can't read it.
+  const appId = !canSetAppTheme ? "unknown" : host.pluginThemeId ? (host.pluginThemeId === THEME_CATALOG_ID ? "plugin" : "other") : (host.theme ?? "auto");
   const [draft, setDraft] = useState<ThemeDraft | undefined>();
   const [typo, setTypo] = useState(hostTypo);
   // The Paseo theme on show (read only); a Paseo theme in use starts out shown.
@@ -81,7 +81,7 @@ export function ThemePage({ theme, layout }: Pick<PluginScreenProps, "theme" | "
       ? "This is your Paseo theme. Apply pushes edits to the app."
       : canSetAppTheme
         ? "Use as app theme saves your edits and reloads Paseo with this theme."
-        : "Apply, then choose it under Settings → Appearance to use it app-wide.";
+        : `Apply saves your edits. To use it app-wide, pick “${saved?.name ?? "it"}” in Settings → Appearance.`;
   return (
     <>
       <TopBar theme={theme} layout={layout} title="Theme" subtitle={subtitle + (settings.saveError ? ` Save failed: ${String(settings.saveError)}` : "")}>
@@ -94,7 +94,7 @@ export function ThemePage({ theme, layout }: Pick<PluginScreenProps, "theme" | "
                 <Icon name="Check" size={14} color={c.foregroundMuted} />
                 <Text style={[s.small, { fontSize: 13 }]}>In use</Text>
               </View>
-            ) : (
+            ) : !canSetAppTheme ? null : (
               <Button theme={theme} label={`Use ${paseo.name}`} icon="Paintbrush" primary onPress={() => updateAppSettings({ theme: paseo.id, ...(typoDirty ? fonts : null) })} />
             )}
             <Button

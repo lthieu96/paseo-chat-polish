@@ -17,7 +17,7 @@ const REPLY = '[data-testid="assistant-message"]';
 type SelNode = { nodeType: number; parentElement: DomElement | null };
 type Selected = { isCollapsed: boolean; rangeCount: number; toString(): string; getRangeAt(i: 0): { startContainer: SelNode; endContainer: SelNode; getBoundingClientRect(): ReturnType<DomElement["getBoundingClientRect"]> } };
 type CopyEvent = { target: unknown; key?: string; shiftKey?: boolean; clipboardData?: { setData(type: string, data: string): void }; preventDefault(): void; stopImmediatePropagation(): void };
-const selDoc = document as unknown as {
+type SelDoc = {
   getSelection(): Selected | null;
   execCommand(command: "copy"): boolean;
   addEventListener(type: string, listener: (event: CopyEvent) => void, capture?: boolean): void;
@@ -32,6 +32,7 @@ const selDoc = document as unknown as {
  */
 export function selectionCopyMenu(enabled: () => boolean) {
   if (Platform.OS !== "web" || typeof document === "undefined") return () => {};
+  const selDoc = document as unknown as SelDoc;
   const style = document.createElement("style");
   style.textContent = SELECT_CSS;
   document.head.appendChild(style);

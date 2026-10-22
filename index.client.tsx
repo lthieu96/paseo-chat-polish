@@ -7,7 +7,7 @@ import { Dashboard } from "./client/dashboard";
 import { clearImageCache } from "./client/images";
 import { sidebarIcon } from "./client/mark";
 import { hideableKind, imageData, turnMarkdown, imagesSchema, noticeData, noticeSchema, planSchema, stepsSchema, thoughtSchema, todoData, todoSchema, toolData, toolSchema } from "./client/model";
-import { followAgent, isTodo, onStaleSteps, onUnplacedStep, placeStep, resetMade, setStepSkip, stepKey, type Phase } from "./client/steps";
+import { followAgent, isTodo, onShownAgent, onStaleSteps, onUnplacedStep, placeStep, resetMade, setStepSkip, stepKey, type Phase } from "./client/steps";
 import { renderDiagram } from "./shared/diagram";
 import { currentPrefs, savePrefs, setPrefs, subscribePrefs, usePrefsSaver } from "./client/prefs";
 import { bindThemeRegistry, currentTheme, registerTheme } from "./client/theme-registry";
@@ -172,13 +172,19 @@ export default function contribute(client: PluginClientContext) {
   });
   const skipHidden = () => setStepSkip((item) => (isTodo(item) ? currentPrefs().hidden.includes("todo") : item.type === "tool_call" && currentPrefs().hidden.includes(hideableKind(item)!)));
   skipHidden();
-  // Follows the timelines of agents with an open tab (none when merging is off, or on native, where tabs can't be read).
+  // Follows the timelines of agents with an open tab, plus the last few whose merged rows rendered (native can't read tabs); none when merging is off.
   const followed = new Map<string, () => void>();
+  const shown: string[] = [];
   const follow = () => {
-    const open = new Set(merging() ? openAgentIds() : []);
+    const open = new Set(merging() ? [...openAgentIds(), ...shown] : []);
     for (const [id, stop] of followed) if (!open.has(id)) (stop(), followed.delete(id));
     for (const id of open) if (!followed.has(id)) followed.set(id, followAgent(client.paseo, id));
   };
+  onShownAgent((id) => {
+    if (shown[0] === id) return;
+    shown.splice(0, shown.length, id, ...shown.filter((a) => a !== id).slice(0, 2));
+    follow();
+  });
   // A step from a tab opened since the last DOM settle: start following now, after Paseo's render, rather than up to 250ms later.
   let followQueued = false;
   onUnplacedStep(() => {

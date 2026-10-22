@@ -97,7 +97,8 @@ To update the Paseo Registry listing, submit the new GitHub tag as a revision th
 
 ## Limitations
 
-- Restyling Paseo's own items, the font settings and the app theme picker work on desktop and web only.
+- Restyling Paseo's own items, the font settings and the app theme picker work on desktop and web only. On the iOS and Android apps the dashboard hides those options; to use a Chat Polish theme there, pick it in Paseo's Settings → Appearance.
+- On the mobile apps, merged steps show one by one for a moment when a chat opens, then fold into one row once its timeline loads.
 - Fonts, theme picks and the restyle write Paseo's own settings and DOM, which aren't a public API and may change.
 - Previews of Paseo's built-in themes and font stacks are copied from Paseo 0.11.2 and can drift in later versions.
 - Plain tool rows need Settings → Appearance → Tool call display set to Detailed; Summary keeps Paseo's grouped calls.

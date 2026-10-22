@@ -13,13 +13,15 @@ import { SQUIRCLE_CARD, Switch } from "./controls";
 
 export type Page = "theme" | "messages" | "steps" | "rich" | "html";
 
-export const PAGES: Array<{ id: Page; icon: string; label: string; group: string; badge?: string }> = [
+const ALL_PAGES: Array<{ id: Page; icon: string; label: string; group: string; badge?: string }> = [
   { id: "theme", icon: "Palette", label: "Theme", group: "APPEARANCE" },
   { id: "messages", icon: "MessageSquareText", label: "Messages", group: "CHAT" },
   { id: "steps", icon: "ListTree", label: "Steps", group: "CHAT" },
   { id: "rich", icon: "Type", label: "Rich text", group: "CHAT" },
   { id: "html", icon: "AppWindow", label: "HTML pages", group: "CHAT", badge: "Experimental" },
 ];
+// Rich text only styles Paseo's own markdown, which native apps draw without a DOM to restyle.
+export const PAGES = ALL_PAGES.filter((p) => canSetAppTheme || p.id !== "rich");
 
 /** The switch for restyling Paseo's own items; it gates Rich text and the loaders, so it sits outside any one page. */
 export function RestyleCard({ theme, prefs, onChange }: { theme: PluginTheme; prefs: Prefs; onChange(p: Prefs): void }) {
