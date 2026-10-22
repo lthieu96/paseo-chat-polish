@@ -41,7 +41,7 @@ export function changeSummary(items: readonly AgentTimelineItem[], cwd: string):
 
 /** The recap for the latest turn in an agent's timeline, or undefined when it changed no files and no command failed (Paseo's own rows already say "Ran 2 commands"). */
 export function recapData(timeline: readonly AgentTimelineItem[], cwd: string): Recap | undefined {
-  // The hook passes the whole history; the turn is everything after the last user message.
+  // Given more than one turn, the latest is everything after the last user message.
   const start = timeline.findLastIndex((item) => item.type === "user_message") + 1;
   const recap = changeSummary(timeline.slice(start), cwd);
   if (!recap.files.length && !recap.failed.length) return undefined;

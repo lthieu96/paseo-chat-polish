@@ -12,6 +12,7 @@ import { closeLocalServer, openHtmlPage, startHtmlTool, withHtmlTool } from "./s
 import { browserStatus, installBrowser, openHtml, removeBrowser } from "./shared/html";
 import { applyUpdate, checkUpdate } from "./shared/update";
 import { checkForUpdate, installUpdate } from "./server/update";
+import { latestTurn } from "./server/turn";
 
 export default function contribute(server: PluginServerContext) {
   const theme = server.registerSettings(themeSettings);
@@ -48,11 +49,13 @@ export default function contribute(server: PluginServerContext) {
   server.on("agent.turn_ended", async (event, { paseo }) => {
     const current = await prefs.read();
     if (current.status === "ready" && current.values.recap === "off") return;
-    const data = recapData(event.timeline, event.agent.cwd);
+    // Paseo 0.13 sends turn_ended with an empty timeline, so fetch the turn instead.
+    const agent = paseo.agents.ref(event.agent.id);
+    const data = recapData(await latestTurn(agent.timeline, event.turnId), event.agent.cwd);
     if (!data) return;
     // turnId can be null or repeat across turns, and a reused id replaces the older row, so the end time keeps each recap.
     const id = `recap-${Date.now()}`;
-    await paseo.agents.ref(event.agent.id).timeline.append({ type: "plugin", id, kind: "chat-polish-recap", version: 1, data });
+    await agent.timeline.append({ type: "plugin", id, kind: "chat-polish-recap", version: 1, data });
   });
   return () => closeLocalServer();
 }
