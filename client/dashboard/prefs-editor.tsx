@@ -1,7 +1,9 @@
 // The settings on the Messages, Steps, Tool calls, Rich text, HTML pages and Extras pages.
 import type { PluginTheme } from "@getpaseo/plugin";
-import type { CSSProperties } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useRpc } from "@getpaseo/plugin/client";
+import { useEffect, useState, type CSSProperties } from "react";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { browserStatus, installBrowser, removeBrowser, type BrowserStatus } from "../../shared/html";
 import { HIDEABLE, ICON_KINDS, LOADERS, RICH_TEXT, type Hideable, type IconKind, type Loader, type Prefs, type RichText } from "../../shared/timeline";
 import { useReducedMotion, useStyles } from "../views";
 import { canSetAppTheme, readHostAppearance, readSyntaxTheme, updateAppSettings } from "../web";
@@ -67,21 +69,83 @@ function LoaderTile({ theme, id, on, onPress }: { theme: PluginTheme; id: Loader
 
 // What a user does with html_render pages, in the order they meet it.
 const HTML_GUIDE: Array<[string, string]> = [
-  ["Ask for a visual", "Ask the agent to draw, chart, visualize, simulate or mock up something, in any language. Other questions get a text answer, so pages are only made when you ask. If Chrome, Edge or Brave is installed, each page is laid out there first and the agent fixes overlapping text, script errors or overflow before you see it."],
+  ["Ask for a visual", "Ask the agent to draw, chart, visualize, simulate or mock up something, in any language. Other questions get a text answer, so pages are only made when you ask. Each page is laid out in a headless browser first and the agent fixes overlapping text, script errors or overflow before you see it."],
   ["Diagrams come as mermaid", "Flowcharts and sequence diagrams are drawn by the chat from a mermaid block, which lays them out better and costs less than a page."],
   ["Use the page", "Hover it for Full screen (Esc closes), Open in browser and Copy HTML. Links open in your browser and app shortcuts keep working. Its scripts run in a sandbox, away from Paseo and your files."],
   ["Find it later", "Pages are kept with the chat and show again, in the current theme, when you reopen it. Desktop and web; phones show the page's title."],
 ];
 
-/** The HTML pages page: the switch for the tool, then how to use it. */
+const mb = (bytes: number) => Math.round(bytes / 1e6);
+
+/**
+ * The switch for the tools, and the headless browser pages are checked in before they show: optional, so HTML pages work without it
+ * (unchecked, and no html_preview). Download shows its progress, polled while it runs; Remove deletes it.
+ */
+function HtmlSwitch({ theme, prefs, onChange }: { theme: PluginTheme; prefs: Prefs; onChange(p: Prefs): void }) {
+  const s = useStyles(theme);
+  const c = theme.colors;
+  const read = useRpc(browserStatus);
+  const install = useRpc(installBrowser);
+  const remove = useRpc(removeBrowser);
+  const [status, setStatus] = useState<BrowserStatus>();
+  const [error, setError] = useState<string>();
+  // Shown, with Refresh, until a call succeeds; a failed poll stops polling rather than retrying behind the user's back.
+  const failed = (e: unknown) => setError(e instanceof Error ? e.message : String(e));
+  const done = (next: BrowserStatus) => {
+    setError(undefined);
+    setStatus(next);
+  };
+  useEffect(() => void read({}).then(done, failed), [read]);
+  useEffect(() => {
+    if (status?.state !== "downloading" || error) return;
+    const timer = setTimeout(() => read({}).then(done, failed), 500);
+    return () => clearTimeout(timer);
+  }, [status, error, read]);
+  const browserHint = error
+    ? error
+    : !status
+      ? "Checking for the headless browser…"
+      : {
+          installed: `Chrome for Testing ${status.version}, about 210 MB. Agents can preview pages, and each page is checked for layout problems before it shows.`,
+          downloading:
+            status.total && status.received === status.total
+              ? "Unpacking the headless browser…"
+              : `Downloading the headless browser: ${mb(status.received ?? 0)}${status.total ? ` of ${mb(status.total)}` : ""} MB.`,
+          missing: "Optional, about 100 MB. Checks each page for overlapping text, script errors and overflow before it shows, and lets agents preview pages.",
+          failed: `The download failed: ${status.error}`,
+          unsupported: "There's no headless browser for this computer, so pages show unchecked.",
+        }[status.state];
+  const percent = status?.total ? Math.floor(((status.received ?? 0) / status.total) * 100) : undefined;
+  return (
+    <>
+      <Row theme={theme} first label="HTML pages" hint="Gives agents created from now on the html_render tool, and html_preview while the headless browser is installed.">
+        <Switch theme={theme} label="HTML pages" value={prefs.html === "on"} onChange={(on) => onChange({ ...prefs, html: on ? "on" : "off" })} />
+      </Row>
+      <Row theme={theme} label="Headless browser" hint={browserHint}>
+        {error ? (
+          <Button theme={theme} icon="RotateCw" label="Refresh" onPress={() => void read({}).then(done, failed)} />
+        ) : status?.state === "downloading" ? (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <ActivityIndicator size="small" color={c.accent} />
+            {percent !== undefined ? <Text style={[s.small, { fontSize: 12, fontVariant: ["tabular-nums"] }]}>{`${percent}%`}</Text> : null}
+          </View>
+        ) : status?.state === "installed" ? (
+          <Button theme={theme} icon="Trash2" label="Remove" onPress={() => void remove({}).then(done, failed)} />
+        ) : status?.state === "missing" || status?.state === "failed" ? (
+          <Button theme={theme} icon={status.state === "failed" ? "RotateCw" : "ArrowDownToLine"} label={status.state === "failed" ? "Retry" : "Download"} onPress={() => void install({}).then(done, failed)} />
+        ) : null}
+      </Row>
+    </>
+  );
+}
+
+/** The HTML pages page: the switch for the tools, then how to use them. */
 function HtmlGuide({ theme, prefs, onChange }: { theme: PluginTheme; prefs: Prefs; onChange(p: Prefs): void }) {
   const s = useStyles(theme);
   return (
     <View style={{ gap: 24 }}>
       <Group theme={theme} title="Tool">
-        <Row theme={theme} first label="HTML pages" hint="Off by default. Gives agents created from now on the html_render tool; existing agents keep the tools they started with.">
-          <Switch theme={theme} label="HTML pages" value={prefs.html === "on"} onChange={(on) => onChange({ ...prefs, html: on ? "on" : "off" })} />
-        </Row>
+        <HtmlSwitch theme={theme} prefs={prefs} onChange={onChange} />
       </Group>
       <Group theme={theme} title="How to use">
         {HTML_GUIDE.map(([title, text], i) => (

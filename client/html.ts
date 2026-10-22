@@ -1,17 +1,35 @@
 import type { AgentTimelineItem } from "@getpaseo/protocol/agent-types";
 import { z } from "zod";
-import { isHtmlTool } from "../shared/html.ts";
+import { isHtmlTool, readHeights } from "../shared/html.ts";
 
-export const htmlSchema = z.object({ title: z.string(), html: z.string() });
+// `heights`: width → height pairs the daemon measured when it checked the page, sorted by width; absent on pages it couldn't check, pages
+// published with force, and older ones.
+export const htmlSchema = z.object({ title: z.string(), html: z.string(), heights: z.array(z.tuple([z.number(), z.number()])).min(1).optional() });
 export type HtmlData = z.output<typeof htmlSchema>;
 
-/** The page a finished html_render call published, read from the call's own input; failed calls (the tool rejected the page) stay tool rows. */
+/**
+ * The page a finished html_render call published, read from the call's own input, plus the heights the daemon added to its output
+ * (readHeights); failed calls (the tool rejected the page) stay tool rows.
+ */
 export function htmlData(item: AgentTimelineItem): HtmlData | undefined {
   if (item.type !== "tool_call" || item.status !== "completed" || item.detail.type !== "unknown" || !isHtmlTool(item.name)) return undefined;
   const input = item.detail.input as { title?: unknown; html?: unknown } | null;
   const output = item.detail.output as { isError?: unknown } | null;
   if (typeof input?.html !== "string" || output?.isError === true) return undefined;
-  return { title: typeof input.title === "string" && input.title.trim() ? input.title.trim() : "Page", html: input.html };
+  const heights = readHeights(output);
+  return { title: typeof input.title === "string" && input.title.trim() ? input.title.trim() : "Page", html: input.html, ...(heights && { heights }) };
+}
+
+/**
+ * The page's height at `width`, from the widths the daemon measured (at least one, sorted by width): in between, along the line between
+ * the two nearest; outside, the nearest.
+ */
+export function heightAt(heights: ReadonlyArray<readonly [number, number]>, width: number) {
+  const above = heights.findIndex(([w]) => w >= width);
+  if (above <= 0) return heights.at(above)![1];
+  const [w0, h0] = heights[above - 1]!;
+  const [w1, h1] = heights[above]!;
+  return Math.round(h0 + ((h1 - h0) * (width - w0)) / (w1 - w0));
 }
 
 /** The chat frame's sandbox. Never allow-same-origin: with it the page's scripts could reach the app's session and storage. */

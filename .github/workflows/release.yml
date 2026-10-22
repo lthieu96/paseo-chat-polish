@@ -22,7 +22,18 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run typecheck
+      # The page check lays pages out in the plugin's headless shell, as on a user's machine; cached by the source that pins its version.
+      - uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/paseo/plugin-cache/paseo-chat-polish/chrome-headless-shell
+          key: headless-shell-${{ runner.os }}-${{ hashFiles('server/headless-shell.ts') }}
+      - name: Install the headless shell
+        env:
+          PASEO_HOME: ${{ runner.temp }}/paseo
+        run: node --input-type=module -e "const shell = await import('./server/headless-shell.ts'); await shell.installHeadlessShell(); if (!shell.headlessShell()) process.exit(1);"
       - run: npm test
+        env:
+          PASEO_HOME: ${{ runner.temp }}/paseo
       - name: Create GitHub Release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:

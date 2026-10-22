@@ -1118,7 +1118,7 @@ function useInlinedImages(html: string) {
 }
 
 /** The page in the chat, with full screen, open in browser and copy on hover. Full screen is a second frame, so the page starts over there. */
-function HtmlPage({ html, title, theme }: HtmlData & { theme: PluginTheme }) {
+function HtmlPage({ html, title, heights, theme }: HtmlData & { theme: PluginTheme }) {
   const page = useInlinedImages(html);
   const c = theme.colors;
   const css = useHtmlTheme(c);
@@ -1161,8 +1161,8 @@ function HtmlPage({ html, title, theme }: HtmlData & { theme: PluginTheme }) {
   const shared = [button("ExternalLink", "Open in browser", () => void openInBrowser()), button("Copy", "Copy HTML", () => void copy())];
   return (
     <View ref={box}>
-      {/* A stand-in the frame's last size while images load, so the chat doesn't move when the page arrives. */}
-      {page === undefined ? <View style={{ height: lastFrameHeight(html) }} /> : <HtmlFrame html={page} id={html} title={title} colors={c} />}
+      {/* A stand-in at the frame's last size (or the daemon's measured height) while images load, so the chat doesn't move when the page arrives. */}
+      {page === undefined ? <View style={{ height: lastFrameHeight(html, heights) }} /> : <HtmlFrame html={page} id={html} title={title} colors={c} heights={heights} />}
       {/* Hidden, not removed, off hover: the buttons stay where the pointer may land, so showing them never moves what is under it. */}
       <View pointerEvents="box-none" style={{ position: "absolute", top: 6, right: 6, flexDirection: "row", gap: 4, opacity: hovered ? 1 : 0 }}>
         {[button("Maximize2", "Full screen", () => setFull(true)), ...shared]}

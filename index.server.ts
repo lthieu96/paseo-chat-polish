@@ -7,8 +7,9 @@ import { recapData } from "./shared/recap";
 import { getTheme, themeSchema, themeSettings } from "./shared/theme";
 import { getIconSet, getPrefs, prefsSchema, prefsSettings } from "./shared/timeline";
 import { loadIconSet } from "./server/icons";
+import { installHeadlessShell, removeHeadlessShell, shellStatus, staleShell } from "./server/headless-shell";
 import { closeLocalServer, openHtmlPage, startHtmlTool, withHtmlTool } from "./server/html";
-import { openHtml } from "./shared/html";
+import { browserStatus, installBrowser, openHtml, removeBrowser } from "./shared/html";
 import { applyUpdate, checkUpdate } from "./shared/update";
 import { checkForUpdate, installUpdate } from "./server/update";
 
@@ -27,9 +28,13 @@ export default function contribute(server: PluginServerContext) {
   });
   server.handle(getIconSet, ({ set }) => loadIconSet(set));
   const htmlTool = () => startHtmlTool().catch((error: unknown) => (console.error("[chat-polish] html_render tool unavailable", error), undefined));
-  // Started even while the pref is off: agents created while it was on still call the tool.
+  // Started even while the pref is off: agents created while it was on still call the tools.
   void htmlTool();
   server.handle(openHtml, openHtmlPage);
+  server.handle(browserStatus, shellStatus);
+  server.handle(installBrowser, () => (void installHeadlessShell(), shellStatus()));
+  server.handle(removeBrowser, () => removeHeadlessShell().then(shellStatus));
+  if (staleShell()) void installHeadlessShell();
   server.before("agent.create", async ({ request }) => {
     // Off by default, so unreadable prefs mean off; internal agents (commit and PR messages) never draw.
     const current = await prefs.read();

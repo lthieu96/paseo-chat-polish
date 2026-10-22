@@ -1,7 +1,7 @@
 import { createElement, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { openExternalUrl } from "@getpaseo/plugin/client";
 import { htmlPage, themeCss, type HtmlColors } from "../shared/page.ts";
-import { FRAME_SANDBOX, fitFrame, frameKey, frameLink, frameReport } from "./html.ts";
+import { FRAME_SANDBOX, fitFrame, frameKey, frameLink, frameReport, heightAt } from "./html.ts";
 import { readHostAppearance, seriesFrom } from "./web";
 
 // Web only (views.tsx checks Platform.OS); just the DOM this module touches.
@@ -14,6 +14,7 @@ interface HoverTarget {
 }
 declare const KeyboardEvent: new (type: "keydown", init: object) => unknown;
 interface Frame {
+  clientWidth: number;
   contentWindow: { postMessage(message: unknown, target: string): void } | null;
   dispatchEvent(event: unknown): boolean;
 }
@@ -23,8 +24,11 @@ interface Frame {
 const lastSizes = new Map<string, { height: number; width: number }>();
 const START_HEIGHT = 160;
 
-/** The height a page's frame last had in the chat, for a stand-in of the same size while the page gets ready. */
-export const lastFrameHeight = (id: string) => lastSizes.get(id)?.height ?? START_HEIGHT;
+// The width a page's measured heights are read at before its frame has one: the chat's column on desktop.
+const COLUMN = 700;
+
+/** The height a page's frame last had in the chat, or else its measured height, for a stand-in of the same size while the page gets ready. */
+export const lastFrameHeight = (id: string, heights?: ReadonlyArray<readonly [number, number]>) => lastSizes.get(id)?.height ?? (heights ? heightAt(heights, COLUMN) : START_HEIGHT);
 // After a width change, a shorter page has to stay shorter this long before the frame follows (see fitFrame).
 const SHRINK_AFTER_MS = 400;
 
@@ -42,8 +46,25 @@ export function useHtmlTheme(colors: HtmlColors) {
 /**
  * An html_render page in a sandboxed frame: scripts run, but with no same-origin access the page can't reach the app's session or storage.
  * `id` names the page across remounts (its source, before images were inlined). The frame fits the page's reported height (or, with `fill`, its container) and follows the app's theme without reloading, so the page keeps its state.
+ * `heights`, the daemon's measurements, size a frame the chat hasn't shown yet, so the page arrives at its size instead of growing into it.
  */
-export function HtmlFrame({ html, id = html, title, colors, fill = false, onEscape }: { html: string; id?: string; title: string; colors: HtmlColors; fill?: boolean; onEscape?: () => void }) {
+export function HtmlFrame({
+  html,
+  id = html,
+  title,
+  colors,
+  heights,
+  fill = false,
+  onEscape,
+}: {
+  html: string;
+  id?: string;
+  title: string;
+  colors: HtmlColors;
+  heights?: ReadonlyArray<readonly [number, number]>;
+  fill?: boolean;
+  onEscape?: () => void;
+}) {
   const ref = useRef<Frame | null>(null);
   const escape = useRef(onEscape);
   escape.current = onEscape;
@@ -52,7 +73,8 @@ export function HtmlFrame({ html, id = html, title, colors, fill = false, onEsca
   latest.current = css;
   // The page starts in the theme of its first render; later themes are posted, since a new srcdoc would reload it.
   const srcDoc = useMemo(() => htmlPage(html, latest.current), [html]);
-  const shown = useRef(lastSizes.get(id) ?? { height: START_HEIGHT, width: -1 });
+  // Width -1 until the page reports one, so its first report always sets the frame: up at once, down after SHRINK_AFTER_MS (fitFrame).
+  const shown = useRef(lastSizes.get(id) ?? { height: lastFrameHeight(id, heights), width: -1 });
   const [height, setHeight] = useState(shown.current.height);
   const shrink = useRef<ReturnType<typeof setTimeout>>(undefined);
   const resize = (size: { height: number; width: number }) => {
@@ -61,6 +83,11 @@ export function HtmlFrame({ html, id = html, title, colors, fill = false, onEsca
     setHeight(size.height);
   };
   const postTheme = () => ref.current?.contentWindow?.postMessage({ type: "cp-html-theme", css: latest.current }, "*");
+  // The frame's width is known from the commit that inserts it, before it's painted: its measured height there.
+  useLayoutEffect(() => {
+    const width = ref.current?.clientWidth;
+    if (!fill && heights && width && !lastSizes.has(id)) resize({ height: heightAt(heights, width), width: -1 });
+  }, []);
   // Listen from the commit that inserts the frame: a fast page can report its height before a passive effect runs.
   useLayoutEffect(() => {
     const onMessage: MessageListener = ({ source, data }) => {

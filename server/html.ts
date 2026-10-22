@@ -5,9 +5,10 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Script } from "node:vm";
-import { HTML_SERVER, HTML_TOOL, localImages } from "../shared/html.ts";
+import { HTML_PREVIEW_TOOL, HTML_SERVER, HTML_TOOL, heightsLine, localImages } from "../shared/html.ts";
+import { headlessShell } from "./headless-shell.ts";
 import { cacheDir } from "./icons.ts";
-import { checkPage } from "./page-check.ts";
+import { checkPage, type PageCheck } from "./page-check.ts";
 
 // The tool's description is the style guide: the model reads it when it builds a page, on every provider.
 const DESCRIPTION = `Show a finished HTML page inline in this chat, above your reply: a chart, table, dashboard, simulation, interactive explainer or UI mockup. Call it only when the user asks for a visual, and once per page, when the page is complete.
@@ -28,7 +29,7 @@ Built-in styles (prefer them to custom CSS)
 Style
 At most three font sizes, spacing in multiples of 4px, one accent color, series colors only for data. Right-align numbers in tables; label axes and units. Animations run 150 to 300ms ease-out and respect prefers-reduced-motion. Simulations size the canvas by devicePixelRatio, offer Play, Pause, Reset and sliders for the key parameters, draw a meaningful first frame, and pause while off-screen (IntersectionObserver).
 
-Follow the layout rules in your instructions: you never see the page, so nothing may rely on hand-picked coordinates. The tool lays the page out at 700 and 360px before showing it and returns any script errors, overlapping or cut-off text, overflow or moving height for you to fix.`;
+Follow the layout rules in your instructions: you never see the page, so nothing may rely on hand-picked coordinates. The tool lays the page out at 700 and 360px before showing it; when it finds script errors, overlapping or cut-off text, overflow or a moving height, it shows nothing and returns them for you to fix.`;
 
 /**
  * Added to a new agent's system prompt while the html pref is on: when the tool is wanted, and the layout rules, since a description can load late and the agent
@@ -47,10 +48,13 @@ You never see the page you publish, so build it so nothing can overlap, get cut 
 - In SVG and canvas, compute positions from the data in your script, never from hand-picked numbers. Give each item (step, message, bar) its own row, at least 20px per line of text plus 12px. Put labels in their own row above or beside a shape, never on another label, line or arrow. Size the viewBox from the rows. Split long labels into short lines with <tspan>, and make boxes wider than their text (about 0.6 × font size per character).
 - Keep at least 8px between labels, and between text and a box edge. Everything must fit a 360px-wide page too.
 - Simulations: moving parts get a region of their own; readouts and controls go below the canvas, in HTML.
-- Animations and controls must not change the page's height: the chat resizes the frame to fit, so the conversation would jump. Reserve space for every state up front: fixed or min-height areas, room for rows that appear later, single-line readouts with tabular numbers.
+- Animations and controls must not change the page's height: the chat resizes the frame to fit, so the conversation would jump. Reserve space for every state up front: fixed or min-height areas (one that scrolls its overflow is fine), room for rows that appear later, single-line readouts with tabular numbers.
 
 Your reply
 After publishing, write one or two sentences the page doesn't already say: a takeaway, a caveat or a next step. Never say the page is shown, above, ready or rendered, and never reply with only punctuation.`;
+
+// Only for agents created while the headless shell is installed: html_preview has nothing to lay a page out in without it.
+const PREVIEW_RULE = `- To see a page before publishing it (canvas drawings, dense SVG), call ${HTML_PREVIEW_TOOL}: it reports what ${HTML_TOOL} would reject and, once the page passes, returns a screenshot. It doesn't publish the page, and it means writing the page twice, so skip it for plain layouts.`;
 
 const TOOL = {
   name: HTML_TOOL,
@@ -66,6 +70,12 @@ const TOOL = {
   },
   annotations: { title: "Render HTML", readOnlyHint: true },
 };
+const PREVIEW = {
+  name: HTML_PREVIEW_TOOL,
+  description: `Lay an HTML page out exactly as ${HTML_TOOL} would, without publishing it, and get back what ${HTML_TOOL}'s checks would reject, its console output, its height and, once it passes them, a screenshot at 700px wide. Optional: ${HTML_TOOL} runs the same checks itself, and previewing means writing the page twice. Use it for what the checks can't judge (canvas drawings, dense SVG, a look you need to see), then publish the page with ${HTML_TOOL}.`,
+  inputSchema: { type: "object", properties: { html: { type: "string", description: "A complete, self-contained HTML document" } }, required: ["html"] },
+  annotations: { title: "Preview HTML", readOnlyHint: true },
+};
 // The frame grows to fit the page, so a size that follows the viewport grows it again and again. Only stylesheets and style attributes are
 // scanned, so a page that mentions the unit in its text passes; comments match first so their contents are skipped.
 const CSS_SOURCE = /<!--[\s\S]*?(?:-->|$)|<style\b[^>]*(?:>|$)([\s\S]*?)(?:<\/style\s*>|$)|\sstyle\s*=\s*(?:"([^"]*)(?:"|$)|'([^']*)(?:'|$)|([^\s>]+))/gi;
@@ -79,8 +89,8 @@ const viewportUnit = (html: string) => {
   return undefined;
 };
 
-// Classic inline scripts, compiled but not run: a syntax error leaves the page blank or half-built, and the agent never sees it.
-// ponytail: modules and src scripts aren't checked, nor errors at run time; a headless browser would catch those.
+// Classic inline scripts, compiled but not run: a syntax error leaves the page blank or half-built, and this names it with its line even
+// when the page isn't laid out (no headless browser, or force). Modules, src scripts and errors at run time are left to the page check.
 const SCRIPT = /<!--[\s\S]*?(?:-->|$)|<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi;
 function scriptError(html: string) {
   let n = 0;
@@ -127,29 +137,55 @@ export async function mcpAnswer(m: RpcMessage) {
   const text = (value: string, isError = false) => result({ content: [{ type: "text", text: value }], isError });
   if (m.method === "initialize") return result({ protocolVersion: m.params?.protocolVersion ?? "2025-06-18", capabilities: { tools: {} }, serverInfo: { name: HTML_SERVER, version: "1" } });
   if (m.method === "ping") return result({});
-  if (m.method === "tools/list") return result({ tools: [TOOL] });
+  // html_preview while the headless shell is installed; without it pages go out unchecked and there's nothing to preview them in.
+  if (m.method === "tools/list") return result({ tools: headlessShell() ? [TOOL, PREVIEW] : [TOOL] });
   if (m.method !== "tools/call") return { jsonrpc: "2.0", id: m.id, error: { code: -32601, message: "Method not found" } };
   const html = m.params?.arguments?.html;
-  if (m.params?.name !== TOOL.name || typeof html !== "string" || !html.trim()) return text("Pass a title and a complete HTML document.", true);
+  const preview = m.params?.name === PREVIEW.name;
+  if ((m.params?.name !== TOOL.name && !preview) || typeof html !== "string" || !html.trim()) return text(preview ? "Pass a complete HTML document." : "Pass a title and a complete HTML document.", true);
   if (html.length > 200000) return text("The page is over 200,000 characters; make it smaller.", true);
   const vh = viewportUnit(html);
-  if (vh) return text(`The page uses a viewport height unit (${vh}). Let content set the height, or use fixed pixel heights.`, true);
-  const problem = scriptError(html) ?? (await imageError(html));
+  const problem = (vh && `The page uses a viewport height unit (${vh}). Let content set the height, or use fixed pixel heights.`) || scriptError(html) || (await imageError(html));
+  if (preview) return result(previewAnswer(problem, await checkPage(html)));
   if (problem) return text(problem, true);
-  const problems = m.params?.arguments?.force === true ? undefined : await checkPage(html);
-  if (problems?.length) {
-    return text(`The page was laid out as the chat shows it, and a reader would see these problems. Fix them and call ${HTML_TOOL} again; pass force: true only if every one is on purpose.\n- ${problems.join("\n- ")}`, true);
+  const check = m.params?.arguments?.force === true ? undefined : await checkPage(html);
+  if (check?.problems.length) {
+    return text(`The page was laid out as the chat shows it, and a reader would see these problems. Fix them and call ${HTML_TOOL} again; pass force: true only if every one is on purpose.\n- ${check.problems.join("\n- ")}`, true);
   }
-  return text("Shown to the reader above your reply. Don't say it's shown and don't describe it; reply in one or two sentences with what it doesn't say: a takeaway, a caveat or a next step.");
+  const shown = "Shown to the reader above your reply. Don't say it's shown and don't describe it; reply in one or two sentences with what it doesn't say: a takeaway, a caveat or a next step.";
+  if (check) return text(`${shown}\n\n${heightsLine(check.heights)}`);
+  // The browser is there but the check didn't run (it couldn't start, or failed): the agent should know nothing vouched for the page.
+  const unchecked = m.params?.arguments?.force !== true && headlessShell();
+  return text(unchecked ? `${shown} The layout check couldn't run, so it went out unchecked.` : shown);
 }
 
-/** A new agent's config with the tool added, preapproved so calling it never asks for permission, loaded up front on Claude, and its rules appended to the system prompt. */
+/**
+ * What html_preview tells the agent: everything html_render would, as notes rather than a rejection. The screenshot comes only once the
+ * checks pass: until then the problems say what to fix, and Paseo shows every image a tool returns in the chat.
+ */
+function previewAnswer(problem: string | undefined, check: PageCheck | undefined) {
+  const problems = [problem, ...(check?.problems ?? [])].filter(Boolean);
+  const height = (width: number) => check?.heights.find(([w]) => w === width)?.[1];
+  const heights = height(700) && height(360) ? [`Height: ${height(700)}px at 700px wide, ${height(360)}px at 360px.`] : [];
+  const text = [
+    check
+      ? `Laid out as the chat would show it, at 700px and 360px wide. The page wasn't published.${problems.length ? " The screenshot comes once these are fixed." : " The screenshot is at 700px."}`
+      : `The page couldn't be laid out (${headlessShell() ? "the check failed" : "the headless browser isn't installed"}), so only its source was checked. The page wasn't published.`,
+    problems.length ? `${HTML_TOOL} would reject it for:\n- ${problems.join("\n- ")}` : `${HTML_TOOL}'s checks pass.`,
+    ...(check ? [check.console.length ? `Console:\n${check.console.join("\n")}` : "Console: nothing logged.", ...heights] : []),
+    `When it looks right, publish it with ${HTML_TOOL}.`,
+  ].join("\n\n");
+  const shot = check && !problems.length ? [{ type: "image", data: check.screenshot, mimeType: "image/png" }] : [];
+  return { content: [{ type: "text", text }, ...shot], isError: false };
+}
+
+/** A new agent's config with the tools added, preapproved so calling them never asks for permission, loaded up front on Claude, and its rules appended to the system prompt. */
 export function withHtmlTool(config: AgentSessionConfig, { url, token }: { url: string; token: string }): AgentSessionConfig {
   return {
     ...config,
     mcpServers: { ...config.mcpServers, [HTML_SERVER]: { type: "http", url, headers: { Authorization: `Bearer ${token}` }, alwaysLoad: true } },
-    toolPolicy: { ...config.toolPolicy, preapproved: [...(config.toolPolicy?.preapproved ?? []), { kind: "mcp", server: HTML_SERVER, tool: HTML_TOOL }] },
-    systemPrompt: [config.systemPrompt, SYSTEM_PROMPT].filter(Boolean).join("\n\n"),
+    toolPolicy: { ...config.toolPolicy, preapproved: [...(config.toolPolicy?.preapproved ?? []), ...[HTML_TOOL, HTML_PREVIEW_TOOL].map((tool) => ({ kind: "mcp" as const, server: HTML_SERVER, tool }))] },
+    systemPrompt: [config.systemPrompt, headlessShell() ? SYSTEM_PROMPT.replace("\n\nYour reply", `\n${PREVIEW_RULE}\n\nYour reply`) : SYSTEM_PROMPT].filter(Boolean).join("\n\n"),
   };
 }
 
@@ -237,7 +273,7 @@ function localServer() {
   return listening;
 }
 
-/** Where agents reach the html_render tool. */
+/** Where agents reach the chat_polish MCP server (html_render, and html_preview while the headless browser is installed). */
 export const startHtmlTool = () => localServer().then(({ port, token }) => ({ url: `http://127.0.0.1:${port}${MCP_PATH}`, token }));
 
 /** Saves the page under its hash and returns its address on the daemon's localhost. */
