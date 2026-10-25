@@ -1,6 +1,6 @@
 // The Chat Polish design for what Paseo draws itself: chat chrome, composer, cards, popovers, tool rows and markdown.
 import { icon } from "./icons";
-import { CHIP, CODE_BLOCK, CTX, CTX_HEAD, HEADING, INLINE_CODE, LANG, LIMIT, MARK, MARK_OL, md, MD, MSG, PERMISSION, PLAN, PRIMARY, QUESTION, ROW, ROW_ICON, SECONDARY, SLASH, SLASH_GLIDE_MS, SURFACE, TAG, USAGE, WORKING_BOX } from "./selectors";
+import { CHIP, CODE_BLOCK, CTX, CTX_HEAD, HEADING, INLINE_CODE, LANG, LIMIT, MARK, MARK_OL, md, MD, MSG, PERMISSION, PLAN, QUESTION, ROW, ROW_ICON, SLASH, SLASH_GLIDE_MS, SURFACE, TAG, USAGE, WORKING_BOX } from "./selectors";
 
 // Values come from CSS variables set by setNativeColors (restyle.ts), so a theme switch restyles without re-tagging.
 
@@ -194,13 +194,13 @@ ${PERMISSION} > div:first-child, [data-testid="question-form-current-question"] 
 [data-cp-part="permission-body"] > div > div:first-child { background-color: var(--cp-sunken) !important; border: 1px solid var(--cp-rule) !important; border-radius: 8px !important; overflow: hidden !important; }
 [data-testid="permission-request-question"] { font-size: 12px !important; margin: 0 !important; }
 ${PERMISSION} > div:last-child, ${QUESTION} > div:last-child, ${PLAN} > div:last-child > div:last-child { justify-content: flex-end !important; }
-:is(${PRIMARY}, ${SECONDARY}) { height: 28px !important; padding: 0 12px !important; border-radius: 8px !important; justify-content: center !important; }
+:is([data-cp-part="primary"], [data-cp-part="secondary"]) { height: 28px !important; padding: 0 12px !important; border-radius: 8px !important; justify-content: center !important; }
 [data-cp-part="primary"] *, [data-cp-part="secondary"] * { font-size: 13px !important; font-weight: 500 !important; }
-${SECONDARY} { background-color: transparent !important; border-color: var(--cp-rule) !important; }
-${PRIMARY} { background-color: var(--cp-accent) !important; border-color: var(--cp-accent) !important; }
+[data-cp-part="secondary"] { background-color: transparent !important; border-color: var(--cp-rule) !important; }
+[data-cp-part="primary"] { background-color: var(--cp-accent) !important; border-color: var(--cp-accent) !important; }
 [data-cp-part="primary"] * { color: var(--cp-accent-fg) !important; font-weight: 600 !important; }
-${PRIMARY} svg { stroke: var(--cp-accent-fg) !important; }
-${PRIMARY}[aria-disabled="true"] { opacity: 0.45 !important; }
+[data-cp-part="primary"] svg { stroke: var(--cp-accent-fg) !important; }
+[data-cp-part="primary"][aria-disabled="true"] { opacity: 0.45 !important; }
 ${QUESTION} [role="radio"] { padding: 7px 10px !important; }
 ${QUESTION} [role="radio"][aria-checked="true"] { background-color: var(--cp-control) !important; }
 ${QUESTION} [role="radio"] > div > div:first-child { width: 14px !important; height: 14px !important; margin-top: 4px !important; }

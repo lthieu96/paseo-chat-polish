@@ -23,6 +23,7 @@ test("DOM restyling, accordion transitions, and bottom following stay stable", {
       <div data-testid="settings-detail-pane"></div>
       <div data-testid="context-window-details" style="position:absolute;border:1px solid black;border-radius:12px;background:white"><div><span>Context</span><span>35% used</span></div><div data-testid="usage-report-test" style="height:180px">Usage</div></div>
       <div data-testid="assistant-message"><div data-paseo-markdown-tag="blockquote"><span id="marker">[!NO</span></div></div>
+      <div><div data-testid="permission-request-deny" style="color:#888"><div><span>Deny</span></div></div><div data-testid="permission-request-action-always" style="color:#888"><div><span>Allow always</span></div></div><div data-testid="permission-request-action-once" style="color:#eee"><div><span>Allow once</span></div></div></div>
       <script>
         const checks = {}; const errors = [];
         window.onerror = (message) => errors.push(String(message));
@@ -61,6 +62,9 @@ test("DOM restyling, accordion transitions, and bottom following stay stable", {
           const restyle = web.restyleNative(() => true); const clamp = web.clampUserMessages(() => true);
           checks.mermaidDocFromBundle = (await web.loadMermaidDoc()) === new TextDecoder().decode(Uint8Array.from(atob("${Buffer.from(mermaidDoc).toString("base64")}"), (ch) => ch.charCodeAt(0)));
           await wait(); checks.observerSettles = !capped;
+          // Extra permission actions follow Paseo's variant, which it shows only by label color.
+          const action = (id) => document.querySelector('[data-testid="permission-request-action-' + id + '"]').dataset.cpPart;
+          checks.permissionActionVariants = action('always') === 'secondary' && action('once') === 'primary';
           first.remove(); await wait(); checks.detachedReleased = released === 10;
           const card = document.querySelector('[data-testid="context-window-details"]');
           const usage = card.lastElementChild;
@@ -184,7 +188,7 @@ test("DOM restyling, accordion transitions, and bottom following stay stable", {
     assert.equal(report.error, undefined, report.error);
     assert.deepEqual(report.errors, []);
     for (const [check, passed] of Object.entries(report.checks)) assert.equal(passed, true, check);
-    assert.equal(Object.keys(report.checks).length, 16);
+    assert.equal(Object.keys(report.checks).length, 17);
   } finally {
     server?.closeAllConnections(); server?.close();
     rmSync(temp, { recursive: true, force: true });

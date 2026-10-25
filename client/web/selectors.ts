@@ -36,6 +36,8 @@ export const LIMIT = '[data-cp-part="usage-limits"] > div';
 export const QUESTION = '[data-testid="question-form-card"]';
 export const PRIMARY = ':is([data-testid="permission-request-accept"], [data-testid="question-form-primary-action"])';
 export const SECONDARY = ':is([data-testid="permission-request-deny"], [data-testid="question-form-dismiss"])';
+// Other permission actions, such as "Implement with Auto" on plans (Paseo 0.13) or OpenCode's "Allow once"; either variant.
+export const ACTION = '[data-testid^="permission-request-action-"]';
 export const WORKING_BOX = '[data-cp-part="loader"]';
 export const SURFACE = ':is([data-testid="combobox-desktop-container"], [data-cp-part="menu"], [role="menu"], [role="listbox"], [data-testid="command-center-panel"])';
 export const SETTINGS_PANE = '[data-testid="settings-detail-pane"]';

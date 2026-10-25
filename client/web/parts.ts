@@ -2,13 +2,27 @@
 import { tagContextCard } from "./context-card";
 import { within, type ComputedStyle, type DomElement, type ResizeObserverClass, type WebDocument } from "./dom";
 import { rowIconMask } from "./icons";
-import { CHIP, CTX, PERMISSION, PLAN, PRIMARY, ROW, ROW_ICON, SECONDARY, SETTINGS_PANE, SLASH, SLASH_GLIDE_MS, SURFACE, USAGE, WORKING_BOX } from "./selectors";
+import { ACTION, CHIP, CTX, PERMISSION, PLAN, PRIMARY, ROW, ROW_ICON, SECONDARY, SETTINGS_PANE, SLASH, SLASH_GLIDE_MS, SURFACE, USAGE, WORKING_BOX } from "./selectors";
 
 declare const document: WebDocument;
 declare function getComputedStyle(el: DomElement): ComputedStyle;
 declare const ResizeObserver: ResizeObserverClass;
 declare function matchMedia(query: string): { matches: boolean };
 declare function setTimeout(cb: () => void, ms: number): number;
+
+const label = (button: DomElement | null | undefined) => Array.from(button?.querySelectorAll("*") ?? []).find((el) => !el.firstElementChild && el.textContent?.trim());
+
+/**
+ * A permission action button when it is drawn as `part`. Paseo draws every action in the same box and marks the primary one only by
+ * its label color (foreground rather than muted), so it is compared with Deny's, which is never primary. Read once per button, in a
+ * card that rarely shows, so the style read costs nothing while the timeline scrolls.
+ */
+function actionAs(el: DomElement, part: "primary" | "secondary") {
+  if (el.hasAttribute("data-cp-part")) return null;
+  const own = label(el), deny = label(el.parentElement?.querySelector('[data-testid="permission-request-deny"]'));
+  const primary = !!own && !!deny && getComputedStyle(own).color !== getComputedStyle(deny).color;
+  return (primary ? "primary" : "secondary") === part ? el : null;
+}
 
 // [child, parent it marks, part]
 const PARTS: Array<[string, (el: DomElement) => DomElement | null | undefined, string]> = [
@@ -35,6 +49,8 @@ const PARTS: Array<[string, (el: DomElement) => DomElement | null | undefined, s
   ['[data-testid="message-input-root"] textarea', (el) => el.parentElement?.parentElement, "input-row"],
   [PRIMARY, (el) => el, "primary"],
   [SECONDARY, (el) => el, "secondary"],
+  [ACTION, (el) => actionAs(el, "primary"), "primary"],
+  [ACTION, (el) => actionAs(el, "secondary"), "secondary"],
   [`${PLAN} > button:first-child`, (el) => el, "plan-head"],
   ['[data-testid="chat-outline-preview"]', (el) => el, "outline-preview"],
   ['[data-testid="context-window-details"]', (el) => el, "context"],
