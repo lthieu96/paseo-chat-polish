@@ -1,4 +1,4 @@
-import { Icon as PaseoIcon, type PluginIconProps } from "@getpaseo/plugin/client/react-native";
+import { Icon as PaseoIcon } from "@getpaseo/plugin/client/react-native";
 import { useSyncExternalStore } from "react";
 import { Image, Platform } from "react-native";
 import { usePrefs } from "./prefs";
@@ -6,7 +6,7 @@ import { iconTwins, subscribeIconSets } from "./web";
 
 /** Paseo's Lucide icon, or its twin in the "Icon set" pref once the daemon has sent that set. React Native's Image draws
  * SVG only on web, so other platforms, and names without a twin, keep Lucide. */
-export function Icon({ name, size = 16, color = "#888888" }: PluginIconProps) {
+export function Icon({ name, size = 16, color = "#888888" }: { name: string; size?: number; color?: string }) {
   const set = usePrefs().iconSet;
   const twins = useSyncExternalStore(subscribeIconSets, () => iconTwins(set));
   const paths = Platform.OS === "web" ? twins?.[name] : undefined;

@@ -1,6 +1,6 @@
 {
   "name": "paseo-chat-polish",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "description": "Paseo plugin: a quieter chat timeline, merged steps, rich text styles, themes and a dashboard with live preview",
   "keywords": [
     "paseo",
@@ -32,7 +32,7 @@
     "test": "node --test test/*.test.mjs"
   },
   "devDependencies": {
-    "@getpaseo/plugin": "0.11.2",
+    "@getpaseo/plugin": "0.13.0",
     "@types/node": "^24.19.2",
     "@types/react": "~19.2.0",
     "react": "19.1.0",
@@ -41,7 +41,7 @@
     "zod": "^4.4.3"
   },
   "dependencies": {
-    "@getpaseo/protocol": "0.11.2",
+    "@getpaseo/protocol": "0.13.0",
     "pele": "1.7.0",
     "sharp": "0.35.5"
   }
