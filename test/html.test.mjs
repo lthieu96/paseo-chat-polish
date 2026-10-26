@@ -93,13 +93,17 @@ test("MCP over HTTP: lists the tool, rejects vh pages, accepts a good one; confi
   try {
     const tool = await startHtmlTool();
     assert.match(tool.url, /^http:\/\/127\.0\.0\.1:\d+\/mcp$/);
-    const config = withHtmlTool({ systemPrompt: "Base", mcpServers: { other: { type: "http", url: "x" } } }, tool);
+    const config = withHtmlTool({ provider: "claude", systemPrompt: "Base", mcpServers: { other: { type: "http", url: "x" } } }, tool);
     assert.deepEqual(Object.keys(config.mcpServers), ["other", "chat_polish"]);
     assert.deepEqual(config.mcpServers.chat_polish, { type: "http", url: tool.url, headers: { Authorization: `Bearer ${tool.token}` }, alwaysLoad: true });
     assert.deepEqual(config.toolPolicy.preapproved, [
       { kind: "mcp", server: "chat_polish", tool: "html_render" },
       { kind: "mcp", server: "chat_polish", tool: "html_preview" },
     ]);
+    // Paseo refuses to create an OMP agent with a toolPolicy, so the tools ride along unapproved.
+    const ompConfig = withHtmlTool({ provider: "omp", systemPrompt: "Base" }, tool);
+    assert.equal(ompConfig.toolPolicy, undefined);
+    assert.equal(ompConfig.mcpServers.chat_polish.type, "http");
     assert.match(config.systemPrompt, /^Base\n\n# HTML pages\nYou have an html_render tool/);
     // No headless shell in this cache: pages go out unchecked, with nothing to preview them in.
     assert.doesNotMatch(config.systemPrompt, /html_preview/);

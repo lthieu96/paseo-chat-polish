@@ -179,13 +179,21 @@ function previewAnswer(problem: string | undefined, check: PageCheck | undefined
   return { content: [{ type: "text", text }, ...shot], isError: false };
 }
 
+/** Paseo refuses to create an agent whose provider cannot preapprove exact MCP tools. */
+const PREAPPROVAL_PROVIDERS: Record<string, true> = { claude: true, codex: true, opencode: true };
+
 /** A new agent's config with the tools added, preapproved so calling them never asks for permission, loaded up front on Claude, and its rules appended to the system prompt. */
 export function withHtmlTool(config: AgentSessionConfig, { url, token }: { url: string; token: string }): AgentSessionConfig {
-  return {
+  const withServer: AgentSessionConfig = {
     ...config,
     mcpServers: { ...config.mcpServers, [HTML_SERVER]: { type: "http", url, headers: { Authorization: `Bearer ${token}` }, alwaysLoad: true } },
-    toolPolicy: { ...config.toolPolicy, preapproved: [...(config.toolPolicy?.preapproved ?? []), ...[HTML_TOOL, HTML_PREVIEW_TOOL].map((tool) => ({ kind: "mcp" as const, server: HTML_SERVER, tool }))] },
     systemPrompt: [config.systemPrompt, headlessShell() ? SYSTEM_PROMPT.replace("\n\nYour reply", `\n${PREVIEW_RULE}\n\nYour reply`) : SYSTEM_PROMPT].filter(Boolean).join("\n\n"),
+  };
+  const provider = "provider" in config && typeof config.provider === "string" ? config.provider : undefined;
+  if (!provider || PREAPPROVAL_PROVIDERS[provider] !== true) return withServer;
+  return {
+    ...withServer,
+    toolPolicy: { ...config.toolPolicy, preapproved: [...(config.toolPolicy?.preapproved ?? []), ...[HTML_TOOL, HTML_PREVIEW_TOOL].map((tool) => ({ kind: "mcp" as const, server: HTML_SERVER, tool }))] },
   };
 }
 
