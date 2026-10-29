@@ -1,6 +1,6 @@
 // The Chat Polish design for what Paseo draws itself: chat chrome, composer, cards, popovers, tool rows and markdown.
 import { icon } from "./icons";
-import { BUBBLE, CHIP, CODE_BLOCK, CTX, CTX_HEAD, HEADING, INLINE_CODE, LANG, LIMIT, MARK, MARK_OL, md, MD, MSG, PERMISSION, PLAN, QUESTION, ROW, ROW_ICON, SLASH, SLASH_GLIDE_MS, SURFACE, TAG, USAGE, WORKING_BOX } from "./selectors";
+import { BUBBLE, CHIP, CODE_BLOCK, CTX, CTX_HEAD, HEADING, INLINE_CODE, LANG, LIMIT, MARK, MARK_OL, md, MD, MSG, PERMISSION, PLAN, QUESTION, ROW, ROW_ICON, SLASH, SLASH_GLIDE_MS, SURFACE, TAG, TRACK_PANEL, USAGE, WORKING_BOX } from "./selectors";
 
 // Values come from CSS variables set by setNativeColors (restyle.ts), so a theme switch restyles without re-tagging.
 
@@ -111,6 +111,12 @@ ${SURFACE} :is(button, [role="button"], [role="menuitem"], [role="option"], a[hr
 ${SURFACE} :is(button, [role="button"], [role="menuitem"], [role="option"], a[href]):not(:disabled):not([aria-disabled="true"]) * { cursor: pointer !important; }
 ${SURFACE} :is(button, [role="button"], [role="menuitem"], [role="option"], a[href]):not(:disabled):not([aria-disabled="true"]):is(:hover, :focus-visible, [aria-selected="true"]) { background-color: color-mix(in srgb, var(--cp-control), var(--cp-fg) 12%) !important; }
 :root:is(.light, .pluginLight) ${SURFACE} :is(button, [role="button"], [role="menuitem"], [role="option"], a[href]):not(:disabled):not([aria-disabled="true"]):is(:hover, :focus-visible, [aria-selected="true"]) { background-color: color-mix(in srgb, var(--cp-raised), var(--cp-fg) 8%) !important; }
+/* The composer's track panels (subagents, tasks) light a row on a child inset 4px; the fill goes there, not on the full-width row, or both show. */
+:root ${TRACK_PANEL} [role="menuitem"]:not(:disabled):not([aria-disabled="true"]):is(:hover, :focus-visible, [aria-selected="true"]) { background-color: transparent !important; }
+${TRACK_PANEL} [role="menuitem"] > div { border-radius: 11px !important; }
+@supports (corner-shape: squircle) { ${TRACK_PANEL} [role="menuitem"] > div { corner-shape: squircle; } }
+${TRACK_PANEL} [role="menuitem"]:is(:hover, :focus-visible) > div { background-color: color-mix(in srgb, var(--cp-control), var(--cp-fg) 12%) !important; }
+:root:is(.light, .pluginLight) ${TRACK_PANEL} [role="menuitem"]:is(:hover, :focus-visible) > div { background-color: color-mix(in srgb, var(--cp-raised), var(--cp-fg) 8%) !important; }
 /* Paseo lights a row with the raised color, which would vanish on a raised surface; markLitRows tags it to draw it a step up. */
 [data-cp-lit] { background-color: color-mix(in srgb, var(--cp-control), var(--cp-fg) 12%) !important; }
 :root:is(.light, .pluginLight) [data-cp-lit] { background-color: color-mix(in srgb, var(--cp-raised), var(--cp-fg) 8%) !important; }
