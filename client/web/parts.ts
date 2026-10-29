@@ -193,12 +193,17 @@ export function tagParts(roots: DomElement[]) {
   const tight = (gap: DomElement | null | undefined) => gap?.getAttribute("data-cp-part") === "footer-gap" && gap.previousElementSibling?.getAttribute("data-cp-part") === "msg-item" && gap.setAttribute("data-cp-tight", "");
   for (const gap of within(roots, '[data-cp-part="footer-gap"]')) tight(gap);
   for (const item of within(roots, '[data-cp-part="msg-item"]')) tight(item.nextElementSibling);
-  // A prompt's bubble holds its attachment rows (thumbnails, then labelled pills) above the text, which Paseo marks data-message-text.
+  // A prompt's attachment rows (thumbnails, then labelled pills) sit above its text, which Paseo marks data-message-text: in the
+  // bubble up to Paseo 0.13, inside the bubble's message preview from 0.14. The rows are the text's siblings either way.
+  // ponytail: a prompt with attachments and no text keeps Paseo's own layout; nothing marks where its rows start.
   for (const message of within(roots, '[data-testid="user-message"]')) {
     const bubble = message.firstElementChild?.firstElementChild;
-    const rows = Array.from(bubble?.children ?? []).filter((row) => !row.hasAttribute("data-message-text"));
-    if (!bubble || !rows.length) continue;
+    const text = bubble?.querySelector("[data-message-text]");
+    const body = text?.parentElement;
+    const rows = Array.from(body?.children ?? []).filter((row) => row !== text);
+    if (!bubble || !body || !rows.length) continue;
     bubble.setAttribute("data-cp-attach", "");
+    if (body !== bubble) body.setAttribute("data-cp-attach-body", "");
     for (const row of rows) {
       // Thumbnails open the lightbox, so their frames are buttons (their image may still be loading); labelled pills are plain views.
       const images = !!row.querySelector('[role="button"]');

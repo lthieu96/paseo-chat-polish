@@ -62,6 +62,16 @@ test("DOM restyling, accordion transitions, and bottom following stay stable", {
           const restyle = web.restyleNative(() => true); const clamp = web.clampUserMessages(() => true);
           checks.mermaidDocFromBundle = (await web.loadMermaidDoc()) === new TextDecoder().decode(Uint8Array.from(atob("${Buffer.from(mermaidDoc).toString("base64")}"), (ch) => ch.charCodeAt(0)));
           await wait(); checks.observerSettles = !capped;
+          // Paseo 0.14 wraps a prompt's rows and text in a message preview that clamps long prompts itself.
+          const shapes = document.createElement('section');
+          shapes.innerHTML = '<div data-testid="user-message" id="p14"><div><div><div style="max-height:240px;overflow:hidden"><div><div data-message-text="true" style="line-height:20px;font-size:14px;white-space:pre">' + Array(15).fill('long prompt').join('\\n') + '</div></div></div></div></div></div>'
+            + '<div data-testid="user-message" id="a14"><div><div><div style="max-height:240px;overflow:hidden"><div><div id="a14row"><div><div><span>PR #12</span></div></div></div><div data-message-text="true">with a card</div></div></div></div></div></div>';
+          document.body.appendChild(shapes); await wait();
+          const bubbleOf = (id) => document.getElementById(id).firstElementChild.firstElementChild;
+          checks.previewPromptLeftToPaseo = !bubbleOf('p14').hasAttribute('data-cp-attach') && !bubbleOf('p14').hasAttribute('data-chat-polish-clamp') && !document.querySelector('#p14 [data-cp-part]');
+          const row14 = document.getElementById('a14row');
+          checks.previewAttachmentsTagged = bubbleOf('a14').hasAttribute('data-cp-attach') && row14.dataset.cpPart === 'att-files' && row14.parentElement.hasAttribute('data-cp-attach-body') && !row14.nextElementSibling.hasAttribute('data-cp-part');
+          shapes.remove(); await wait();
           // Extra permission actions follow Paseo's variant, which it shows only by label color.
           const action = (id) => document.querySelector('[data-testid="permission-request-action-' + id + '"]').dataset.cpPart;
           checks.permissionActionVariants = action('always') === 'secondary' && action('once') === 'primary';
@@ -188,7 +198,7 @@ test("DOM restyling, accordion transitions, and bottom following stay stable", {
     assert.equal(report.error, undefined, report.error);
     assert.deepEqual(report.errors, []);
     for (const [check, passed] of Object.entries(report.checks)) assert.equal(passed, true, check);
-    assert.equal(Object.keys(report.checks).length, 17);
+    assert.equal(Object.keys(report.checks).length, 19);
   } finally {
     server?.closeAllConnections(); server?.close();
     rmSync(temp, { recursive: true, force: true });

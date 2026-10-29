@@ -326,9 +326,10 @@ ${ROW} > button { background-color: transparent !important; border-color: transp
 /* Attachments leave the bubble: thumbnails and file cards stack above it, right-aligned, and the bubble wraps only the text.
    tagParts marks the bubble (data-cp-attach) and each row: att-images (thumbnails) or att-files (issues, PRs, reviews, text). */
 [data-cp-attach] { display: flex !important; flex-direction: column !important; align-items: flex-end !important; gap: 6px; padding: 0 !important; border-radius: 0 !important; background-color: transparent !important; }
-[data-cp-attach] > [data-message-text] { padding: 10px 14px; border-radius: 16px; background-color: var(--colors-surface3); }
-@supports (corner-shape: squircle) { [data-cp-attach] > [data-message-text] { border-radius: 28px; corner-shape: squircle; } }
-[data-cp-attach] > :is([data-cp-part="att-images"], [data-cp-part="att-files"]) { justify-content: flex-end !important; gap: 6px !important; margin: 0 !important; }
+[data-cp-attach-body] { display: flex !important; flex-direction: column !important; align-items: flex-end !important; gap: 6px; }
+[data-cp-attach] [data-message-text] { padding: 10px 14px; border-radius: 16px; background-color: var(--colors-surface3); }
+@supports (corner-shape: squircle) { [data-cp-attach] [data-message-text] { border-radius: 28px; corner-shape: squircle; } }
+[data-cp-attach] :is([data-cp-part="att-images"], [data-cp-part="att-files"]) { justify-content: flex-end !important; gap: 6px !important; margin: 0 !important; }
 [data-cp-part="att-images"] > * { width: 104px !important; height: 104px !important; border-radius: 12px !important; border: 1px solid var(--cp-rule) !important; transition: filter 120ms; }
 [data-cp-part="att-images"] > :only-child { width: 240px !important; height: 160px !important; }
 [data-cp-part="att-images"] > *:hover { filter: brightness(1.08); }
@@ -358,7 +359,7 @@ ${ROW} > button { background-color: transparent !important; border-color: transp
 [data-cp-part="footer-gap"] { margin-top: var(--cp-d-footer) !important; }
 [data-cp-part="footer-gap"][data-cp-tight] { margin-top: 2px !important; }
 [data-testid="user-message"] { margin-top: var(--cp-d-prompt) !important; }
-[data-testid="user-message"] > div > div:first-child > :last-child { line-height: 1.55 !important; }
+[data-testid="user-message"] > div > div:first-child [data-message-text] { line-height: 1.55 !important; }
 
 ${MSG} span { line-height: 1.6 !important; }
 ${MSG} ${INLINE_CODE} { border-radius: 4px !important; padding: 2px 5px !important; }

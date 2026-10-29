@@ -20,7 +20,8 @@ const CLAMP_CSS = `
  * Clamps long user messages to six lines with a fade while `enabled()`; clicking the bubble toggles it.
  * Paseo keeps its own bubble, so rewind, copy, timestamps and attachments still work. Returns cleanup.
  * ponytail: the bubble is the first grandchild of [data-testid="user-message"] and its text the bubble's last
- * child; breaks if Paseo restructures the message. Replace with a native clamp if Paseo adds one.
+ * child; breaks if Paseo restructures the message. From Paseo 0.14 a native preview wraps the text and clamps long
+ * prompts itself, so bubbles with nested text are left to it.
  */
 export function clampUserMessages(enabled: () => boolean) {
   const bound = new Map<DomElement, () => void>();
@@ -50,7 +51,7 @@ export function clampUserMessages(enabled: () => boolean) {
       for (const message of within(roots, '[data-testid="user-message"]')) {
         const bubble = message.firstElementChild?.firstElementChild;
         const text = bubble?.lastElementChild;
-        if (!bubble || !text || bound.has(bubble)) continue;
+        if (!bubble || !text || bound.has(bubble) || bubble.querySelector(":scope > * [data-message-text]")) continue;
         const css = getComputedStyle(text);
         const line = parseFloat(css.lineHeight) || parseFloat(css.fontSize) * 1.4;
         if (!line || text.scrollHeight < line * CLAMP_FROM_LINES) continue;
