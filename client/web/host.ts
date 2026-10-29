@@ -16,11 +16,11 @@ export interface HostAppearance {
   theme?: string;
   /** Settings → Appearance → Always expand reasoning. */
   autoExpandReasoning: boolean;
-  /** Settings → Tool call display: "overview" (Summary) groups consecutive calls, "detailed" lists each one. */
-  toolCallDetail: "overview" | "detailed";
+  /** Settings → Chat → Chat display (Paseo 0.14): every call, consecutive calls grouped, or answered turns folded into a summary. */
+  chatDisplay: "full" | "collapseToolCalls" | "collapseTurns";
 }
 
-export const DEFAULTS: HostAppearance = { contentSize: 15, codeSize: 12, autoExpandReasoning: false, toolCallDetail: "detailed" };
+export const DEFAULTS: HostAppearance = { contentSize: 15, codeSize: 12, autoExpandReasoning: false, chatDisplay: "full" };
 let cache: { at: number; value: HostAppearance } | undefined;
 
 const text = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : undefined);
@@ -46,8 +46,10 @@ export function readHostAppearance(): HostAppearance {
         pluginThemeId: s.theme === "plugin" ? text(s.pluginThemeId) : undefined,
         theme: text(s.theme),
         autoExpandReasoning: s.autoExpandReasoning === true,
-        // Same fallback as Paseo: the legacy compactToolCalls flag, then "detailed"; "concise" is the old "overview".
-        toolCallDetail: ["overview", "concise"].includes(String(s.toolCallDetailLevel)) || (s.toolCallDetailLevel === undefined && s.compactToolCalls === true) ? "overview" : "detailed",
+        // Same fallback as Paseo: before 0.14 the tool call display (Summary was "overview", earlier "concise"), then the compactToolCalls flag.
+        chatDisplay: ["full", "collapseToolCalls", "collapseTurns"].includes(String(s.chatDisplay))
+          ? (s.chatDisplay as HostAppearance["chatDisplay"])
+          : ["overview", "concise"].includes(String(s.toolCallDetailLevel)) || (s.toolCallDetailLevel === undefined && s.compactToolCalls === true) ? "collapseToolCalls" : "full",
       };
     }
   } catch {

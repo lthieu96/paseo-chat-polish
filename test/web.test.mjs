@@ -72,6 +72,21 @@ test("DOM restyling, accordion transitions, and bottom following stay stable", {
           const row14 = document.getElementById('a14row');
           checks.previewAttachmentsTagged = bubbleOf('a14').hasAttribute('data-cp-attach') && row14.dataset.cpPart === 'att-files' && row14.parentElement.hasAttribute('data-cp-attach-body') && !row14.nextElementSibling.hasAttribute('data-cp-part');
           shapes.remove(); await wait();
+          // A prompt another agent sent leads with a "Sent by" button; the bubble after it keeps the plugin's shape and attachment layout.
+          const sent = document.createElement('section');
+          sent.innerHTML = '<div data-testid="user-message" id="s14"><div><button><div dir="auto">Sent by planner</div></button><div><div><div><div data-message-text="true">hello</div></div></div></div></div></div>'
+            + '<div data-testid="user-message" id="sa14"><div><button><div dir="auto">Sent by planner</div></button><div><div><div><div id="sa14row"><div><div><span>PR #12</span></div></div></div><div data-message-text="true">with a card</div></div></div></div></div></div>';
+          document.body.appendChild(sent); await wait();
+          const sentBubble = document.querySelector('#s14 > div > div');
+          checks.senderPromptBubble = getComputedStyle(sentBubble).paddingLeft === '14px' && getComputedStyle(document.querySelector('#s14 > div > button')).paddingLeft !== '14px'
+            && document.getElementById('sa14row').dataset.cpPart === 'att-files' && document.querySelector('#sa14 > div > div').hasAttribute('data-cp-attach');
+          sent.remove(); await wait();
+          // Paseo 0.14's chat display setting, with the tool call display it replaced as the fallback.
+          const realNow = Date.now; let clock = 0; Date.now = () => (clock += 5000);
+          const display = (settings) => (localStorage.setItem('@paseo:app-settings', JSON.stringify(settings)), load('web/host').readHostAppearance().chatDisplay);
+          checks.chatDisplaySetting = display({ chatDisplay: 'collapseTurns' }) === 'collapseTurns' && display({ chatDisplay: 'full', toolCallDetailLevel: 'overview' }) === 'full'
+            && display({ toolCallDetailLevel: 'overview' }) === 'collapseToolCalls' && display({ compactToolCalls: true }) === 'collapseToolCalls' && display({}) === 'full';
+          Date.now = realNow; localStorage.removeItem('@paseo:app-settings');
           // Extra permission actions follow Paseo's variant, which it shows only by label color.
           const action = (id) => document.querySelector('[data-testid="permission-request-action-' + id + '"]').dataset.cpPart;
           checks.permissionActionVariants = action('always') === 'secondary' && action('once') === 'primary';
@@ -198,7 +213,7 @@ test("DOM restyling, accordion transitions, and bottom following stay stable", {
     assert.equal(report.error, undefined, report.error);
     assert.deepEqual(report.errors, []);
     for (const [check, passed] of Object.entries(report.checks)) assert.equal(passed, true, check);
-    assert.equal(Object.keys(report.checks).length, 19);
+    assert.equal(Object.keys(report.checks).length, 21);
   } finally {
     server?.closeAllConnections(); server?.close();
     rmSync(temp, { recursive: true, force: true });

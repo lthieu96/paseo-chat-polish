@@ -51,14 +51,18 @@ export function taskChanges(before: readonly Task[], after: readonly Task[]): Ta
   });
 }
 
+/** A message from another agent or a scheduled heartbeat, sent as a tool call. Paseo starts a turn at it (from 0.14 it shows an agent's
+ * message as a prompt), so it is never a step and the plugin leaves it to Paseo. */
+export const isTurnTrigger = (item: Item) => item.type === "tool_call" && (item.agentMessage !== undefined || toolName(item) === "agent_message" || toolName(item) === "heartbeat");
+
 /** The id a step has both in the app and in the daemon's timeline: tool calls by callId, thoughts (which carry none) by their opening words,
- * todo updates (which carry none either) by their list. Plans, todo-list calls and agent messages aren't steps: they stand on their own. */
+ * todo updates (which carry none either) by their list. Plans, todo-list calls, agent messages and heartbeats aren't steps: they stand on their own. */
 export function stepKey(item: Item): string | undefined {
   if (item.type === "todo") return `d:${item.items.map((t) => `${taskStatus(t)} ${t.text}`).join("\n")}`;
   if (item.type === "tool_call") {
     const name = toolName(item);
     // An html_render call never joins a run: once it completes it shows as a page, content like a reply.
-    if (item.detail.type === "plan" || TODO_TOOLS.has(name) || name === "agent_message" || DROPPED_TOOLS.has(name) || isHtmlTool(item.name)) return undefined;
+    if (item.detail.type === "plan" || TODO_TOOLS.has(name) || isTurnTrigger(item) || DROPPED_TOOLS.has(name) || isHtmlTool(item.name)) return undefined;
     return `t:${item.callId}`;
   }
   if (item.type !== "reasoning") return undefined;

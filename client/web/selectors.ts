@@ -4,7 +4,10 @@ export const TAG = "data-chat-polish";
 // Assistant replies, plus the plan body Paseo renders with the same markdown (tagged in tagParts: a positional pseudo-class here
 // would be tested on every ancestor of every markdown node).
 export const MSG = ':is([data-testid="assistant-message"], [data-cp-plan-md])';
-export const ROW = ':is([data-testid="tool-call-group"], [data-testid="tool-call-badge"])';
+// Paseo 0.14's collapsed turn summary is the same badge as a tool group.
+export const ROW = ':is([data-testid="tool-call-group"], [data-testid="tool-call-badge"], [data-testid="turn-summary"])';
+// A prompt's bubble. From Paseo 0.14 a prompt another agent sent leads with a "Sent by" button, so the bubble isn't the first child.
+export const BUBBLE = '[data-testid="user-message"] > div > div:not([data-testid])';
 export const ROW_ICON = `${ROW} > button > div > div:first-child`;
 // Parts Paseo marks only through a child, and containers whose every descendant is restyled, are tagged by tagParts.
 // :has(), and "X *" where X is only known by data-testid (on nearly every ancestor), re-match the whole timeline

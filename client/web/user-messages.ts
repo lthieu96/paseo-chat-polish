@@ -19,8 +19,8 @@ const CLAMP_CSS = `
 /**
  * Clamps long user messages to six lines with a fade while `enabled()`; clicking the bubble toggles it.
  * Paseo keeps its own bubble, so rewind, copy, timestamps and attachments still work. Returns cleanup.
- * ponytail: the bubble is the first grandchild of [data-testid="user-message"] and its text the bubble's last
- * child; breaks if Paseo restructures the message. From Paseo 0.14 a native preview wraps the text and clamps long
+ * ponytail: the bubble is the grandchild of [data-testid="user-message"] without a testID (from 0.14 a "Sent by" button may
+ * precede it) and its text the bubble's last child; breaks if Paseo restructures the message. From Paseo 0.14 a native preview wraps the text and clamps long
  * prompts itself, so bubbles with nested text are left to it.
  */
 export function clampUserMessages(enabled: () => boolean) {
@@ -49,7 +49,7 @@ export function clampUserMessages(enabled: () => boolean) {
       }
       prune();
       for (const message of within(roots, '[data-testid="user-message"]')) {
-        const bubble = message.firstElementChild?.firstElementChild;
+        const bubble = message.firstElementChild?.querySelector(":scope > div:not([data-testid])");
         const text = bubble?.lastElementChild;
         if (!bubble || !text || bound.has(bubble) || bubble.querySelector(":scope > * [data-message-text]")) continue;
         const css = getComputedStyle(text);
