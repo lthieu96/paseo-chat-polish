@@ -8,7 +8,7 @@ import { getTheme, themeSchema, themeSettings } from "./shared/theme";
 import { getIconSet, getPrefs, prefsSchema, prefsSettings } from "./shared/timeline";
 import { loadIconSet } from "./server/icons";
 import { installHeadlessShell, removeHeadlessShell, shellStatus, staleShell } from "./server/headless-shell";
-import { closeLocalServer, openHtmlPage, startHtmlTool, withHtmlTool } from "./server/html";
+import { baseProvider, closeLocalServer, openHtmlPage, startHtmlTool, withHtmlTool } from "./server/html";
 import { browserStatus, installBrowser, openHtml, removeBrowser } from "./shared/html";
 import { applyUpdate, checkUpdate } from "./shared/update";
 import { checkForUpdate, installUpdate } from "./server/update";
@@ -36,13 +36,15 @@ export default function contribute(server: PluginServerContext) {
   server.handle(installBrowser, () => (void installHeadlessShell(), shellStatus()));
   server.handle(removeBrowser, () => removeHeadlessShell().then(shellStatus));
   if (staleShell()) void installHeadlessShell();
-  server.before("agent.create", async ({ request }) => {
+  server.before("agent.create", async ({ request }, { paseo }) => {
     // Off by default, so unreadable prefs mean off; internal agents (commit and PR messages) never draw.
     const current = await prefs.read();
     if (current.status !== "ready" || current.values.html !== "on" || request.config.internal) return undefined;
     const tool = await htmlTool();
     if (!tool) return undefined;
-    return { ...request, config: withHtmlTool(request.config, tool) };
+    // Unreadable daemon config: judge the provider by its own id, so a derived one loses preapproval rather than failing to start.
+    const providers = await paseo.config.get().then(({ config }) => config.providers, () => undefined);
+    return { ...request, config: withHtmlTool(request.config, tool, baseProvider(request.config.provider, providers)) };
   });
   server.handle(checkUpdate, checkForUpdate);
   server.handle(applyUpdate, installUpdate);

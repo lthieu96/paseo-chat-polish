@@ -89,7 +89,7 @@ test("MCP over HTTP: lists the tool, rejects vh pages, accepts a good one; confi
   const cache = join(process.env.PASEO_HOME, "plugin-cache", "paseo-chat-polish");
   await mkdir(cache, { recursive: true });
   await writeFile(join(cache, "html-server.json"), '{"port":');
-  const { startHtmlTool, withHtmlTool, openHtmlPage, closeLocalServer } = await import("../server/html.ts");
+  const { startHtmlTool, withHtmlTool, baseProvider, openHtmlPage, closeLocalServer } = await import("../server/html.ts");
   try {
     const tool = await startHtmlTool();
     assert.match(tool.url, /^http:\/\/127\.0\.0\.1:\d+\/mcp$/);
@@ -104,6 +104,11 @@ test("MCP over HTTP: lists the tool, rejects vh pages, accepts a good one; confi
     const ompConfig = withHtmlTool({ provider: "omp", systemPrompt: "Base" }, tool);
     assert.equal(ompConfig.toolPolicy, undefined);
     assert.equal(ompConfig.mcpServers.chat_polish.type, "http");
+    // A configured provider gets its base's contract, through a chain of extends; a custom ACP one gets none.
+    const providers = { "claude-mobile": { extends: "claude" }, work: { extends: "claude-mobile" }, mine: { extends: "acp" }, loop: { extends: "loop" }, omp: {} };
+    assert.deepEqual(["claude-mobile", "work", "mine", "loop", "omp", "codex"].map((id) => baseProvider(id, providers)), ["claude", "claude", "acp", "loop", "omp", "codex"]);
+    assert.equal(withHtmlTool({ provider: "claude-mobile" }, tool, baseProvider("claude-mobile", providers)).toolPolicy.preapproved.length, 2);
+    assert.equal(withHtmlTool({ provider: "mine" }, tool, baseProvider("mine", providers)).toolPolicy, undefined);
     assert.match(config.systemPrompt, /^Base\n\n# HTML pages\nYou have an html_render tool/);
     // No headless shell in this cache: pages go out unchecked, with nothing to preview them in.
     assert.doesNotMatch(config.systemPrompt, /html_preview/);

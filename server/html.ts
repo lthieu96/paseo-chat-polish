@@ -179,21 +179,29 @@ function previewAnswer(problem: string | undefined, check: PageCheck | undefined
   return { content: [{ type: "text", text }, ...shot], isError: false };
 }
 
-/** Paseo refuses to create an agent whose provider cannot preapprove exact MCP tools. */
-const PREAPPROVAL_PROVIDERS: Record<string, true> = { claude: true, codex: true, opencode: true };
+/** Providers whose agents may preapprove exact MCP tools (`PROVIDER_CONTRACTS` in Paseo's provider-registry.ts); Paseo refuses to create an agent on any other with a toolPolicy. */
+const PREAPPROVES = new Set(["claude", "codex", "opencode"]);
 
-/** A new agent's config with the tools added, preapproved so calling them never asks for permission, loaded up front on Claude, and its rules appended to the system prompt. */
-export function withHtmlTool(config: AgentSessionConfig, { url, token }: { url: string; token: string }): AgentSessionConfig {
-  const withServer: AgentSessionConfig = {
+/** The provider a configured one finally extends, as Paseo resolves its contract: `claude-mobile` → `claude`, a custom ACP one → `acp`. */
+export function baseProvider(provider: string, providers: Record<string, Record<string, unknown>> = {}): string {
+  const seen = new Set<string>();
+  for (let id = provider; ; ) {
+    const next = providers[id]?.extends;
+    if (typeof next !== "string" || seen.has(next)) return id;
+    seen.add(id);
+    id = next;
+  }
+}
+
+/** A new agent's config with the tools added, preapproved where its base provider allows it so calling them never asks for permission, loaded up front on Claude, and its rules appended to the system prompt. */
+export function withHtmlTool(config: AgentSessionConfig, { url, token }: { url: string; token: string }, base = config.provider): AgentSessionConfig {
+  return {
     ...config,
     mcpServers: { ...config.mcpServers, [HTML_SERVER]: { type: "http", url, headers: { Authorization: `Bearer ${token}` }, alwaysLoad: true } },
+    ...(PREAPPROVES.has(base) && {
+      toolPolicy: { ...config.toolPolicy, preapproved: [...(config.toolPolicy?.preapproved ?? []), ...[HTML_TOOL, HTML_PREVIEW_TOOL].map((tool) => ({ kind: "mcp" as const, server: HTML_SERVER, tool }))] },
+    }),
     systemPrompt: [config.systemPrompt, headlessShell() ? SYSTEM_PROMPT.replace("\n\nYour reply", `\n${PREVIEW_RULE}\n\nYour reply`) : SYSTEM_PROMPT].filter(Boolean).join("\n\n"),
-  };
-  const provider = "provider" in config && typeof config.provider === "string" ? config.provider : undefined;
-  if (!provider || PREAPPROVAL_PROVIDERS[provider] !== true) return withServer;
-  return {
-    ...withServer,
-    toolPolicy: { ...config.toolPolicy, preapproved: [...(config.toolPolicy?.preapproved ?? []), ...[HTML_TOOL, HTML_PREVIEW_TOOL].map((tool) => ({ kind: "mcp" as const, server: HTML_SERVER, tool }))] },
   };
 }
 
