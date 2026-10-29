@@ -286,11 +286,14 @@ test("steps: Claude's task tools are passed over, todo-list calls and agent mess
     tool({ type: "unknown", input: null, output: null }, { callId: "w", name: "TodoWrite" }),
     tool({ type: "shell", command: "pwd" }, { callId: "c" }),
     tool({ type: "plain_text", text: "hi" }, { callId: "m", name: "agent_message" }),
+    tool({ type: "plain_text", text: "tick" }, { callId: "h", name: "heartbeat" }),
+    tool({ type: "shell", command: "date" }, { callId: "d" }),
   ].map((item, i) => ({ item, at: i }));
-  assert.deepEqual(stepRuns(entries, () => false).map((r) => r.steps.map(stepKey)), [["t:a", "t:b"], ["t:c"]]);
+  // Agent messages and heartbeats start a turn in Paseo, so they end a run and never join one.
+  assert.deepEqual(stepRuns(entries, () => false).map((r) => r.steps.map(stepKey)), [["t:a", "t:b"], ["t:c"], ["t:d"]]);
   // Hidden todo lists (the call or the daemon's own todo item) are passed over, so the steps around them stay one run.
   const withTodo = [...entries.slice(0, 4), { item: { type: "todo", items: [] }, at: 4 }, ...entries.slice(5)];
-  for (const list of [entries, withTodo]) assert.deepEqual(stepRuns(list, isTodo).map((r) => r.steps.map(stepKey)), [["t:a", "t:b", "t:c"]]);
+  for (const list of [entries, withTodo]) assert.deepEqual(stepRuns(list, isTodo).map((r) => r.steps.map(stepKey)), [["t:a", "t:b", "t:c"], ["t:d"]]);
 });
 
 test("steps: a step transformed before its timeline catches up leads its run in place, with no re-transform", async () => {

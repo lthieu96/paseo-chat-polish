@@ -1,6 +1,6 @@
 // The Chat Polish design for what Paseo draws itself: chat chrome, composer, cards, popovers, tool rows and markdown.
 import { icon } from "./icons";
-import { CHIP, CODE_BLOCK, CTX, CTX_HEAD, HEADING, INLINE_CODE, LANG, LIMIT, MARK, MARK_OL, md, MD, MSG, PERMISSION, PLAN, QUESTION, ROW, ROW_ICON, SLASH, SLASH_GLIDE_MS, SURFACE, TAG, USAGE, WORKING_BOX } from "./selectors";
+import { BUBBLE, CHIP, CODE_BLOCK, CTX, CTX_HEAD, HEADING, INLINE_CODE, LANG, LIMIT, MARK, MARK_OL, md, MD, MSG, PERMISSION, PLAN, QUESTION, ROW, ROW_ICON, SLASH, SLASH_GLIDE_MS, SURFACE, TAG, TRACK_PANEL, USAGE, WORKING_BOX } from "./selectors";
 
 // Values come from CSS variables set by setNativeColors (restyle.ts), so a theme switch restyles without re-tagging.
 
@@ -65,8 +65,8 @@ ${FOOTER} { gap: 8px !important; min-height: 26px !important; align-items: cente
 ${FOOTER} > [data-cp-part="fork"] { width: 20px !important; height: 20px !important; }
 ${FOOTER} ${FOOTER_ICON} { width: 20px !important; height: 20px !important; padding: 3px !important; margin: 0 !important; }
 ${FOOTER} > :last-child, ${FOOTER} > :last-child * { font-size: 12px !important; }
-[data-testid="user-message"] > div:first-child > div:first-child { transition: box-shadow 0.6s ease-out; }
-[data-testid="user-message"][data-cp-flash] > div:first-child > div:first-child { box-shadow: 0 0 0 1.5px var(--cp-accent); transition: none; }
+${BUBBLE} { transition: box-shadow 0.6s ease-out; }
+[data-testid="user-message"][data-cp-flash] > div > div:not([data-testid]) { box-shadow: 0 0 0 1.5px var(--cp-accent); transition: none; }
 [data-testid="turn-working-indicator"] > div > div:first-child { width: 20px !important; margin-left: 0 !important; align-items: center !important; }
 ${WORKING_DOTS}
 ${LOADERS}
@@ -111,6 +111,12 @@ ${SURFACE} :is(button, [role="button"], [role="menuitem"], [role="option"], a[hr
 ${SURFACE} :is(button, [role="button"], [role="menuitem"], [role="option"], a[href]):not(:disabled):not([aria-disabled="true"]) * { cursor: pointer !important; }
 ${SURFACE} :is(button, [role="button"], [role="menuitem"], [role="option"], a[href]):not(:disabled):not([aria-disabled="true"]):is(:hover, :focus-visible, [aria-selected="true"]) { background-color: color-mix(in srgb, var(--cp-control), var(--cp-fg) 12%) !important; }
 :root:is(.light, .pluginLight) ${SURFACE} :is(button, [role="button"], [role="menuitem"], [role="option"], a[href]):not(:disabled):not([aria-disabled="true"]):is(:hover, :focus-visible, [aria-selected="true"]) { background-color: color-mix(in srgb, var(--cp-raised), var(--cp-fg) 8%) !important; }
+/* The composer's track panels (subagents, tasks) light a row on a child inset 4px; the fill goes there, not on the full-width row, or both show. */
+:root ${TRACK_PANEL} [role="menuitem"]:not(:disabled):not([aria-disabled="true"]):is(:hover, :focus-visible, [aria-selected="true"]) { background-color: transparent !important; }
+${TRACK_PANEL} [role="menuitem"] > div { border-radius: 11px !important; }
+@supports (corner-shape: squircle) { ${TRACK_PANEL} [role="menuitem"] > div { corner-shape: squircle; } }
+${TRACK_PANEL} [role="menuitem"]:is(:hover, :focus-visible) > div { background-color: color-mix(in srgb, var(--cp-control), var(--cp-fg) 12%) !important; }
+:root:is(.light, .pluginLight) ${TRACK_PANEL} [role="menuitem"]:is(:hover, :focus-visible) > div { background-color: color-mix(in srgb, var(--cp-raised), var(--cp-fg) 8%) !important; }
 /* Paseo lights a row with the raised color, which would vanish on a raised surface; markLitRows tags it to draw it a step up. */
 [data-cp-lit] { background-color: color-mix(in srgb, var(--cp-control), var(--cp-fg) 12%) !important; }
 :root:is(.light, .pluginLight) [data-cp-lit] { background-color: color-mix(in srgb, var(--cp-raised), var(--cp-fg) 8%) !important; }
@@ -187,10 +193,22 @@ ${CHIP}:hover { background-color: var(--cp-control) !important; }
 [data-testid="message-input-root"] [data-testid="context-window-meter"] { border-radius: 999px !important; }
 button[aria-label="Stop agent"] { background-color: var(--cp-control) !important; border: 1px solid var(--cp-rule) !important; }
 button[aria-label="Stop agent"] svg { width: 11px !important; height: 11px !important; stroke: var(--cp-fg) !important; fill: var(--cp-fg) !important; }
-:is([data-testid="subagents-track-header"], [data-testid="composer-diff-stat-pill"]) { height: 24px !important; padding: 0 10px !important; border-radius: 999px !important; border-color: var(--cp-rule) !important; }
+/* Paseo 0.14 gives these pills a 32px min-height; its link back to a subagent's parent joins them. */
+:is([data-testid="subagents-track-header"], [data-testid="composer-diff-stat-pill"], [data-testid="composer-parent-agent-pill"]) { height: 24px !important; min-height: 24px !important; padding: 0 10px !important; border-radius: 999px !important; border-color: var(--cp-rule) !important; }
+[data-testid="composer-parent-agent-pill"] { padding-left: 6px !important; }
+[data-testid="composer-parent-agent-pill"] [dir] { font-size: 12px !important; }
+/* A provider subagent's pane shows a link back to its parent where the composer would be: the composer's shape and the plugin's button. */
+[data-testid="parent-agent-callout"] { border-radius: 12px !important; border-color: var(--cp-rule) !important; padding: 8px 8px 8px 14px !important; }
+@supports (corner-shape: squircle) { [data-testid="parent-agent-callout"] { border-radius: 28px !important; corner-shape: squircle; } }
+[data-testid="parent-agent-callout-open"] { height: 28px !important; min-height: 28px !important; padding: 0 12px !important; border-radius: 8px !important; background-color: transparent !important; border: 1px solid var(--cp-rule) !important; }
+[data-testid="parent-agent-callout-open"] [dir] { font-size: 13px !important; font-weight: 500 !important; }
 
 ${PERMISSION}, ${QUESTION} { padding: 12px 14px !important; border-color: var(--cp-rule) !important; border-radius: 12px !important; }
 ${PERMISSION} > div:first-child, [data-testid="question-form-current-question"] { font-weight: 500 !important; color: var(--cp-fg) !important; }
+/* Paseo 0.14 renders the question, option labels and descriptions as markdown, which styles each paragraph inline. */
+[data-testid="question-form-current-question"] .enrm-text > p { font-weight: 500 !important; color: var(--cp-fg) !important; }
+${QUESTION} [role="radio"] > div > div:nth-child(2) > :first-child .enrm-text > p { color: var(--cp-fg) !important; }
+[data-testid="question-form-option-description"] .enrm-text > p { font-size: 12px !important; line-height: 18px !important; }
 [data-cp-part="permission-body"] > div > div:first-child { background-color: var(--cp-sunken) !important; border: 1px solid var(--cp-rule) !important; border-radius: 8px !important; overflow: hidden !important; }
 [data-testid="permission-request-question"] { font-size: 12px !important; margin: 0 !important; }
 ${PERMISSION} > div:last-child, ${QUESTION} > div:last-child, ${PLAN} > div:last-child > div:last-child { justify-content: flex-end !important; }
@@ -312,6 +330,8 @@ ${ROW} > button { background-color: transparent !important; border-color: transp
 [data-cp-part="group-body"] > div { max-height: none !important; }
 [data-cp-part="group-body"] > div > div { padding: 4px 13px 0 41px !important; position: relative !important; }
 [data-cp-part="group-body"] > div > div::before { content: ""; position: absolute; left: 22px; top: 6px; bottom: 12px; width: 1px; background: var(--cp-rule); }
+/* Paseo 0.14 draws its own rail around a group's rows (a lone child; before 0.14 the rows sat here directly, two or more); the line above replaces it. */
+[data-cp-part="group-body"] > div > div > div:only-child { margin-left: 0 !important; padding-left: 0 !important; border-left-width: 0 !important; }
 [data-testid="tool-call-badge"] > div:nth-child(2) { margin: 6px 13px 4px 41px !important; border: 1px solid var(--cp-rule) !important; border-radius: 8px !important; background-color: var(--cp-sunken) !important; }
 [data-cp-part="badge-body"] > div > div > div { background-color: transparent !important; }
 /* Paseo nests a horizontal scroller inside the vertical one, so long lines showed their scrollbar only below the last line. One box scrolls both ways instead. */
@@ -319,8 +339,15 @@ ${ROW} > button { background-color: transparent !important; border-color: transp
 [data-cp-part="detail-scroll"] div { overflow: visible !important; }
 [data-testid="tool-call-badge"] { margin-bottom: 10px !important; }
 
-[data-testid="user-message"] > div > div:first-child { padding: 10px 14px !important; border-radius: 16px !important; }
-@supports (corner-shape: squircle) { [data-testid="user-message"] > div > div:first-child { border-radius: 28px !important; corner-shape: squircle; } }
+${BUBBLE} { padding: 10px 14px !important; border-radius: 16px !important; }
+@supports (corner-shape: squircle) { ${BUBBLE} { border-radius: 28px !important; corner-shape: squircle; } }
+/* Paseo 0.14: "Sent by" over a prompt from another agent reads as a caption, and Show more under a long prompt as a quiet link. */
+[data-testid="user-message"] > div > button { align-self: flex-end !important; min-height: 0 !important; height: auto !important; padding: 0 4px 4px !important; gap: 6px !important; }
+[data-testid="user-message"] > div > button > [dir] { font-size: 12px !important; }
+[data-testid="user-message"] > div > button svg { width: 13px !important; height: 13px !important; }
+${BUBBLE} > button { margin-top: 8px !important; }
+${BUBBLE} > button > [dir] { font-size: 12px !important; font-weight: 500 !important; color: var(--cp-muted, var(--colors-foreground-muted)) !important; }
+[data-cp-attach] > button { align-self: flex-end !important; margin-top: 2px !important; }
 /* Prompts take at most 60% of the chat (never under 360px, so they stay readable in a narrow pane). */
 [data-testid="user-message"] > div { max-width: max(60%, min(100%, 360px)) !important; }
 /* Attachments leave the bubble: thumbnails and file cards stack above it, right-aligned, and the bubble wraps only the text.
@@ -348,7 +375,8 @@ ${ROW} > button { background-color: transparent !important; border-color: transp
 /* Chat rhythm (15px text): 18 between paragraphs, 20 between text and step rows, ~21 to the turn footer, 28 from a prompt to its
    reply, 46 between turns. Paseo stacks three spacings per reply block (its item's 12/16 margin, 12 padding at a reply's ends,
    12 under each paragraph), which left 28 between paragraphs and pushed rows and prompts apart. */
-[data-cp-part="msg-item"] { margin-bottom: var(--cp-d-item) !important; }
+/* As padding: in an opened turn (Paseo 0.14) the item is the turn's rail, and a margin would break its line. */
+[data-cp-part="msg-item"] { margin-bottom: 0 !important; padding-bottom: var(--cp-d-item) !important; }
 [data-testid="assistant-message"] { padding-top: var(--cp-d-pad) !important; padding-bottom: var(--cp-d-pad) !important; }
 /* A paragraph alone in its block; consecutive paragraphs (a quote, the plan card) keep Paseo's gap between them. */
 [data-testid="assistant-message"] ${md("p")}:last-child { margin-bottom: 0 !important; }
@@ -359,7 +387,7 @@ ${ROW} > button { background-color: transparent !important; border-color: transp
 [data-cp-part="footer-gap"] { margin-top: var(--cp-d-footer) !important; }
 [data-cp-part="footer-gap"][data-cp-tight] { margin-top: 2px !important; }
 [data-testid="user-message"] { margin-top: var(--cp-d-prompt) !important; }
-[data-testid="user-message"] > div > div:first-child [data-message-text] { line-height: 1.55 !important; }
+[data-testid="user-message"] [data-message-text] { line-height: 1.55 !important; }
 
 ${MSG} span { line-height: 1.6 !important; }
 ${MSG} ${INLINE_CODE} { border-radius: 4px !important; padding: 2px 5px !important; }

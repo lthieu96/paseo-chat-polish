@@ -4,7 +4,10 @@ export const TAG = "data-chat-polish";
 // Assistant replies, plus the plan body Paseo renders with the same markdown (tagged in tagParts: a positional pseudo-class here
 // would be tested on every ancestor of every markdown node).
 export const MSG = ':is([data-testid="assistant-message"], [data-cp-plan-md])';
-export const ROW = ':is([data-testid="tool-call-group"], [data-testid="tool-call-badge"])';
+// Paseo 0.14's collapsed turn summary is the same badge as a tool group.
+export const ROW = ':is([data-testid="tool-call-group"], [data-testid="tool-call-badge"], [data-testid="turn-summary"])';
+// A prompt's bubble. From Paseo 0.14 a prompt another agent sent leads with a "Sent by" button, so the bubble isn't the first child.
+export const BUBBLE = '[data-testid="user-message"] > div > div:not([data-testid])';
 export const ROW_ICON = `${ROW} > button > div > div:first-child`;
 // Parts Paseo marks only through a child, and containers whose every descendant is restyled, are tagged by tagParts.
 // :has(), and "X *" where X is only known by data-testid (on nearly every ancestor), re-match the whole timeline
@@ -41,4 +44,6 @@ export const ACTION = '[data-testid^="permission-request-action-"]';
 export const WORKING_BOX = '[data-cp-part="loader"]';
 export const SURFACE = ':is([data-testid="combobox-desktop-container"], [data-cp-part="menu"], [role="menu"], [role="listbox"], [data-testid="command-center-panel"])';
 export const SETTINGS_PANE = '[data-testid="settings-detail-pane"]';
+// The panels the composer's subagent and task pills open (Paseo 0.14 rows light an inset child).
+export const TRACK_PANEL = ':is([data-testid="subagents-track-header-panel"], [data-testid="agent-task-list-header-panel"])';
 export const POP = '[data-testid="combobox-desktop-container"]';

@@ -197,7 +197,7 @@ export function tagParts(roots: DomElement[]) {
   // bubble up to Paseo 0.13, inside the bubble's message preview from 0.14. The rows are the text's siblings either way.
   // ponytail: a prompt with attachments and no text keeps Paseo's own layout; nothing marks where its rows start.
   for (const message of within(roots, '[data-testid="user-message"]')) {
-    const bubble = message.firstElementChild?.firstElementChild;
+    const bubble = message.firstElementChild?.querySelector(":scope > div:not([data-testid])");
     const text = bubble?.querySelector("[data-message-text]");
     const body = text?.parentElement;
     const rows = Array.from(body?.children ?? []).filter((row) => row !== text);

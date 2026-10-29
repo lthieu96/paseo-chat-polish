@@ -284,7 +284,15 @@ export function PrefsEditor({ theme, page, prefs, onChange }: { theme: PluginThe
     const paseo = readHostAppearance().autoExpandReasoning;
     return (
       <View style={{ gap: 24 }}>
-        <Group theme={theme} title="Layout">
+        <Group
+          theme={theme}
+          title="Layout"
+          top={
+            readHostAppearance().chatDisplay === "collapseTurns" ? (
+              <Notice theme={theme}>Paseo's chat display collapses turns, which folds steps into its own summary, so they don't merge. Switch it to Full or Collapse tool calls in Settings → Chat to merge them.</Notice>
+            ) : null
+          }
+        >
           <Row theme={theme} first label="Merge into one row" hint="One row like “Thought 2 times, ran 3 commands”.">
             <Switch theme={theme} label="Merge into one row" value={prefs.merge === "on"} onChange={(on) => set("merge")(on ? "on" : "off")} />
           </Row>
@@ -326,8 +334,8 @@ export function PrefsEditor({ theme, page, prefs, onChange }: { theme: PluginThe
           theme={theme}
           title="Tool calls"
           top={
-            readHostAppearance().toolCallDetail === "overview" ? (
-              <Notice theme={theme}>Paseo's tool call display is Summary, so calls stay grouped ("Ran 4 commands"). Switch it to Detailed in Settings → Appearance to get these rows.</Notice>
+            readHostAppearance().chatDisplay !== "full" ? (
+              <Notice theme={theme}>Paseo's chat display collapses tool calls, so they stay grouped ("Ran 4 commands"). Switch it to Full in Settings → Chat to get these rows.</Notice>
             ) : null
           }
         >

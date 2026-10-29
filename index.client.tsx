@@ -7,7 +7,7 @@ import { Dashboard } from "./client/dashboard";
 import { clearImageCache } from "./client/images";
 import { sidebarIcon } from "./client/mark";
 import { hideableKind, imageData, turnMarkdown, imagesSchema, noticeData, noticeSchema, planSchema, stepsSchema, thoughtSchema, todoData, todoSchema, toolData, toolSchema } from "./client/model";
-import { followAgent, isTodo, onShownAgent, onStaleSteps, onUnplacedStep, placeStep, resetMade, setStepSkip, stepKey, type Phase } from "./client/steps";
+import { followAgent, isTodo, isTurnTrigger, onShownAgent, onStaleSteps, onUnplacedStep, placeStep, resetMade, setStepSkip, stepKey, type Phase } from "./client/steps";
 import { renderDiagram } from "./shared/diagram";
 import { currentPrefs, savePrefs, setPrefs, subscribePrefs, usePrefsSaver } from "./client/prefs";
 import { bindThemeRegistry, currentTheme, registerTheme } from "./client/theme-registry";
@@ -85,7 +85,9 @@ export default function contribute(client: PluginClientContext) {
   });
 
   // Merged steps: the run's first step becomes one row, the rest leave the list; unknown steps render as before.
-  const merging = () => currentPrefs().merge === "on";
+  // Paseo's Collapse turns folds the same steps into its turn summary, and counts only its own calls, so merging stands aside there.
+  const merging = () => currentPrefs().merge === "on" && readHostAppearance().chatDisplay !== "collapseTurns";
+  const detailed = () => readHostAppearance().chatDisplay === "full";
   const stepRow = (item: Parameters<typeof placeStep>[0], phase: Phase) => {
     if (!merging()) return undefined;
     const placed = placeStep(item, phase);
@@ -112,6 +114,7 @@ export default function contribute(client: PluginClientContext) {
         id: `${KIND}-tool`,
         query: { itemType: "tool_call" },
         transform: ({ item, phase }) => {
+          if (isTurnTrigger(item)) return undefined;
           const page = htmlData(item);
           if (page) return one("html", page);
           const kind = hideableKind(item);
@@ -121,14 +124,15 @@ export default function contribute(client: PluginClientContext) {
           if (item.detail.type === "plan") return one("plan", { text: item.detail.text, phase });
           const merged = stepRow(item, phase);
           if (merged) return merged;
-          // Summary mode: leave calls native so Paseo can group them ("Ran 4 commands"); a plugin row would split the group.
-          return readHostAppearance().toolCallDetail === "overview" ? undefined : one("tool", toolData(item));
+          // Collapsed chat display: leave calls native so Paseo can group them ("Ran 4 commands"); a plugin row would split the group.
+          return detailed() ? one("tool", toolData(item)) : undefined;
         },
       }),
       client.addTimelineTransformer({
         id: `${KIND}-reasoning`,
         query: { itemType: "reasoning" },
-        transform: ({ item, phase }) => stepRow(item, phase) ?? one("thought", { text: item.text, phase }),
+        // Paseo 0.14 groups reasoning with the calls around it too, unless Always expand reasoning is on.
+        transform: ({ item, phase }) => stepRow(item, phase) ?? (detailed() || readHostAppearance().autoExpandReasoning ? one("thought", { text: item.text, phase }) : undefined),
       }),
       client.addTimelineTransformer({
         id: `${KIND}-images`,
@@ -153,7 +157,7 @@ export default function contribute(client: PluginClientContext) {
     return () => removers.forEach((r) => void r());
   };
   let removeTransformers = addTransformers();
-  const inputs = () => [currentPrefs().images, currentPrefs().hidden.join(), currentPrefs().merge, readHostAppearance().toolCallDetail].join("|");
+  const inputs = () => [currentPrefs().images, currentPrefs().hidden.join(), currentPrefs().merge, readHostAppearance().chatDisplay, readHostAppearance().autoExpandReasoning].join("|");
   let transformedWith = inputs();
   const retransform = (force = false) => {
     if (!force && inputs() === transformedWith) return;
@@ -225,7 +229,7 @@ export default function contribute(client: PluginClientContext) {
     retransform();
     follow();
   });
-  // Paseo doesn't tell plugins when Tool call display changes; its settings screen re-renders, so check on DOM changes.
+  // Paseo doesn't tell plugins when Chat display changes; its settings screen re-renders, so check on DOM changes.
   const unwatchHost = watchDom(
     {
       settled: () => {
