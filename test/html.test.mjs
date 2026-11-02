@@ -20,6 +20,10 @@ test("htmlData: reads finished calls from Claude and Codex, skips running, faile
   assert.equal(htmlData(call("chat_polish.html_render", page, { status: "failed" })), undefined);
   assert.equal(htmlData({ ...call("chat_polish.html_render", page), detail: { type: "unknown", input: page, output: { isError: true } } }), undefined);
   assert.equal(htmlData(call("mcp__other__html_render", page)), undefined);
+  // omp's MCP bridge names the tool with an alias suffix; a host may publish the label instead of the name.
+  assert.deepEqual(htmlData(call("mcp_chat_polish__html_render_53e28128e555", page)), { title: "Chart", html: "<p>x</p>" });
+  assert.deepEqual(htmlData(call("chat_polish / html_render", page)), { title: "Chart", html: "<p>x</p>" });
+  assert.equal(htmlData(call("chat_polish / html_preview", page)), undefined);
   // A page never folds into a merged steps row, and its frame never gets the app's origin.
   assert.equal(stepKey(call("mcp__chat_polish__html_render", page)), undefined);
   assert.equal(stepKey(call("chat_polish.html_render", page)), undefined);

@@ -12,9 +12,11 @@ export type HtmlData = z.output<typeof htmlSchema>;
  * (readHeights); failed calls (the tool rejected the page) stay tool rows.
  */
 export function htmlData(item: AgentTimelineItem): HtmlData | undefined {
-  if (item.type !== "tool_call" || item.status !== "completed" || item.detail.type !== "unknown" || !isHtmlTool(item.name)) return undefined;
-  const input = item.detail.input as { title?: unknown; html?: unknown } | null;
-  const output = item.detail.output as { isError?: unknown } | null;
+  if (item.type !== "tool_call" || item.status !== "completed" || !isHtmlTool(item.name)) return undefined;
+  // The call's own shape, whatever detail type the provider chose for a tool it doesn't recognise.
+  const { detail } = item;
+  const input = ("input" in detail ? detail.input : undefined) as { title?: unknown; html?: unknown } | null | undefined;
+  const output = ("output" in detail ? detail.output : undefined) as { isError?: unknown } | null | undefined;
   if (typeof input?.html !== "string" || output?.isError === true) return undefined;
   const heights = readHeights(output);
   return { title: typeof input.title === "string" && input.title.trim() ? input.title.trim() : "Page", html: input.html, ...(heights && { heights }) };
