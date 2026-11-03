@@ -255,6 +255,54 @@ test("steps: runs split on replies, fold tool updates and thought chunks, skip h
   assert.equal(stepSummary([tool({ type: "unknown", input: null, output: null }, { name: "mcp__paseo__browser_click" }), tool({ type: "unknown", input: null, output: null }, { name: "WebSearch" })]), "Used 1 other tool and called Paseo 1 time");
 });
 
+test("steps: with Collapse turns, replies before a turn's last fold into its run; the last reply and the next turn stay out", async () => {
+  const { stepRuns, stepKey, stepSummary } = await import("../client/steps.ts");
+  const reply = (text) => ({ type: "assistant_message", text });
+  const list = [
+    { type: "user_message", text: "go" },
+    tool({ type: "shell", command: "ls" }, { callId: "a" }),
+    reply("Let me look."),
+    tool({ type: "shell", command: "pwd" }, { callId: "b" }),
+    reply("Done."),
+    tool({ type: "shell", command: "date" }, { callId: "c" }),
+    reply("![Image](file:///tmp/shot.png)"),
+    tool({ type: "shell", command: "true" }, { callId: "d" }),
+    { type: "user_message", text: "again" },
+    reply("Only one."),
+    reply("And the answer."),
+  ].map((item, i) => ({ item, at: i * 1000 }));
+  assert.deepEqual(stepRuns(list, () => false, true).map((r) => r.steps.map(stepKey)), [["t:a", "m:Let me look.", "t:b"], ["t:c", "m:![Image](file:///tmp/shot.png)", "t:d"], ["m:Only one."]]);
+  // Without Collapse turns a reply ends a run, as before.
+  assert.deepEqual(stepRuns(list, () => false, false).map((r) => r.steps.map(stepKey)), [["t:a"], ["t:b"], ["t:c"], ["t:d"]]);
+  // Another agent's notice steered into the running turn shares its id, so it doesn't end the turn: the reply before it still folds.
+  const steered = [
+    { item: { type: "user_message", text: "go" }, turn: "t1" },
+    { item: tool({ type: "shell", command: "ls" }, { callId: "a" }), turn: "t1" },
+    { item: reply("Waiting."), turn: "t1" },
+    { item: tool({ type: "plain_text", text: "Agent x (X) finished." }, { callId: "n", name: "agent_message" }), turn: "t1" },
+    { item: reply("All done."), turn: "t1" },
+  ].map((e, i) => ({ ...e, at: i }));
+  assert.deepEqual(stepRuns(steered, () => false, true).map((r) => r.steps.map(stepKey)), [["t:a", "m:Waiting."]]);
+  // Without turn ids the notice starts a turn, as in Paseo.
+  assert.deepEqual(stepRuns(steered.map(({ turn, ...e }) => e), () => false, true).map((r) => r.steps.map(stepKey)), [["t:a"]]);
+  const shot = (n) => reply(`![Image](file:///var/folders/0k/cp7qlhsd4c75_t3910n0xxvm0000gp/T/paseo-attachments-amBgL7/${n}.png)`);
+  assert.notEqual(stepKey(shot(1)), stepKey(shot(2)));
+  assert.equal(stepSummary([reply("x")]), "Wrote 1 message");
+  assert.equal(stepSummary([tool({ type: "shell", command: "ls" }), reply("x")]), "Ran 1 command");
+});
+
+test("an agent's finish notice reads as a row: its title, then only its reply", async () => {
+  const { agentEventData } = await import("../client/model.ts");
+  const notice = (text) => tool({ type: "plain_text", text, icon: "bot" }, { name: "agent_message" });
+  const done = agentEventData(notice("Agent 48a6 (Fixture) finished.\n\nServer: srv_1\n\n<agent-response>\nThe chart is a fixture.\n</agent-response>"));
+  assert.deepEqual([done.verb, done.target, done.mono, done.status, done.detail], ["Agent finished", "Fixture", false, "completed", { kind: "prose", text: "The chart is a fixture." }]);
+  const failed = agentEventData(notice("Agent 48a6 (Fixture) errored.\n\nServer: srv_1"));
+  assert.deepEqual([failed.verb, failed.status, failed.detail], ["Agent errored", "failed", undefined]);
+  // A message from another agent has no status line: Paseo shows it as a prompt.
+  assert.equal(agentEventData(notice("Please review the diff.")), undefined);
+  assert.ok(toolSchema.safeParse(done).success);
+});
+
 test("untyped tools read as words: MCP server › tool, known built-ins, labels as targets, search text", () => {
   const unknown = (name, input = null, output = null, extra = {}) => toolData(tool({ type: "unknown", input, output }, { name, ...extra }));
   assert.deepEqual([unknown("mcp__github__create_issue").target, unknown("mcp__github__create_issue").icon], ["github › Create issue", "Blocks"]);

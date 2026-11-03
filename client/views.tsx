@@ -9,14 +9,14 @@ import { readImage } from "../shared/image";
 import { loadImage } from "./images";
 import type { Recap } from "../shared/recap";
 import type { IconKind } from "../shared/timeline";
-import { todoData, toolData, type imagesSchema, type noticeSchema, type planSchema, type stepsSchema, type thoughtSchema, type todoSchema, type ToolData, type Tone } from "./model";
+import { imageData, todoData, toolData, type imagesSchema, type noticeSchema, type planSchema, type stepsSchema, type thoughtSchema, type todoSchema, type ToolData, type Tone } from "./model";
 import { changesOfTodo, noteShownAgent, runOf, runVersion, stepKey, stepSummary, subscribeRun, type TaskChange } from "./steps";
 import { contrast, isHex } from "../shared/theme";
 import { highlight, highlightShell, highlightShellBlock, SYNTAX_THEMES, type Span, type SyntaxColors } from "./highlight";
 import { Icon } from "./icons";
 import { usePrefs } from "./prefs";
 import { useCurrentTheme } from "./theme-registry";
-import { followExpansionAtBottom, readHostAppearance, type HostAppearance } from "./web";
+import { followExpansionAtBottom, loadPaseoLightbox, readHostAppearance, type HostAppearance, type PaseoLightbox } from "./web";
 import type { HtmlData } from "./html";
 import { HtmlFrame, lastFrameHeight, useHovered, useHtmlTheme, windowButtonsInset } from "./html-frame";
 import { htmlPage } from "../shared/page";
@@ -492,6 +492,12 @@ function ToolDetail({ data, theme }: { data: NonNullable<ToolData["detail"]>; th
           ))}
         </View>
       );
+    case "prose":
+      return (
+        <View style={s.ruled}>
+          <Prose theme={theme} text={data.text} />
+        </View>
+      );
     case "text":
       return (
         <View style={s.ruled}>
@@ -588,6 +594,12 @@ export function MergedSteps(
       <ThoughtItem key={stepKey(step)} {...props} nested={nested} item={{ ...item, data: { text: step.text, phase } }} />
     ) : step.type === "todo" ? (
       <TodoSteps key={stepKey(step)} {...props} step={step} />
+    ) : step.type === "assistant_message" ? (
+      imageData(step.text) ? (
+        <ImagesItem key={stepKey(step)} {...props} item={{ ...item, data: imageData(step.text)! }} />
+      ) : (
+        <ReplyStep key={stepKey(step)} theme={theme} text={step.text} />
+      )
     ) : null;
   // The step in progress, or between steps of a run the agent is still adding to, the one just done (not the summary, which would flash).
   const live = steps.findLast((s) => s.phase === "streaming" || (s.item.type === "tool_call" && s.item.status === "running")) ?? (growing ? steps.at(-1) : undefined);
@@ -626,6 +638,46 @@ export function MergedSteps(
     </View>
   );
 }
+
+/** Markdown an agent wrote, read as paragraphs: **bold** and `code` drawn, "- " items bulleted; the rest of Markdown is left to Paseo. */
+function Prose({ theme, text, color }: { theme: PluginTheme; text: string; color?: string }) {
+  const s = useStyles(theme);
+  const c = theme.colors;
+  return (
+    <View style={{ gap: 10 }}>
+      {text
+        .trim()
+        .split(/\n\s*\n/)
+        .map((para, i) => (
+          <Text key={i} style={[s.prose, color ? { color } : null]} selectable>
+            {para
+              .replace(/^(\s*)[-*] /gm, "$1• ")
+              .split(/(\*\*[^*\n]+\*\*|`[^`\n]+`)/)
+              .map((part, j) =>
+                part.startsWith("**") && part.endsWith("**") && part.length > 4 ? (
+                  <Text key={j} style={{ color: c.foreground, fontWeight: "600" }}>
+                    {part.slice(2, -2)}
+                  </Text>
+                ) : part.startsWith("`") && part.endsWith("`") && part.length > 2 ? (
+                  <Text key={j} style={[s.mono, { color: c.foreground }]}>
+                    {part.slice(1, -1)}
+                  </Text>
+                ) : (
+                  part
+                ),
+              )}
+          </Text>
+        ))}
+    </View>
+  );
+}
+
+/** A reply Collapse turns folded into a run. */
+const ReplyStep = ({ theme, text }: { theme: PluginTheme; text: string }) => (
+  <View style={{ paddingVertical: 8 }}>
+    <Prose theme={theme} text={text} color={theme.colors.foreground} />
+  </View>
+);
 
 export function ThoughtItem({ item, theme, layout, nested }: PluginTimelineItemProps<z.output<typeof thoughtSchema>> & Nestable) {
   const s = useStyles(theme);
@@ -979,15 +1031,54 @@ function Lightbox({ images, index, onIndex, onClose }: { images: Array<{ alt: st
   );
 }
 
+/** Paseo's attachment viewer, once found (desktop and web); undefined until then and on phones. */
+function usePaseoLightbox() {
+  const [viewer, setViewer] = useState<{ Component: PaseoLightbox }>();
+  useEffect(() => {
+    let alive = true;
+    void loadPaseoLightbox().then((Component) => alive && Component && setViewer({ Component }));
+    return () => {
+      alive = false;
+    };
+  }, []);
+  return viewer?.Component;
+}
+
+/** A reply image in Paseo's own viewer, like an attached one; ← → step through the reply's other images, as in the plugin's viewer. */
+function PaseoImage({ Viewer, images, index, onIndex, onClose }: { Viewer: PaseoLightbox; images: Array<{ alt: string; url: string }>; index: number; onIndex(i: number): void; onClose(): void }) {
+  const { uri, failed } = useImage(images[index]!.url);
+  useEffect(() => {
+    const target = images.length > 1 ? (globalThis as unknown as KeyTarget) : undefined;
+    if (!target) return;
+    const onKey = (e: { key: string; preventDefault(): void }) => {
+      const step = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+      if (!step) return;
+      e.preventDefault();
+      onIndex((index + step + images.length) % images.length);
+    };
+    target.addEventListener("keydown", onKey);
+    return () => target.removeEventListener("keydown", onKey);
+  }, [images.length, index, onIndex]);
+  // Nothing while the original loads; an empty uri is Paseo's "couldn't load" state.
+  if (!uri && !failed) return null;
+  return <Viewer source={{ type: "uri", uri: uri ?? "" }} onClose={onClose} />;
+}
+
 export function ImagesItem({ item, theme }: PluginTimelineItemProps<z.output<typeof imagesSchema>>) {
   const [open, setOpen] = useState<number>();
+  const Viewer = usePaseoLightbox();
+  const viewer = open === undefined ? null : Viewer ? (
+    <PaseoImage Viewer={Viewer} images={item.data.images} index={open} onIndex={setOpen} onClose={() => setOpen(undefined)} />
+  ) : (
+    <Lightbox images={item.data.images} index={open} onIndex={setOpen} onClose={() => setOpen(undefined)} />
+  );
   return (
     // Rows leave 8pt less below and take 2pt more above (TIGHT), so thumbnails between two rows sit 19pt from each.
     <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 11, paddingBottom: 1 }}>
       {item.data.images.map((img, i) => (
         <Thumbnail key={i} alt={img.alt} url={img.url} theme={theme} onOpen={() => setOpen(i)} />
       ))}
-      {open !== undefined ? <Lightbox images={item.data.images} index={open} onIndex={setOpen} onClose={() => setOpen(undefined)} /> : null}
+      {viewer}
     </View>
   );
 }

@@ -6,8 +6,8 @@ import { useEffect } from "react";
 import { Dashboard } from "./client/dashboard";
 import { clearImageCache } from "./client/images";
 import { sidebarIcon } from "./client/mark";
-import { hideableKind, imageData, turnMarkdown, imagesSchema, noticeData, noticeSchema, planSchema, stepsSchema, thoughtSchema, todoData, todoSchema, toolData, toolSchema } from "./client/model";
-import { followAgent, isTodo, isTurnTrigger, onShownAgent, onStaleSteps, onUnplacedStep, placeStep, resetMade, setStepSkip, stepKey, type Phase } from "./client/steps";
+import { agentEventData, hideableKind, imageData, turnMarkdown, imagesSchema, noticeData, noticeSchema, planSchema, stepsSchema, thoughtSchema, todoData, todoSchema, toolData, toolSchema } from "./client/model";
+import { followAgent, isTodo, isTurnTrigger, onShownAgent, onStaleSteps, onUnplacedStep, placeStep, resetMade, setReplyFolding, setStepSkip, stepKey, type Phase } from "./client/steps";
 import { renderDiagram } from "./shared/diagram";
 import { currentPrefs, savePrefs, setPrefs, subscribePrefs, usePrefsSaver } from "./client/prefs";
 import { bindThemeRegistry, currentTheme, registerTheme } from "./client/theme-registry";
@@ -85,8 +85,9 @@ export default function contribute(client: PluginClientContext) {
   });
 
   // Merged steps: the run's first step becomes one row, the rest leave the list; unknown steps render as before.
-  // Paseo's Collapse turns folds the same steps into its turn summary, and counts only its own calls, so merging stands aside there.
-  const merging = () => currentPrefs().merge === "on" && readHostAppearance().chatDisplay !== "collapseTurns";
+  // With Paseo's Collapse turns the replies before a turn's last join the run too, which leaves Paseo nothing to fold into its summary.
+  const merging = () => currentPrefs().merge === "on";
+  const foldReplies = () => setReplyFolding(merging() && readHostAppearance().chatDisplay === "collapseTurns");
   const detailed = () => readHostAppearance().chatDisplay === "full";
   const stepRow = (item: Parameters<typeof placeStep>[0], phase: Phase) => {
     if (!merging()) return undefined;
@@ -114,7 +115,11 @@ export default function contribute(client: PluginClientContext) {
         id: `${KIND}-tool`,
         query: { itemType: "tool_call" },
         transform: ({ item, phase }) => {
-          if (isTurnTrigger(item)) return undefined;
+          // Paseo turns an agent's message into a prompt and folds a turn only under a native host, so those stay Paseo's.
+          if (isTurnTrigger(item)) {
+            const event = readHostAppearance().chatDisplay === "collapseTurns" && !merging() ? undefined : agentEventData(item);
+            return event ? one("tool", event) : undefined;
+          }
           const page = htmlData(item);
           if (page) return one("html", page);
           const kind = hideableKind(item);
@@ -137,7 +142,9 @@ export default function contribute(client: PluginClientContext) {
       client.addTimelineTransformer({
         id: `${KIND}-images`,
         query: { itemType: "assistant_message" },
-        transform: ({ item }) => {
+        transform: ({ item, phase }) => {
+          const merged = stepRow(item, phase);
+          if (merged) return merged;
           const data = currentPrefs().images === "native" ? undefined : imageData(item.text);
           return data ? one("images", data) : undefined;
         },
@@ -156,12 +163,14 @@ export default function contribute(client: PluginClientContext) {
     ];
     return () => removers.forEach((r) => void r());
   };
+  foldReplies();
   let removeTransformers = addTransformers();
   const inputs = () => [currentPrefs().images, currentPrefs().hidden.join(), currentPrefs().merge, readHostAppearance().chatDisplay, readHostAppearance().autoExpandReasoning].join("|");
   let transformedWith = inputs();
   const retransform = (force = false) => {
     if (!force && inputs() === transformedWith) return;
     transformedWith = inputs();
+    foldReplies();
     removeTransformers();
     resetMade();
     removeTransformers = addTransformers();

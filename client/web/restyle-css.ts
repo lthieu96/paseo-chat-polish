@@ -49,7 +49,10 @@ ${L("snake")} > i { animation: cp-snake 1.35s linear infinite; animation-delay: 
 @media (prefers-reduced-motion: reduce) { [data-cp-loader] > i, [data-cp-loader]::before { animation: none !important; } }`;
 // Shown when a row was first drawn open, so its own icon was never seen.
 const WRENCH_MASK = icon("Wrench", '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>');
-const THUMBS = `:root:not([data-cp-rt-images="native"]) ${MSG} [data-paseo-markdown-tag="img"]`;
+// The merged steps row's icon (views.tsx StepsItem), at the 1.5 stroke Paseo draws its icons with.
+const LIST_TREE_MASK = icon("ListTree", '<g stroke-width="1.5"><path d="M8 5h13"/><path d="M13 12h8"/><path d="M13 19h8"/><path d="M3 10a2 2 0 0 0 2 2h3"/><path d="M3 5v12a2 2 0 0 0 2 2h3"/></g>');
+const SUMMARY_ICON = '[data-testid="turn-summary"] > button > div > div:first-child';
+const THUMBS =`:root:not([data-cp-rt-images="native"]) ${MSG} [data-paseo-markdown-tag="img"]`;
 const CLOCK_MASK = icon("Clock", '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16.5 12"/>');
 const REDRAW_MASK = icon("RefreshCw", '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>');
 // Paseo renders a popover once hidden (inline opacity 0, or parked at -9999px) to measure it, then places it. Animating
@@ -202,6 +205,19 @@ button[aria-label="Stop agent"] svg { width: 11px !important; height: 11px !impo
 @supports (corner-shape: squircle) { [data-testid="parent-agent-callout"] { border-radius: 28px !important; corner-shape: squircle; } }
 [data-testid="parent-agent-callout-open"] { height: 28px !important; min-height: 28px !important; padding: 0 12px !important; border-radius: 8px !important; background-color: transparent !important; border: 1px solid var(--cp-rule) !important; }
 [data-testid="parent-agent-callout-open"] [dir] { font-size: 13px !important; font-weight: 500 !important; }
+/* Scroll to bottom: a 36px floating control like the plugin's surfaces (rule border, lifted fill), not Paseo's 48px disc. Its margin keeps
+   it centered in the 48px box Paseo positions. */
+[data-testid="scroll-to-bottom-button"] { width: 36px !important; height: 36px !important; margin: 6px !important; border: 1px solid var(--cp-rule) !important; background-color: var(--cp-control) !important; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3) !important; transition: background-color 120ms ease-out; }
+:root:is(.light, .pluginLight) [data-testid="scroll-to-bottom-button"] { background-color: var(--cp-raised) !important; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12) !important; }
+[data-testid="scroll-to-bottom-button"]:hover { background-color: color-mix(in srgb, var(--cp-control), var(--cp-fg) 12%) !important; }
+:root:is(.light, .pluginLight) [data-testid="scroll-to-bottom-button"]:hover { background-color: color-mix(in srgb, var(--cp-raised), var(--cp-fg) 8%) !important; }
+[data-testid="scroll-to-bottom-button"] svg { width: 16px !important; height: 16px !important; }
+/* Tooltips read as captions: 12px text in a tighter box than menus. */
+[role="tooltip"] { padding: 4px 8px !important; border-radius: 8px !important; border-color: var(--cp-rule, var(--colors-border)) !important; }
+[role="tooltip"] > [dir] { font-size: 12px !important; line-height: 16px !important; }
+/* Timeline sync failed: the card shape of permission prompts, its text at the chat's secondary size; Retry is a secondary button (SECONDARY). */
+[data-testid="agent-timeline-sync-error"] { padding: 6px 6px 6px 14px !important; gap: 12px !important; border-radius: 12px !important; }
+[data-testid="agent-timeline-sync-error"] > [dir] { font-size: 13px !important; }
 
 ${PERMISSION}, ${QUESTION} { padding: 12px 14px !important; border-color: var(--cp-rule) !important; border-radius: 12px !important; }
 ${PERMISSION} > div:first-child, [data-testid="question-form-current-question"] { font-weight: 500 !important; color: var(--cp-fg) !important; }
@@ -308,7 +324,7 @@ ${ROW_ICON}[data-cp-chev] svg { width: 9px !important; height: 9px !important; }
 ${ROW_ICON}[data-cp-chev] + div { padding-right: 18px !important; }
 [data-cp-part="row-label"] > [dir]:first-child { color: var(--cp-fg) !important; }
 /* Row icons hidden per kind (Paseo's groups count as merged rows, its single calls as tool calls): the slot collapses; an open or hovered row keeps its chevron at the row's end. */
-${([["tool-call-group", "steps"], ["tool-call-badge", "tool"]] as const)
+${([["tool-call-group", "steps"], ["turn-summary", "steps"], ["tool-call-badge", "tool"]] as const)
   .map(([testid, kind]) => {
     const slot = `:root[data-cp-rt-icon-${kind}="hide"] [data-testid="${testid}"] > button > div > div:first-child`;
     return `${slot} { width: 0 !important; margin-right: 0 !important; }\n${slot}:not([data-cp-chev]) > svg, ${slot}[data-cp-chev]::before { display: none !important; }`;
@@ -326,6 +342,57 @@ ${ROW} > button { background-color: transparent !important; border-color: transp
 :root[data-cp-rt-steps="full"] ${ROW} > button:hover { background-color: var(--cp-raised) !important; }
 /* Rows step back so the reply reads first: faded until hovered or opened (an open row's details follow its button), with no hover fill. Plugin rows do the same in views.tsx. */
 :root:not([data-cp-rt-steps="full"]) ${ROW} > button:last-child:not(:hover) { opacity: var(--cp-quiet); }
+/* Loading rows (tagParts: data-cp-running) look like the plugin's running rows: full strength, the label at full color under the plugin's
+   light sweep (data-cp-running-label, plugin-views.ts) in place of Paseo's gradient copy, and each new step's label rising in
+   (data-cp-swap, as useSwap: from 0.25 and 4px below, 240ms). */
+${ROW}[data-cp-running] > button { opacity: 1 !important; }
+[data-cp-running-label] > [dir] { opacity: 1 !important; }
+[data-cp-running-label] > div:not([dir]) { display: none !important; }
+@keyframes cp-step-a { from { opacity: 0.25; transform: translateY(4px); } }
+@keyframes cp-step-b { from { opacity: 0.25; transform: translateY(4px); } }
+[data-cp-running-label][data-cp-swap="a"] > [dir] { animation: cp-step-a 240ms cubic-bezier(0.23, 1, 0.32, 1) both; }
+[data-cp-running-label][data-cp-swap="b"] > [dir] { animation: cp-step-b 240ms cubic-bezier(0.23, 1, 0.32, 1) both; }
+@media (prefers-reduced-motion: reduce) { [data-cp-running-label] > [dir] { animation: none !important; } }
+/* An open turn summary's rows are list rows of their own, so its button is still the last child; tagParts marks it open. */
+${ROW}[data-cp-open] > button { opacity: 1 !important; }
+/* Collapse turns' summary is that display's merged steps row, so it reads like the plugin's: its ListTree icon (in the chosen icon set,
+   drawn where Paseo's sits), and its spacing. The plugin row gets that from TIGHT plus Paseo's 16px between timeline items; the summary
+   shares its prompt's item, so it adds both. Open, it sits on its rail with no gap. */
+${SUMMARY_ICON} { --cp-row-icon: ${LIST_TREE_MASK} !important; position: relative; }
+${SUMMARY_ICON}:not([data-cp-chev]) > div { opacity: 0; }
+${SUMMARY_ICON}:not([data-cp-chev])::before { content: ""; position: absolute; left: 3px; top: 2px; width: 15px; height: 15px; background-color: var(--cp-muted); -webkit-mask: var(--cp-row-icon) center / 15px no-repeat; mask: var(--cp-row-icon) center / 15px no-repeat; }
+:root[data-cp-rt-icon-steps="hide"] ${SUMMARY_ICON}::before { display: none !important; }
+[data-testid="turn-summary"] { margin-top: calc(16px + var(--cp-d-row-top)) !important; }
+[data-testid="turn-summary"]:not([data-cp-open]) { margin-bottom: calc(16px + var(--cp-d-row-bottom)) !important; }
+/* An opened turn reads like the plugin's open merged row (StepsItem's Expand): its rail (tagParts: data-cp-indent) 9px in, in the rule
+   color, rows 15px past it and flush, 3px from the summary (the tail, Paseo's 16px spacer under it). */
+[data-cp-indent] { margin-left: 9px !important; padding-left: 15px !important; border-left-color: var(--cp-rule) !important; }
+[data-cp-indent="tail"] { padding-bottom: 3px !important; }
+[data-cp-indent] > [data-testid="tool-call-badge"] { margin-bottom: 0 !important; }
+/* After the last row the rail runs 3px on and the reply follows as it does the plugin's open group (Paseo already leaves 1px before it); nothing follows on the rail, so a margin is safe. */
+[data-cp-indent-end] { padding-bottom: 3px !important; margin-bottom: calc(15px + var(--cp-d-row-bottom)) !important; }
+/* Text between the turn's rows is one more step of the list: close to the rows on both sides, the same gap above and below
+   (msg-item, here the rail, holds the gap below). */
+[data-cp-indent] > [data-testid="assistant-message"] { padding-top: 0 !important; padding-bottom: 0 !important; margin-top: calc(2 * var(--cp-d-pad)) !important; }
+[data-cp-indent][data-cp-part="msg-item"] { padding-bottom: calc(2 * var(--cp-d-pad)) !important; }
+/* A turn just opened (tagParts: data-cp-enter on its rows) rises in top-down; a row's details fade in when opened. Opacity and transform
+   only: the list's rows keep their measured height. The rail itself stays put, so its line doesn't shimmer. */
+@keyframes cp-enter { from { opacity: 0; transform: translateY(-4px); } }
+[data-cp-indent][data-cp-enter] > * { animation: cp-enter 160ms cubic-bezier(0.23, 1, 0.32, 1) var(--cp-enter-delay, 0ms) both; }
+:is([data-cp-part="badge-body"], [data-cp-part="group-body"])[data-cp-enter] { animation: cp-enter 140ms cubic-bezier(0.23, 1, 0.32, 1) both; }
+@media (prefers-reduced-motion: reduce) { [data-cp-indent][data-cp-enter] > *, [data-cp-enter] { animation: none !important; } }
+/* Paseo's own tools (tagParts: tool-section) as the plugin's input/output block: a small caps title, then label/value fields in the
+   code font, 9/12 padding, sections split by the rule. */
+[data-cp-part="badge-body"] > div { gap: 0 !important; }
+[data-cp-part="tool-section"] { padding: 9px 12px !important; gap: 4px !important; border-color: var(--cp-rule) !important; }
+[data-cp-part="tool-section"]:last-child { border-bottom-width: 0 !important; }
+[data-cp-part="tool-section"] > [dir]:first-child { font-size: 10px !important; font-weight: 600 !important; letter-spacing: 0.8px; text-transform: uppercase; color: var(--cp-muted) !important; }
+[data-cp-part="tool-section"] > [dir]:last-child { font-size: 13px !important; }
+/* Long values scroll inside, as the plugin's block does past 320px. */
+[data-cp-part="tool-section"] > div:not([dir]) { gap: 4px !important; max-height: 320px; overflow: auto; }
+[data-cp-part="tool-section"] > div:not([dir]) > div { gap: 12px !important; }
+[data-cp-part="tool-section"] > div:not([dir]) > div > [dir]:first-child { width: 96px !important; font-size: 12px !important; line-height: 18px !important; color: var(--cp-muted) !important; }
+[data-cp-part="tool-section"] > div:not([dir]) > div > [dir]:last-child { font-family: var(--cp-mono) !important; font-size: var(--cp-code) !important; line-height: 18px !important; }
 [data-testid="tool-call-badge"] > button > div > [data-cp-part="row-label"] > [dir]:nth-child(2) { color: var(--cp-muted) !important; }
 [data-cp-part="group-body"] > div { max-height: none !important; }
 [data-cp-part="group-body"] > div > div { padding: 4px 13px 0 41px !important; position: relative !important; }
