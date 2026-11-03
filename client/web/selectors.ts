@@ -38,7 +38,7 @@ export const USAGE = `${CTX} > [data-testid^="usage-report-"]`;
 export const LIMIT = '[data-cp-part="usage-limits"] > div';
 export const QUESTION = '[data-testid="question-form-card"]';
 export const PRIMARY = ':is([data-testid="permission-request-accept"], [data-testid="question-form-primary-action"])';
-export const SECONDARY = ':is([data-testid="permission-request-deny"], [data-testid="question-form-dismiss"])';
+export const SECONDARY = ':is([data-testid="permission-request-deny"], [data-testid="question-form-dismiss"], [data-testid="agent-timeline-sync-retry"])';
 // Other permission actions, such as "Implement with Auto" on plans (Paseo 0.13) or OpenCode's "Allow once"; either variant.
 export const ACTION = '[data-testid^="permission-request-action-"]';
 export const WORKING_BOX = '[data-cp-part="loader"]';

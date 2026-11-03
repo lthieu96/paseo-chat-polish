@@ -17,7 +17,8 @@ test("DOM restyling, accordion transitions, and bottom following stay stable", {
     const names = ["css-guard", "provider-icons", "web", ...readdirSync(new URL("../client/web/", import.meta.url)).map((file) => `web/${file.replace(/\.ts$/, "")}`)];
     const sources = Object.fromEntries(names.map((name) => [name, ts.transpileModule(readFileSync(new URL(`../client/${name}.ts`, import.meta.url), "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText]));
     // Paseo's bundle exports its mermaid document as a minified string literal, with JS-only escapes like \xHH.
-    const bundle = String.raw`Object.defineProperty(a,"mermaidRuntimeHtml",{get:function(){return o}});const o='<!doctype html>\n<p class="x" title=\'y\'>\x3c!-- __PASEO_MERMAID_RUNTIME_RECEIVE__ \\x41 \u0041 \u{1F600} \v \/ --\x3e</p>';`;
+    const bundle = String.raw`Object.defineProperty(a,"mermaidRuntimeHtml",{get:function(){return o}});const o='<!doctype html>\n<p class="x" title=\'y\'>\x3c!-- __PASEO_MERMAID_RUNTIME_RECEIVE__ \\x41 \u0041 \u{1F600} \v \/ --\x3e</p>';
+__d(function(g,r,i,a,m,e,d){"use strict";Object.defineProperty(e,'__esModule',{value:!0}),e.AttachmentLightbox=function(h){const u={a:{b:1}},x=[1,2];return null};var t=r(d[0])},4021,[1008,472]);`;
     const mermaidDoc = "<!doctype html>\n<p class=\"x\" title='y'><!-- __PASEO_MERMAID_RUNTIME_RECEIVE__ \\x41 A \u{1F600} \v / --></p>";
     const html = `<!doctype html><html><head><title>pending</title><script type="text/plain" src="/bundle.js"></script></head><body><img src="/hold" hidden>
       <div data-testid="settings-detail-pane"></div>
@@ -60,6 +61,8 @@ test("DOM restyling, accordion transitions, and bottom following stay stable", {
           localStorage.removeItem('chat-polish:context-card-heights');
           const first = prompts(); const web = load('web');
           const restyle = web.restyleNative(() => true); const clamp = web.clampUserMessages(() => true);
+          window.__r = (id) => (id === 4021 ? { AttachmentLightbox: function Lightbox() {} } : {});
+          checks.paseoLightboxFromBundle = (await web.loadPaseoLightbox())?.name === 'Lightbox';
           checks.mermaidDocFromBundle = (await web.loadMermaidDoc()) === new TextDecoder().decode(Uint8Array.from(atob("${Buffer.from(mermaidDoc).toString("base64")}"), (ch) => ch.charCodeAt(0)));
           await wait(); checks.observerSettles = !capped;
           // Paseo 0.14 wraps a prompt's rows and text in a message preview that clamps long prompts itself.
@@ -90,6 +93,41 @@ test("DOM restyling, accordion transitions, and bottom following stay stable", {
           // Extra permission actions follow Paseo's variant, which it shows only by label color.
           const action = (id) => document.querySelector('[data-testid="permission-request-action-' + id + '"]').dataset.cpPart;
           checks.permissionActionVariants = action('always') === 'secondary' && action('once') === 'primary';
+          // Collapse turns (Paseo 0.14+): an open summary turns its chevron 90°; its rows sit in IndentRails in their own history rows.
+          const turn = document.createElement('section');
+          turn.innerHTML = '<div data-history-row-id="t1"><div><div data-testid="turn-summary" id="ts"><button><div><div><div style="transform: rotate(90deg);"><svg><path d="m9 18 6-6-6-6"></path></svg></div></div><div>Ran 2 commands</div></div></button></div><div id="tail"></div></div></div>'
+            + '<div data-history-row-id="t2"><div><div id="rail"><div data-testid="tool-call-badge"><button></button></div></div></div></div>'
+            + '<div data-history-row-id="t3"><div><div id="railView"><div style="display: contents;"></div></div></div></div>'
+            + '<div data-history-row-id="paseo-chat-polish/x"><div><div style="display: contents;" id="view"><div></div></div></div></div>'
+            + '<div data-history-row-id="t4"><div><div id="wrap"><div data-cp-part="footer"></div></div></div></div>';
+          document.body.appendChild(turn); await wait();
+          const summary = document.getElementById('ts');
+          const openedTagged = summary.hasAttribute('data-cp-open') && getComputedStyle(summary.firstElementChild).opacity === '1';
+          summary.querySelector('[style]').style.transform = 'rotate(0deg)'; await wait();
+          checks.turnSummaryOpen = openedTagged && !summary.hasAttribute('data-cp-open');
+          checks.turnRails = document.getElementById('tail').dataset.cpIndent === 'tail' && ['rail', 'railView'].every((id) => document.getElementById(id).dataset.cpIndent === '')
+            && document.getElementById('railView').hasAttribute('data-cp-indent-end') && !document.getElementById('rail').hasAttribute('data-cp-indent-end') && !turn.querySelector('#view[data-cp-indent], #wrap[data-cp-indent], #ts[data-cp-indent]');
+          // Rows that mounted with the list don't animate; rows of a summary opened in place do, and so does a body opened in a row on screen.
+          const remounted = !turn.querySelector('[data-cp-enter]');
+          summary.querySelector('[style]').style.transform = 'rotate(90deg)'; await wait();
+          const opened = document.createElement('div'); opened.setAttribute('data-history-row-id', 't5');
+          opened.innerHTML = '<div><div id="railNew"><div data-testid="tool-call-badge"><button></button></div></div></div>';
+          turn.insertBefore(opened, turn.children[1]); await wait();
+          const badge = opened.querySelector('[data-testid="tool-call-badge"]');
+          badge.insertAdjacentHTML('beforeend', '<div><div><div id="sec"><div dir="auto">Details</div><div><div><div dir="auto">Limit</div><div dir="auto">3</div></div></div></div></div></div>'); await wait();
+          checks.turnEnter = remounted && document.getElementById('railNew').hasAttribute('data-cp-enter') && badge.lastElementChild.hasAttribute('data-cp-enter') && document.getElementById('sec').dataset.cpPart === 'tool-section';
+          turn.remove(); await wait();
+          // A loading row (Paseo's gradient copy over its label) runs in the plugin's look; its next step's label rises in; done once the copy goes.
+          const loading = document.createElement('div');
+          loading.innerHTML = '<div data-testid="tool-call-group" id="lg"><button><div><div><svg></svg></div><div><div dir="auto" id="lt">Ran 1 command</div><div><div style="background-image: linear-gradient(red, blue)">Ran 1 command</div></div></div></div></button></div>';
+          document.body.appendChild(loading); await wait();
+          const lg = document.getElementById('lg'), label = lg.querySelector('[data-cp-part="row-label"]');
+          const startedRunning = lg.hasAttribute('data-cp-running') && label?.hasAttribute('data-cp-running-label');
+          document.getElementById('lt').textContent = 'Ran 2 commands'; await wait();
+          const swapped = label.getAttribute('data-cp-swap') === 'a';
+          label.lastElementChild.remove(); await wait();
+          checks.runningRow = startedRunning && swapped && !lg.hasAttribute('data-cp-running') && !label.hasAttribute('data-cp-running-label');
+          loading.remove(); await wait();
           first.remove(); await wait(); checks.detachedReleased = released === 10;
           const card = document.querySelector('[data-testid="context-window-details"]');
           const usage = card.lastElementChild;
@@ -213,7 +251,7 @@ test("DOM restyling, accordion transitions, and bottom following stay stable", {
     assert.equal(report.error, undefined, report.error);
     assert.deepEqual(report.errors, []);
     for (const [check, passed] of Object.entries(report.checks)) assert.equal(passed, true, check);
-    assert.equal(Object.keys(report.checks).length, 21);
+    assert.equal(Object.keys(report.checks).length, 26);
   } finally {
     server?.closeAllConnections(); server?.close();
     rmSync(temp, { recursive: true, force: true });

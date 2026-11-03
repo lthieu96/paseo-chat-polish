@@ -1,6 +1,7 @@
 import type { PluginClientContext } from "@getpaseo/plugin/client";
 import type { AgentTimelineItem } from "@getpaseo/protocol/agent-types";
 import { isHtmlTool } from "../shared/html.ts";
+import { imageData } from "./model.ts";
 
 // Merged steps: each run of consecutive thoughts and tool calls between replies folds into one row.
 // A transformer sees one item at a time, so the runs come from each open agent's own timeline (fetched
@@ -14,6 +15,8 @@ export interface Entry {
   item: Item;
   /** Unknown when restored history supplies an import time instead of the event time. */
   at?: number;
+  /** The daemon's turn id, when it has one: an agent's message steered into a running turn belongs to that turn. */
+  turn?: string;
 }
 export interface Run {
   steps: Item[];
@@ -65,27 +68,32 @@ export function stepKey(item: Item): string | undefined {
     if (item.detail.type === "plan" || TODO_TOOLS.has(name) || isTurnTrigger(item) || DROPPED_TOOLS.has(name) || isHtmlTool(item.name)) return undefined;
     return `t:${item.callId}`;
   }
-  if (item.type !== "reasoning") return undefined;
-  const words = item.text.replace(/\s+/g, " ").trim().slice(0, 80);
-  return words ? `r:${words}` : undefined;
+  // Replies are steps only when Collapse turns folds them (see stepRuns); like thoughts they carry no id in every provider.
+  if (item.type !== "reasoning" && item.type !== "assistant_message") return undefined;
+  const reply = item.type === "assistant_message";
+  // A reply is keyed once complete, so it can take more words: screenshots share their first 80 characters (the attachment folder).
+  const words = item.text.replace(/\s+/g, " ").trim().slice(0, reply ? 400 : 80);
+  return words ? `${reply ? "m" : "r"}:${words}` : undefined;
 }
 
 /** Folds a live timeline event into an agent's list the way the daemon's projection does: tool updates replace their call, thought chunks
  * extend the thought before. Returns false when the runs can't have changed (a reply chunk after a reply), so streaming text costs nothing. */
-export function applyItem(list: Entry[], item: Item, at: number): boolean {
+export function applyItem(list: Entry[], item: Item, at: number, turn?: string): boolean {
   const last = list.at(-1);
   if (item.type === "tool_call") {
     const i = list.findLastIndex((e) => e.item.type === "tool_call" && e.item.callId === item.callId);
-    if (i < 0) return (list.push({ item, at }), true);
-    const old = list[i]!.item as typeof item;
-    list[i] = { item: { ...old, ...item, detail: item.detail.type === "unknown" ? old.detail : item.detail }, at };
+    if (i < 0) return (list.push({ item, at, turn }), true);
+    const old = list[i]!;
+    const call = old.item as typeof item;
+    list[i] = { ...old, item: { ...call, ...item, detail: item.detail.type === "unknown" ? call.detail : item.detail }, at };
   } else if (item.type === "reasoning" && last?.item.type === "reasoning") {
-    list[list.length - 1] = { item: { type: "reasoning", text: last.item.text + item.text }, at };
+    list[list.length - 1] = { ...last, item: { type: "reasoning", text: last.item.text + item.text }, at };
   } else if (item.type === "assistant_message" && last?.item.type === "assistant_message") {
-    // Reply chunks only matter as the end of a run, so one per reply is kept (with the time of the latest).
-    last.at = at;
+    // One entry per reply (with the time of the latest chunk). Its text keys it when Collapse turns folds it; a reply that is still
+    // streaming is the turn's last, so its runs can't have changed.
+    list[list.length - 1] = { ...last, item: { ...last.item, text: last.item.text + item.text }, at };
     return false;
-  } else list.push({ item, at });
+  } else list.push({ item, at, turn });
   return true;
 }
 
@@ -96,9 +104,9 @@ const timestampMs = (timestamp: string | undefined) => {
 
 /** Restored events cannot belong after their next prompt or the idle agent's last update.
  * Keep their content, but leave timing unknown rather than measuring the gap to the import date. */
-export function historyEntries(entries: readonly { item: Item; timestamp: string }[], endedAt?: string): Entry[] {
+export function historyEntries(entries: readonly { item: Item; timestamp: string; turnId?: string }[], endedAt?: string): Entry[] {
   let ceiling = timestampMs(endedAt);
-  const list: Entry[] = entries.map(({ item, timestamp }) => ({ item, at: timestampMs(timestamp) }));
+  const list: Entry[] = entries.map(({ item, timestamp, turnId }) => ({ item, at: timestampMs(timestamp), turn: turnId }));
   for (let i = list.length - 1; i >= 0; i--) {
     const entry = list[i]!;
     if (entry.at === undefined) continue;
@@ -108,9 +116,25 @@ export function historyEntries(entries: readonly { item: Item; timestamp: string
   return list;
 }
 
+/** Paseo's rule: turn ids decide when both rows have one; without them a prompt or another agent's message starts a turn. */
+const continuesTurn = (prev: Entry, next: Entry) =>
+  prev.turn !== undefined && next.turn !== undefined ? prev.turn === next.turn : !(next.item.type === "user_message" || isTurnTrigger(next.item));
+
 /** Runs of consecutive steps; anything else ends a run, and items `skip` names (hidden by prefs) are passed over. Todo updates join a run but
- * never make one: a run of only todo updates isn't a run, so those stand on their own. */
-export function stepRuns(list: readonly Entry[], skip: (item: Item) => boolean): Run[] {
+ * never make one: a run of only todo updates isn't a run, so those stand on their own. With `replies` (Paseo's Collapse turns) a reply the
+ * agent wrote another after, in the same turn, is a step too, so a turn folds into one row before its last reply, like Paseo's summary. */
+export function stepRuns(list: readonly Entry[], skip: (item: Item) => boolean, replies = foldReplies): Run[] {
+  const folded = new Set<number>();
+  let later = false;
+  for (let i = list.length - 1; replies && i >= 0; i--) {
+    const { item } = list[i]!;
+    if (i + 1 < list.length && !continuesTurn(list[i]!, list[i + 1]!)) later = false;
+    if (item.type === "assistant_message") {
+      // Tool screenshots reach the chat as image-only messages: pictures of a step, not replies, so they fold in and fold nothing.
+      if (later || imageData(item.text)) folded.add(i);
+      later ||= !imageData(item.text);
+    }
+  }
   const runs: Run[] = [];
   let run: Item[] = [];
   let start: number | undefined;
@@ -131,7 +155,7 @@ export function stepRuns(list: readonly Entry[], skip: (item: Item) => boolean):
       if (key === lastTodo) continue;
       lastTodo = key;
     }
-    if (!stepKey(item)) {
+    if (!stepKey(item) || (item.type === "assistant_message" && !folded.has(i))) {
       close();
       continue;
     }
@@ -159,9 +183,11 @@ export function stepSummary(items: readonly Item[], changesOf: (item: Item) => r
   let searches = 0;
   let other = 0;
   let paseo = 0;
+  let replies = 0;
   let completed = 0;
   for (const item of items) {
     if (item.type === "reasoning") thoughts++;
+    if (item.type === "assistant_message") replies++;
     if (item.type === "todo") completed += changesOf(item).filter((c) => c.type === "completed").length;
     if (item.type !== "tool_call") continue;
     const d = item.detail;
@@ -182,6 +208,8 @@ export function stepSummary(items: readonly Item[], changesOf: (item: Item) => r
     completed && plural(completed, "completed # task", "completed # tasks"),
     paseo && plural(paseo, "called Paseo # time", "called Paseo # times"),
   ].filter((p): p is string => !!p);
+  // Replies only name a run that did nothing else, like Paseo's turn summary, which counts calls.
+  if (!parts.length && replies) parts.push(plural(replies, "wrote # message", "wrote # messages"));
   const text = parts.length > 2 ? `${parts.slice(0, -1).join(", ")}, and ${parts.at(-1)}` : parts.join(" and ");
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
@@ -193,8 +221,8 @@ const runs = new Map<string, Run>();
 const places = new Map<string, { head: string; index: number }>();
 /** The app's own copy of each step (with its phase), newer than the daemon's while it streams. */
 const seen = new Map<string, { item: Item; phase: Phase }>();
-/** What the transformer last made of each step, to tell when Paseo must transform again. */
-const made = new Map<string, "head" | "none">();
+/** What the transformer last made of each step, to tell when Paseo must transform again ("native": a reply left to Paseo). */
+const made = new Map<string, "head" | "none" | "native">();
 /** What each todo update changed, against the update before it in its agent's timeline. */
 const todoChanges = new Map<string, TaskChange[]>();
 // ponytail: seen keeps the latest few thousand steps across agents; key it per agent if long sessions show stale rows.
@@ -210,6 +238,14 @@ let onStale: () => void = () => {};
 let onUnplaced: () => void = () => {};
 let onShown: (agentId: string) => void = () => {};
 let skip: (item: Item) => boolean = () => false;
+let foldReplies = false;
+
+/** Paseo's Collapse turns: replies before a turn's last fold into its run. Re-splits every agent when that changes. */
+export function setReplyFolding(on: boolean) {
+  if (on === foldReplies) return;
+  foldReplies = on;
+  for (const agentId of lists.keys()) rebuild(agentId);
+}
 
 /** Steps the transformer hides (prefs) are left out of runs; re-splits every agent when that changes. */
 export function setStepSkip(fn: (item: Item) => boolean) {
@@ -317,7 +353,7 @@ function runGrowing() {
   const now = Date.now();
   for (const list of lists.values()) {
     const last = list.at(-1);
-    if (last && last.at !== undefined && now - last.at < GROWING_MS && stepKey(last.item) && !skip(last.item)) return true;
+    if (last && last.at !== undefined && now - last.at < GROWING_MS && last.item.type !== "assistant_message" && stepKey(last.item) && !skip(last.item)) return true;
   }
   return false;
 }
@@ -330,7 +366,10 @@ function runGrowing() {
  * thought's key is its opening words, which may never match, and a thought kept out would then stay out. */
 export function placeStep(item: Item, phase: Phase): { key: string; as: "head" | "none" } | undefined {
   const key = stepKey(item);
-  if (!key) return undefined;
+  const reply = item.type === "assistant_message";
+  if (!key || (reply && !foldReplies)) return undefined;
+  // A reply no run holds stays Paseo's; noted (once complete, its key final) so the re-transform folds it when a later reply arrives.
+  if (reply && !places.has(key)) return void (phase === "complete" && made.set(key, "native"));
   const previous = seen.get(key);
   seen.delete(key);
   seen.set(key, { item, phase });
@@ -347,7 +386,7 @@ export function placeStep(item: Item, phase: Phase): { key: string; as: "head" |
 /** Keeps an agent's list current: the latest 1000 entries, then live events (those that raced the fetch are replayed past its end). */
 export function followAgent(paseo: PluginClientContext["paseo"], agentId: string) {
   const timeline = paseo.agents.ref(agentId).timeline;
-  let pending: Array<{ seq?: number; item: Item; at: number }> | undefined;
+  let pending: Array<{ seq?: number; item: Item; at: number; turn?: string }> | undefined;
   let closed = false;
   const load = async () => {
     pending = [];
@@ -356,7 +395,7 @@ export function followAgent(paseo: PluginClientContext["paseo"], agentId: string
       if (closed) return;
       const list = historyEntries(page.entries, page.agent?.status === "idle" ? page.agent.updatedAt : undefined);
       const end = page.endCursor?.seq ?? -1;
-      for (const e of pending) if (e.seq === undefined || e.seq > end) applyItem(list, e.item, e.at);
+      for (const e of pending) if (e.seq === undefined || e.seq > end) applyItem(list, e.item, e.at, e.turn);
       trimHistory(list);
       lists.set(agentId, list);
       rebuild(agentId);
@@ -371,9 +410,10 @@ export function followAgent(paseo: PluginClientContext["paseo"], agentId: string
     if (event.type === "timeline") {
       const item = event.item as Item;
       const at = timestampMs("timestamp" in payload ? payload.timestamp : undefined) ?? Date.now();
-      if (pending) return void pending.push({ seq: "seq" in payload ? payload.seq : undefined, item, at });
+      const turn = (event as { turnId?: string }).turnId;
+      if (pending) return void pending.push({ seq: "seq" in payload ? payload.seq : undefined, item, at, turn });
       const list = lists.get(agentId);
-      if (list && applyItem(list, item, at)) {
+      if (list && applyItem(list, item, at, turn)) {
         trimHistory(list);
         rebuild(agentId);
       }
@@ -430,4 +470,3 @@ export const runVersion = (head: string) => versions.get(head) ?? 0;
 export const changesOfTodo = (key: string): readonly TaskChange[] => todoChanges.get(key) ?? [];
 /** What a todo update changed when there is no timeline to work it out from (the dashboard preview's sample). */
 export const setTodoChanges = (item: Item, changes: TaskChange[]) => void todoChanges.set(stepKey(item)!, changes);
-

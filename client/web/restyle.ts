@@ -8,7 +8,7 @@ import { dropGhost, ghostOutlinePreview, hoverCardsRemoved, notePointer, swapOut
 import { ICON_VARS } from "./icons";
 import { redrawDiagrams, setDiagramColors, themeMermaid, type PeleDiagrams } from "./mermaid";
 import { decoratePopovers, markLitRows, MODEL_SELECTOR_CSS, noteClick, noteThinkingFallback } from "./model-picker";
-import { tagParts } from "./parts";
+import { runningRemoved, tagParts } from "./parts";
 import { NATIVE_CSS } from "./restyle-css";
 import { markBlocks, RICH_TEXT_CSS } from "./rich-text";
 
@@ -110,6 +110,7 @@ export function restyleNative(enabled: () => boolean, pele?: PeleDiagrams) {
       swapOutlinePreview(roots);
     },
     removed: (nodes) => {
+      if (style) runningRemoved(nodes);
       hoverCardsRemoved();
       ghostOutlinePreview(nodes);
     },

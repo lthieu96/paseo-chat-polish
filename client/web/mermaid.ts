@@ -1,4 +1,5 @@
 // Mermaid diagrams: Paseo's mermaid themed in the app's colors, Pele drawing in its place, and the redraw button.
+import { findInAppScripts } from "./app-script";
 import { darker, isDark, mix } from "./color";
 import type { DomElement, KeyEvent, MessageListener, WebDocument } from "./dom";
 
@@ -80,15 +81,8 @@ let bundledMermaidDoc: Promise<string | undefined> | undefined;
 export function loadMermaidDoc(): Promise<string | undefined> {
   if (paseoMermaidDoc) return Promise.resolve(paseoMermaidDoc);
   bundledMermaidDoc ??= (async () => {
-    for (const script of Array.from(document.querySelectorAll("script[src]"))) {
-      try {
-        const response = await fetch(script.getAttribute("src") ?? "");
-        const doc = response.ok ? mermaidDocIn(await response.text()) : undefined;
-        if (doc) return (paseoMermaidDoc ||= doc);
-      } catch (error) {
-        console.warn("[chat-polish] Couldn't read a script for Paseo's mermaid", error);
-      }
-    }
+    const doc = await findInAppScripts(mermaidDocIn, "Paseo's mermaid");
+    if (doc) return (paseoMermaidDoc ||= doc);
     // Look again next time.
     bundledMermaidDoc = undefined;
   })();

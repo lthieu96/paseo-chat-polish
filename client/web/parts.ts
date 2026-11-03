@@ -185,6 +185,34 @@ function tagSettings(roots: DomElement[]) {
     }
 }
 
+const SUMMARY = '[data-testid="turn-summary"]';
+const ENTER_WINDOW_MS = 300;
+// When a summary last opened in place, and how many of its rows have risen in since.
+let turnOpenedAt = -Infinity;
+let entering = 0;
+/** Whether `el` came in with this batch (an added root holds it), rather than being on screen before. */
+const mountedWith = (roots: DomElement[], el: DomElement) => roots.some((root) => root === el || (root as unknown as { contains(n: DomElement): boolean }).contains(el));
+
+const LABEL = '[data-cp-part="row-label"]';
+const toggleAttr = (el: DomElement | null | undefined, name: string, on: boolean) => (on ? el?.setAttribute(name, "") : el?.removeAttribute(name));
+
+/**
+ * A loading call or group: Paseo dims its label and lays a gradient copy over it (the label's second child, there only while it
+ * loads). Running rows take the plugin's look instead: full strength and the plugin rows' light sweep (data-cp-running-label, whose
+ * animation plugin-views.ts defines).
+ */
+function markRunning(label: DomElement) {
+  const running = label.children.length > 1 && !!label.querySelector('[style*="background-image"]');
+  toggleAttr(label.closest(ROW), "data-cp-running", running);
+  toggleAttr(label, "data-cp-running-label", running);
+  if (!running) label.removeAttribute("data-cp-swap");
+}
+
+/** A loading row whose gradient copy Paseo just removed has finished. */
+export function runningRemoved(nodes: Array<{ from: DomElement }>) {
+  for (const { from } of nodes) if (from.matches(LABEL)) markRunning(from);
+}
+
 /** Tags the parts above, for selectors that would otherwise need :has() or a slow "X *". */
 export function tagParts(roots: DomElement[]) {
   tagSettings(roots);
@@ -228,11 +256,57 @@ export function tagParts(roots: DomElement[]) {
   for (const svg of within(roots, `${ROW_ICON} svg`)) {
     const slot = svg.closest(ROW_ICON);
     if (!slot) continue;
-    if (svg.querySelector('path[d="m9 18 6-6-6-6"]')) slot.setAttribute("data-cp-chev", "");
+    const chevron = !!svg.querySelector('path[d="m9 18 6-6-6-6"]');
+    if (chevron) slot.setAttribute("data-cp-chev", "");
     else {
       slot.removeAttribute("data-cp-chev");
       slot.style.setProperty("--cp-row-icon", rowIconMask(svg));
     }
+    // Open rows turn the chevron 90°. A turn summary's rows follow it as separate list rows, so its button stays its last child
+    // and the faded rule would keep it faded while open; this tag is the only open mark it has (Paseo sets no aria-expanded).
+    const row = slot.parentElement?.parentElement?.parentElement;
+    if (!row) continue;
+    if (chevron && slot.querySelector('[style*="rotate(90deg)"]')) {
+      // A summary already on screen that opens now, not one the list remounts open while scrolling: its rows may rise in.
+      if (!row.hasAttribute("data-cp-open") && row.matches(SUMMARY) && !mountedWith(roots, row)) (turnOpenedAt = Date.now()), (entering = 0);
+      row.setAttribute("data-cp-open", "");
+    } else row.removeAttribute("data-cp-open");
+  }
+  // Paseo 0.14+ draws an opened turn's rows each in an IndentRail inside its history row, and ends the summary's row with an empty
+  // one. Tagged by what they hold, so no styles are read while rows mount: a Paseo item (testID), a plugin view (display: contents)
+  // or nothing. Top-level items and plugin rows sit one level up, and carry a testID or an inline style themselves.
+  for (const el of within(roots, "[data-history-row-id] > div > div:not([data-testid]):not([style])")) {
+    const first = el.firstElementChild;
+    if (!first || first.hasAttribute("data-testid") || first.getAttribute("style") === "display: contents;") el.setAttribute("data-cp-indent", first ? "" : "tail");
+    // Rows of a turn just opened rise in top-down, a few ms apart, in place of the plugin group's height reveal: a list row's height
+    // can't be animated, Paseo's virtual list re-measures it every frame.
+    if (first && Date.now() - turnOpenedAt < ENTER_WINDOW_MS) {
+      el.setAttribute("data-cp-enter", "");
+      el.style.setProperty("--cp-enter-delay", `${Math.min(entering++, 8) * 15}ms`);
+    }
+  }
+  // A row's details opened now (its body is new in a row already on screen) fade in; remounted ones show at once.
+  for (const body of within(roots, ':is([data-cp-part="badge-body"], [data-cp-part="group-body"])')) if (body.parentElement && !mountedWith(roots, body.parentElement)) body.setAttribute("data-cp-enter", "");
+  // Paseo's own tools show their input and output as titled sections of label/value fields ("Details", "Result"); drawn like the
+  // plugin's input/output block. A section is the body's grandchild that starts with its title text.
+  for (const section of within(roots, '[data-cp-part="badge-body"] > div > div')) {
+    if (section.firstElementChild?.hasAttribute("dir") && section.children.length === 2) section.setAttribute("data-cp-part", "tool-section");
+  }
+  // The turn's last row: the history row after it isn't on the rail. Decided for the pair as either mounts, like footer-gap.
+  const railOf = (row: DomElement | null | undefined) => row?.querySelector(":scope > div > [data-cp-indent]:not([data-cp-indent='tail'])");
+  const markEnd = (row: DomElement | null | undefined) => {
+    const rail = railOf(row), next = row?.nextElementSibling;
+    if (rail && next) next.hasAttribute("data-history-row-id") && !railOf(next) ? rail.setAttribute("data-cp-indent-end", "") : rail.removeAttribute("data-cp-indent-end");
+  };
+  for (const rail of within(roots, "[data-cp-indent]")) markEnd(rail.closest("[data-history-row-id]"));
+  for (const row of within(roots, "[data-history-row-id]")) markEnd(row.previousElementSibling);
+  // Labels mounted or changed in this batch; a running label's new text (the next step) rises in like the plugin merged row's.
+  for (const label of new Set([...within(roots, LABEL), ...roots.map((root) => root.closest(LABEL))])) {
+    if (!label) continue;
+    const wasRunning = label.hasAttribute("data-cp-running-label");
+    markRunning(label);
+    if (wasRunning && label.hasAttribute("data-cp-running-label") && roots.some((root) => root.parentElement === label && root.hasAttribute("dir")))
+      label.setAttribute("data-cp-swap", label.getAttribute("data-cp-swap") === "a" ? "b" : "a");
   }
   // Also when only its text re-renders, so the card is an ancestor of the root.
   for (const card of new Set([...within(roots, CTX), ...roots.map((root) => root.closest(CTX))])) if (card) tagContextCard(card);

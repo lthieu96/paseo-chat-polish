@@ -5,6 +5,7 @@ export { openAgentIds, watchDom } from "./web/dom";
 export { canSetAppTheme, DEFAULTS, PASEO_FONT_STACKS, readHostAppearance, readSyntaxTheme, setAppTheme, updateAppSettings, type HostAppearance } from "./web/host";
 export { addIconSet, iconTwins, nativeIconSet, subscribeIconSets } from "./web/icons";
 export { diagramDoc, drawDiagram, loadMermaidDoc, redrawDiagrams, seriesFrom } from "./web/mermaid";
+export { loadPaseoLightbox, type PaseoLightbox } from "./web/lightbox";
 export { setRailProviders, type RailProvider } from "./web/model-picker";
 export { stylePluginViews } from "./web/plugin-views";
 export { bindPromptKeys, followExpansionAtBottom, jumpToPrompt } from "./web/prompts";

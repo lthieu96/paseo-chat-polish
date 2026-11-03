@@ -289,7 +289,7 @@ export function PrefsEditor({ theme, page, prefs, onChange }: { theme: PluginThe
           title="Layout"
           top={
             readHostAppearance().chatDisplay === "collapseTurns" ? (
-              <Notice theme={theme}>Paseo's chat display collapses turns, which folds steps into its own summary, so they don't merge. Switch it to Full or Collapse tool calls in Settings → Chat to merge them.</Notice>
+              <Notice theme={theme}>Paseo's chat display collapses turns: merged, each turn's steps and the replies before its last one fold into one row here instead of Paseo's turn summary.</Notice>
             ) : null
           }
         >

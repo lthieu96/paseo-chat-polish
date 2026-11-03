@@ -19,6 +19,8 @@ const detail = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("diff"), lines: z.array(z.object({ text: z.string(), sign: z.enum([" ", "+", "-"]), n: z.number().optional() })) }),
   z.object({ kind: z.literal("list"), items: z.array(listItem) }),
   z.object({ kind: z.literal("text"), text: z.string() }),
+  /** Words written to be read (another agent's reply): paragraphs, not output. */
+  z.object({ kind: z.literal("prose"), text: z.string() }),
   z.object({ kind: z.literal("io"), input: z.string(), output: z.string() }),
 ]);
 
@@ -290,6 +292,37 @@ function describe(d: ToolCallDetail, name: string, running: boolean): Omit<ToolD
       return { icon: "Wrench", verb: tense(running, "Calling", "Called"), target: readable(name), mono: false, detail: io };
     }
   }
+}
+
+// The daemon's notice to a parent agent opens with this line ("Agent <id> (<title>) finished."); clients get the notice as plain text.
+const AGENT_STATUS = /^Agent (\S+) \((.*)\) (finished|errored|needs permission|is unavailable|was closed|was canceled)\.$/;
+const AGENT_VERBS: Record<string, [icon: string, verb: string]> = {
+  finished: ["Bot", "Agent finished"],
+  errored: ["CircleAlert", "Agent errored"],
+  "needs permission": ["ShieldAlert", "Agent needs permission"],
+  "is unavailable": ["BotOff", "Agent unavailable"],
+  "was closed": ["BotOff", "Agent closed"],
+  "was canceled": ["CircleSlash", "Agent canceled"],
+};
+
+/** Paseo's notice about another agent (finished, errored, needs permission…): its title is the target and its last reply the detail,
+ * without the status and server lines written for the receiving agent. Undefined for anything else, a message from an agent included. */
+export function agentEventData(item: Item<"tool_call">): ToolData | undefined {
+  const body = item.detail.type === "plain_text" ? (item.detail.text ?? "") : "";
+  const [first = "", ...rest] = body.split("\n\n");
+  const status = AGENT_STATUS.exec(first.trim());
+  if (!status) return undefined;
+  const reply = /<agent-response>\n?([\s\S]*?)\n?<\/agent-response>/.exec(body)?.[1];
+  const text = (reply ?? rest.filter((part) => !part.startsWith("Server: ")).join("\n\n")).trim();
+  const [icon, verb] = AGENT_VERBS[status[3]!]!;
+  return {
+    status: status[3] === "errored" ? "failed" : "completed",
+    icon,
+    verb,
+    target: status[2] || status[1],
+    mono: false,
+    detail: text ? { kind: "prose", text: clipLines(text) } : undefined,
+  };
 }
 
 export function toolData(item: Item<"tool_call">): ToolData {
