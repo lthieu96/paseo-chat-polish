@@ -5,7 +5,7 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Script } from "node:vm";
-import { HTML_PREVIEW_TOOL, HTML_SERVER, HTML_TOOL, heightsLine, localImages } from "../shared/html.ts";
+import { HTML_PREVIEW_TOOL, HTML_SERVER, HTML_TOOL, heightsLine, localImages, pageIdLine } from "../shared/html.ts";
 import { headlessShell } from "./headless-shell.ts";
 import { cacheDir } from "./icons.ts";
 import { checkPage, type PageCheck } from "./page-check.ts";
@@ -128,8 +128,8 @@ interface RpcMessage {
 }
 
 /**
- * The MCP server's answer to one JSON-RPC message, undefined for a notification. It only checks the page: the chat reads it from the
- * call's input, which the provider's transcript keeps, so nothing is stored here.
+ * The MCP server's answer to one JSON-RPC message, undefined for a notification. It checks the page, and stores a published one: the chat
+ * reads the page from the call's input, which the provider's transcript keeps, and loads the stored copy only when Paseo cut that input.
  */
 export async function mcpAnswer(m: RpcMessage) {
   if (m.id === undefined) return undefined;
@@ -153,10 +153,10 @@ export async function mcpAnswer(m: RpcMessage) {
     return text(`The page was laid out as the chat shows it, and a reader would see these problems. Fix them and call ${HTML_TOOL} again; pass force: true only if every one is on purpose.\n- ${check.problems.join("\n- ")}`, true);
   }
   const shown = "Shown to the reader above your reply. Don't say it's shown and don't describe it; reply in one or two sentences with what it doesn't say: a takeaway, a caveat or a next step.";
-  if (check) return text(`${shown}\n\n${heightsLine(check.heights)}`);
   // The browser is there but the check didn't run (it couldn't start, or failed): the agent should know nothing vouched for the page.
-  const unchecked = m.params?.arguments?.force !== true && headlessShell();
-  return text(unchecked ? `${shown} The layout check couldn't run, so it went out unchecked.` : shown);
+  const unchecked = !check && m.params?.arguments?.force !== true && headlessShell();
+  const stored = await savePage(html).then(pageIdLine, (error: unknown) => console.warn("[chat-polish] couldn't store the page", error));
+  return text([unchecked ? `${shown} The layout check couldn't run, so it went out unchecked.` : shown, check && heightsLine(check.heights), stored].filter(Boolean).join("\n\n"));
 }
 
 /**
@@ -292,11 +292,20 @@ function localServer() {
 /** Where agents reach the chat_polish MCP server (html_render, and html_preview while the headless browser is installed). */
 export const startHtmlTool = () => localServer().then(({ port, token }) => ({ url: `http://127.0.0.1:${port}${MCP_PATH}`, token }));
 
+/** Saves a page under its sha256, where the local server serves it and the html.page RPC reads it, and returns that id. */
+async function savePage(html: string) {
+  const id = createHash("sha256").update(html).digest("hex");
+  await mkdir(pagesDir(), { recursive: true });
+  await writeFile(join(pagesDir(), `${id}.html`), html);
+  return id;
+}
+
+/** A page html_render stored, for the chat when Paseo cut the call's input; null once it's gone. */
+export const readStoredPage = ({ id }: { id: string }) => readFile(join(pagesDir(), `${id}.html`), "utf8").then((html) => ({ html }), () => ({ html: null }));
+
 /** Saves the page under its hash and returns its address on the daemon's localhost. */
 export async function openHtmlPage({ html }: { html: string }) {
-  const name = createHash("sha256").update(html).digest("hex");
-  await mkdir(pagesDir(), { recursive: true });
-  await writeFile(join(pagesDir(), `${name}.html`), html);
+  const name = await savePage(html);
   const { port } = await localServer();
   return { url: `http://127.0.0.1:${port}/${name}.html` };
 }
