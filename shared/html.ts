@@ -9,8 +9,19 @@ export const HTML_SERVER = "chat_polish";
 export const HTML_TOOL = "html_render";
 export const HTML_PREVIEW_TOOL = "html_preview";
 
-/** The tool as each provider names it: "mcp__server__tool" (Claude) or "server.tool" (Codex). */
-export const isHtmlTool = (name: string) => name === `mcp__${HTML_SERVER}__${HTML_TOOL}` || name === `${HTML_SERVER}.${HTML_TOOL}`;
+/** The tool as each provider names it: "mcp__server__tool" (Claude CLI), "server.tool" (Codex), the alias an MCP bridge registers for it
+ * (omp's "mcp_server__tool_<alias>"), or the human label a host publishes in its place ("server / tool"). Only the words are compared, so a
+ * separator or an alias suffix can't hide the page. */
+export const isHtmlTool = (name: string) => {
+  const words = name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/gu, "_")
+    .replace(/^_+|_+$/gu, "")
+    .replace(/^mcpx?_/u, "");
+  const target = `${HTML_SERVER}_${HTML_TOOL}`;
+  // A bridge picks the alias, so drop the suffix by its digit rather than its alphabet: the tool's own last word ("render") has none.
+  return words === target || words.replace(/_[a-z0-9]*\d[a-z0-9]*$/u, "") === target;
+};
 
 // The page's height at each width the daemon laid it out at, on the last line of html_render's answer: the chat reads it back from the
 // call's output, so a page's frame starts at its size without the daemon keeping anything.
