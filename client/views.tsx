@@ -20,7 +20,7 @@ import { followExpansionAtBottom, readHostAppearance, type HostAppearance } from
 import type { HtmlData } from "./html";
 import { HtmlFrame, lastFrameHeight, useHovered, useHtmlTheme, windowButtonsInset } from "./html-frame";
 import { htmlPage } from "../shared/page";
-import { inlineImages, localImages, openHtml } from "../shared/html";
+import { inlineImages, localImages, openHtml, storedPage } from "../shared/html";
 
 type Colors = PluginTheme["colors"];
 const SQUIRCLE_CARD = { dataSet: { cpSquircle: "card" } } as object;
@@ -1093,10 +1093,32 @@ export function RecapItem({ item, theme }: PluginTimelineItemProps<Recap>) {
 
 /** A page an agent published with html_render. Native apps can't run its scripts in a frame, so they name it instead. */
 export function HtmlItem({ item, theme }: PluginTimelineItemProps<HtmlData>) {
-  if (Platform.OS === "web") return <HtmlPage {...item.data} theme={theme} />;
+  if (Platform.OS === "web") return item.data.stored === undefined ? <HtmlPage {...item.data} theme={theme} /> : <StoredHtmlPage {...item.data} theme={theme} />;
   return (
     <Text style={{ color: theme.colors.foregroundMuted, fontSize: 13, paddingVertical: 4 }}>{`${item.data.title}: open this chat on desktop or the web to see the page.`}</Text>
   );
+}
+
+/** A page Paseo cut to fit the timeline, loaded whole from where html_render stored it. */
+function StoredHtmlPage({ stored, theme, ...data }: HtmlData & { theme: PluginTheme }) {
+  const load = useRpc(storedPage);
+  const [html, setHtml] = useState<string | null>();
+  useEffect(() => {
+    if (!stored) return void setHtml(null);
+    let alive = true;
+    load({ id: stored }).then(
+      (page) => alive && setHtml(page.html),
+      () => alive && setHtml(null),
+    );
+    return () => {
+      alive = false;
+    };
+  }, [stored, load]);
+  if (html === undefined) return <View style={{ height: lastFrameHeight(data.html, data.heights) }} />;
+  if (html === null) {
+    return <Text style={{ color: theme.colors.foregroundMuted, fontSize: 13, paddingVertical: 4 }}>{`${data.title}: the page is too long for the chat's history, and its saved copy is gone.`}</Text>;
+  }
+  return <HtmlPage {...data} html={html} theme={theme} />;
 }
 
 /** The page with the local images it names inlined, undefined while they're read; an image that can't be read keeps its path. */

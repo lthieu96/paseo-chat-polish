@@ -8,8 +8,8 @@ import { getTheme, themeSchema, themeSettings } from "./shared/theme";
 import { getIconSet, getPrefs, prefsSchema, prefsSettings } from "./shared/timeline";
 import { loadIconSet } from "./server/icons";
 import { installHeadlessShell, removeHeadlessShell, shellStatus, staleShell } from "./server/headless-shell";
-import { baseProvider, closeLocalServer, openHtmlPage, startHtmlTool, withHtmlTool } from "./server/html";
-import { browserStatus, installBrowser, openHtml, removeBrowser } from "./shared/html";
+import { baseProvider, closeLocalServer, openHtmlPage, readStoredPage, startHtmlTool, withHtmlTool } from "./server/html";
+import { browserStatus, installBrowser, openHtml, removeBrowser, storedPage } from "./shared/html";
 import { applyUpdate, checkUpdate } from "./shared/update";
 import { checkForUpdate, installUpdate } from "./server/update";
 import { latestTurn } from "./server/turn";
@@ -32,6 +32,7 @@ export default function contribute(server: PluginServerContext) {
   // Started even while the pref is off: agents created while it was on still call the tools.
   void htmlTool();
   server.handle(openHtml, openHtmlPage);
+  server.handle(storedPage, readStoredPage);
   server.handle(browserStatus, shellStatus);
   server.handle(installBrowser, () => (void installHeadlessShell(), shellStatus()));
   server.handle(removeBrowser, () => removeHeadlessShell().then(shellStatus));

@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { FRAME_SANDBOX, fitFrame, frameKey, frameLink, frameReport, heightAt, htmlData } from "../client/html.ts";
 import { htmlPage } from "../shared/page.ts";
-import { heightsLine, inlineImages, localImages, readHeights } from "../shared/html.ts";
+import { heightsLine, inlineImages, localImages, pageIdLine, readHeights, readPageId } from "../shared/html.ts";
 import { stepKey } from "../client/steps.ts";
 
 // The Paseo home the headless shell is installed in (~/.paseo, or CI's); the MCP test swaps in an empty one.
@@ -34,6 +34,12 @@ test("page heights: read back from the call's output in either provider's shape,
   assert.deepEqual(htmlData(call("mcp__chat_polish__html_render", page, { detail: { type: "unknown", input: page, output: { output: `Shown to the reader.\n\n${line}` } } })).heights, heights);
   assert.deepEqual(htmlData(call("chat_polish.html_render", page, { detail: { type: "unknown", input: page, output: { content: [{ type: "text", text: `Shown.\n\n${line}` }] } } })).heights, heights);
   assert.equal("heights" in htmlData(call("chat_polish.html_render", page, { detail: { type: "unknown", input: page, output: { output: "Shown." } } })), false);
+  // Paseo 0.15 cuts a call's strings to fit the timeline: a cut page names the id it was stored under, or null if it never was.
+  const cut = { title: "Chart", html: "<p>xx…[truncated 82.1 KB]" };
+  const id = "a".repeat(64);
+  assert.equal(htmlData(call("chat_polish.html_render", cut, { detail: { type: "unknown", input: cut, output: { output: `Shown.\n\n${line}\n\n${pageIdLine(id)}` } } })).stored, id);
+  assert.equal(htmlData(call("chat_polish.html_render", cut, { detail: { type: "unknown", input: cut, output: { output: "Shown." } } })).stored, null);
+  assert.equal("stored" in htmlData(call("chat_polish.html_render", page, { detail: { type: "unknown", input: page, output: { output: pageIdLine(id) } } })), false);
   assert.equal(heightAt(heights, 700), 500);
   assert.equal(heightAt(heights, 530), 700);
   assert.equal(heightAt(heights, 320), 900);
@@ -89,7 +95,7 @@ test("MCP over HTTP: lists the tool, rejects vh pages, accepts a good one; confi
   const cache = join(process.env.PASEO_HOME, "plugin-cache", "paseo-chat-polish");
   await mkdir(cache, { recursive: true });
   await writeFile(join(cache, "html-server.json"), '{"port":');
-  const { startHtmlTool, withHtmlTool, baseProvider, openHtmlPage, closeLocalServer } = await import("../server/html.ts");
+  const { startHtmlTool, withHtmlTool, baseProvider, openHtmlPage, readStoredPage, closeLocalServer } = await import("../server/html.ts");
   try {
     const tool = await startHtmlTool();
     assert.match(tool.url, /^http:\/\/127\.0\.0\.1:\d+\/mcp$/);
@@ -136,6 +142,11 @@ test("MCP over HTTP: lists the tool, rejects vh pages, accepts a good one; confi
     const ok = await ask(4, "tools/call", { name: "html_render", arguments: { title: "t", html: "<p>Use 12px, not 100vh or names like ovhd</p>", force: true } });
     assert.equal(ok.result.isError, false);
     assert.match(ok.result.content[0].text, /^Shown to the reader/);
+    // A published page is stored under the id in the answer, for the chat to load if Paseo cuts the call's input; an unknown id is null.
+    const id = readPageId(ok.result);
+    assert.match(id, /^[0-9a-f]{64}$/);
+    assert.deepEqual(await readStoredPage({ id }), { html: "<p>Use 12px, not 100vh or names like ovhd</p>" });
+    assert.deepEqual(await readStoredPage({ id: "0".repeat(64) }), { html: null });
     const reject = async (html) => (await ask(5, "tools/call", { name: "html_render", arguments: { title: "t", html, force: true } })).result;
     assert.match((await reject('<div style="min-height:100dvh"></div>')).content[0].text, /viewport height unit \(100dvh\)/);
     assert.match((await reject("<script>\nconst a = {;\n</script>")).content[0].text, /^Script 1 has a syntax error on its line 2/);

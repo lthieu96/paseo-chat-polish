@@ -49,6 +49,23 @@ function guardRules(rules: ArrayLike<CssRuleLike>) {
   }
 }
 
+// Paseo 0.15 opens menus through element.animate (WEB_CONTENT_ENTERING_KEYFRAMES in menu-overlay.tsx, 150ms), which CSS can't shorten, so
+// the call is cut to the 40ms the restyle gives every surface. Matched by its keyframes; if Paseo changes them, menus keep its 150ms.
+const MENU_ENTRANCE = "scale(0.97)";
+type Animatable = { animate(keyframes: unknown, options?: unknown): unknown };
+function quickMenus(enabled: () => boolean) {
+  const proto = (globalThis as unknown as { Element?: { prototype: Animatable } }).Element?.prototype;
+  if (!proto) return () => {};
+  const inherited = proto.animate;
+  proto.animate = function (this: Animatable, keyframes: unknown, options?: unknown) {
+    const entrance = typeof options === "number" && enabled() && (keyframes as { transform?: unknown[] } | null)?.transform?.[0] === MENU_ENTRANCE;
+    return inherited.call(this, keyframes, entrance ? Math.min(options, 40) : options);
+  };
+  return () => {
+    proto.animate = inherited;
+  };
+}
+
 /**
  * Restyles what Paseo still draws itself (tool call groups, user bubbles, markdown) to the Chat Polish design
  * while `enabled()`; desktop/web only. Returns cleanup.
@@ -59,6 +76,7 @@ export function restyleNative(enabled: () => boolean, pele?: PeleDiagrams) {
   if (Platform.OS !== "web" || typeof document === "undefined") return () => {};
   let style: DomElement | undefined;
   const unthemeMermaid = themeMermaid(() => !!style, pele);
+  const slowMenus = quickMenus(() => !!style);
   const off = () => {
     if (!style) return;
     style.remove();
@@ -104,5 +122,6 @@ export function restyleNative(enabled: () => boolean, pele?: PeleDiagrams) {
   return () => {
     stop();
     unthemeMermaid();
+    slowMenus();
   };
 }

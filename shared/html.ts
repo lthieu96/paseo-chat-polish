@@ -22,6 +22,14 @@ export function readHeights(output: unknown): Array<[number, number]> | undefine
   return line ? line.trim().split(" ").map((pair) => pair.split(":").map(Number) as [number, number]) : undefined;
 }
 
+// The id html_render stored the page under (its sha256), on a line of its answer. Paseo 0.15 cuts any tool call over about 64 KB, the page
+// in its input included, so the chat loads a page that was cut from the daemon by this id.
+const PAGE_ID = /Page id: ([0-9a-f]{64})/;
+export const pageIdLine = (id: string) => `Page id: ${id}`;
+export const readPageId = (output: unknown) => PAGE_ID.exec(JSON.stringify(output) ?? "")?.[1];
+/** A page html_render stored, by its id; null once it's gone from the plugin's cache. */
+export const storedPage = defineRpc({ name: "html.page", input: z.object({ id: z.string().regex(/^[0-9a-f]{64}$/) }), output: z.object({ html: z.string().nullable() }) });
+
 /** The browser that lays pages out before they show: Chrome for Testing's headless shell, which the user can download from the dashboard. */
 export const browserStatusSchema = z.object({
   /** "unsupported": no build for this platform. */

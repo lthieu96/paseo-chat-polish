@@ -1,11 +1,20 @@
 import type { AgentTimelineItem } from "@getpaseo/protocol/agent-types";
 import { z } from "zod";
-import { isHtmlTool, readHeights } from "../shared/html.ts";
+import { isHtmlTool, readHeights, readPageId } from "../shared/html.ts";
 
 // `heights`: width → height pairs the daemon measured when it checked the page, sorted by width; absent on pages it couldn't check, pages
-// published with force, and older ones.
-export const htmlSchema = z.object({ title: z.string(), html: z.string(), heights: z.array(z.tuple([z.number(), z.number()])).min(1).optional() });
+// published with force, and older ones. `stored`: set only when Paseo cut the page to fit the timeline, to the id html_render stored the
+// whole page under, or null for a page published before it stored them.
+export const htmlSchema = z.object({
+  title: z.string(),
+  html: z.string(),
+  heights: z.array(z.tuple([z.number(), z.number()])).min(1).optional(),
+  stored: z.string().nullable().optional(),
+});
 export type HtmlData = z.output<typeof htmlSchema>;
+
+// The marker Paseo (0.15+) ends a string with when it cuts a timeline item to its size limit (cutString in agent-timeline-content.ts).
+const CUT = /…\[truncated [\d.]+ (?:B|KB|MB)\]$/;
 
 /**
  * The page a finished html_render call published, read from the call's own input, plus the heights the daemon added to its output
@@ -17,7 +26,8 @@ export function htmlData(item: AgentTimelineItem): HtmlData | undefined {
   const output = item.detail.output as { isError?: unknown } | null;
   if (typeof input?.html !== "string" || output?.isError === true) return undefined;
   const heights = readHeights(output);
-  return { title: typeof input.title === "string" && input.title.trim() ? input.title.trim() : "Page", html: input.html, ...(heights && { heights }) };
+  const cut = CUT.test(input.html);
+  return { title: typeof input.title === "string" && input.title.trim() ? input.title.trim() : "Page", html: input.html, ...(heights && { heights }), ...(cut && { stored: readPageId(output) ?? null }) };
 }
 
 /**

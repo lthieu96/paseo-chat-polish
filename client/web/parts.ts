@@ -71,7 +71,10 @@ const PARTS: Array<[string, (el: DomElement) => DomElement | null | undefined, s
   ['[data-cp-part="input-row"] > div + div', (el) => el, "input-extra"],
   [`${USAGE} > div:first-child > div:nth-child(3)`, (el) => el, "usage-plan"],
   [`${USAGE} > div:nth-child(2)`, (el) => el, "usage-limits"],
-  ['[data-cp-part="usage-limits"] > div > div:nth-child(2)', (el) => el, "limit-body"],
+  // A limit row's box of label row, bar and (0.15+) reset line. Up to 0.14 it sat in a wrapper after an empty highlight layer; 0.15 dropped
+  // both, so the row is the box. The bar is the child holding just its fill (a balance row may have none).
+  ['[data-cp-part="usage-limits"] > div', (el) => (el.firstElementChild?.firstElementChild ? el : el.children[1]?.firstElementChild), "limit-body"],
+  ['[data-cp-part="limit-body"] > div', (el) => (el.children.length === 1 && !el.firstElementChild?.firstElementChild && !el.textContent ? el : null), "limit-bar"],
   ['[data-testid^="model-row-"] > div > div:nth-child(2)', (el) => el, "model-text"],
 ];
 
