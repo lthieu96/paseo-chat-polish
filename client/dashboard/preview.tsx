@@ -308,9 +308,9 @@ export function ComposerPreview({ theme, draft, prefs, layout }: { theme: Plugin
         <Text style={[s.small, { fontSize: 12 }]}>Native and plugin pills share one size and style.</Text>
         <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
           <TrackPill theme={pt} prefs={prefs} testID="composer-diff-stat-pill" icon="FileDiff" label="+1.5k −12" />
-          <TrackPill theme={pt} prefs={prefs} icon="CalendarClock" label="1" />
-          <TrackPill theme={pt} prefs={prefs} icon="NotebookPen" label="Prompts" />
-          <TrackPill theme={pt} prefs={prefs} icon="Send" label="Bind" />
+          <View><TrackPill theme={pt} prefs={prefs} icon="CalendarClock" label="1" /></View>
+          <View><TrackPill theme={pt} prefs={prefs} icon="NotebookPen" label="Prompts" /></View>
+          <View><TrackPill theme={pt} prefs={prefs} icon="Send" label="Bind" /></View>
         </View>
       </View>
     </View>

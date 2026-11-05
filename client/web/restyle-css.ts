@@ -7,10 +7,10 @@ import { BUBBLE, CHIP, CODE_BLOCK, CTX, CTX_HEAD, HEADING, INLINE_CODE, LANG, LI
 
 const FOOTER = '[data-cp-part="footer"]';
 const FOOTER_ICON = ':is(button[aria-label="Copy turn"], [data-testid="assistant-fork-menu-trigger"])';
-// ComposerTrackBar is a sibling of message-input-root, not its descendant. Locate the rail from a
-// native pill, then style its direct button children so third-party pills need no host testID.
+// ComposerTrackBar is a sibling of message-input-root, not its descendant. Native pills are direct
+// buttons; plugin pills have a Tooltip wrapper div. Cover both without requiring a plugin testID.
 const COMPOSER_TRACK_ROW = ':is(div:has(> [data-testid="subagents-track-header"]), div:has(> [data-testid="composer-diff-stat-pill"]), div:has(> [data-testid="composer-parent-agent-pill"]))';
-const COMPOSER_TRACK_PILLS = `${COMPOSER_TRACK_ROW} > :is(button, [role="button"])`;
+const COMPOSER_TRACK_PILLS = `:is(${COMPOSER_TRACK_ROW} > :is(button, [role="button"]), ${COMPOSER_TRACK_ROW} > div > :is(button, [role="button"]))`;
 const COMPOSER_BUTTON =
   ':is([data-testid="message-input-attach-button"], [data-testid^="agent-feature-"], [data-testid="workspace-create-submit"], [data-testid="context-window-meter"], button:is([aria-label="Open agent features"], [aria-label="Start dictation"], [aria-label="Send message"], [aria-label="Queue message"], [aria-label="Stop agent"], [aria-label$="Voice mode"]))';
 
