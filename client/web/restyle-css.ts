@@ -7,7 +7,10 @@ import { BUBBLE, CHIP, CODE_BLOCK, CTX, CTX_HEAD, HEADING, INLINE_CODE, LANG, LI
 
 const FOOTER = '[data-cp-part="footer"]';
 const FOOTER_ICON = ':is(button[aria-label="Copy turn"], [data-testid="assistant-fork-menu-trigger"])';
-const COMPOSER_TRACK_PILLS = ':is([data-testid="subagents-track-header"], [data-testid="composer-diff-stat-pill"], [data-testid="composer-parent-agent-pill"], [data-testid^="plugin-button-"])';
+// ComposerTrackBar is a sibling of message-input-root, not its descendant. Locate the rail from a
+// native pill, then style its direct button children so third-party pills need no host testID.
+const COMPOSER_TRACK_ROW = ':is(div:has(> [data-testid="subagents-track-header"]), div:has(> [data-testid="composer-diff-stat-pill"]), div:has(> [data-testid="composer-parent-agent-pill"]))';
+const COMPOSER_TRACK_PILLS = `${COMPOSER_TRACK_ROW} > :is(button, [role="button"])`;
 const COMPOSER_BUTTON =
   ':is([data-testid="message-input-attach-button"], [data-testid^="agent-feature-"], [data-testid="workspace-create-submit"], [data-testid="context-window-meter"], button:is([aria-label="Open agent features"], [aria-label="Start dictation"], [aria-label="Send message"], [aria-label="Queue message"], [aria-label="Stop agent"], [aria-label$="Voice mode"]))';
 
@@ -548,9 +551,9 @@ export const COMPOSER_BUTTON_CSS = `
 :root[data-cp-rt-track-icon="16"] { --cp-track-icon: 16px; }
 :root[data-cp-rt-track-height="26"] { --cp-track-height: 26px; }
 :root[data-cp-rt-track-height="28"] { --cp-track-height: 28px; }
-[data-testid="message-input-root"] ${COMPOSER_TRACK_PILLS} { height: var(--cp-track-height) !important; min-height: var(--cp-track-height) !important; padding: 0 10px !important; gap: 6px !important; border-color: var(--cp-rule) !important; border-radius: 999px !important; background-color: transparent !important; }
-[data-testid="message-input-root"] ${COMPOSER_TRACK_PILLS} [dir] { font-size: 13px !important; font-weight: 500 !important; }
-[data-testid="message-input-root"] ${COMPOSER_TRACK_PILLS} svg { width: var(--cp-track-icon) !important; height: var(--cp-track-icon) !important; flex-shrink: 0; }
+${COMPOSER_TRACK_PILLS} { height: var(--cp-track-height) !important; min-height: var(--cp-track-height) !important; padding: 0 10px !important; gap: 6px !important; border-color: var(--cp-rule) !important; border-radius: 999px !important; background-color: transparent !important; }
+${COMPOSER_TRACK_PILLS} [dir] { font-size: 13px !important; font-weight: 500 !important; }
+${COMPOSER_TRACK_PILLS} svg { width: var(--cp-track-icon) !important; height: var(--cp-track-icon) !important; flex-shrink: 0; }
 `;
 
 /** Keeps each surface independent without changing the established design. */

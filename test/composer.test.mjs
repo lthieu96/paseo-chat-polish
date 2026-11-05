@@ -31,7 +31,8 @@ test("composer defaults keep every existing surface and use one track style", as
   for (const size of [12, 13, 14, 16]) assert.match(COMPOSER_BUTTON_CSS, new RegExp(`data-cp-rt-track-icon="${size}"`));
   for (const size of [26, 28]) assert.match(COMPOSER_BUTTON_CSS, new RegExp(`data-cp-rt-track-height="${size}"`));
   assert.match(COMPOSER_BUTTON_CSS, /composer-diff-stat-pill/);
-  assert.match(COMPOSER_BUTTON_CSS, /plugin-button-/);
+  assert.doesNotMatch(COMPOSER_BUTTON_CSS, /plugin-button-/);
+  assert.match(COMPOSER_BUTTON_CSS, /:has\(> \[data-testid="composer-diff-stat-pill"\]\)/);
   assert.doesNotMatch(COMPOSER_BUTTON_CSS, /message-input-attach-button|Stop agent|Start dictation|Send message/);
 });
 

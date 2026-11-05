@@ -283,16 +283,16 @@ export function InlineCode({ theme, variant, children }: { theme: PluginTheme; v
   );
 }
 
-function TrackPill({ theme, prefs, testID, icon, label }: { theme: PluginTheme; prefs: Prefs; testID: string; icon: string; label: string }) {
+function TrackPill({ theme, prefs, testID, icon, label }: { theme: PluginTheme; prefs: Prefs; testID?: string; icon: string; label: string }) {
   const c = theme.colors;
   const design = prefs.nativeStyle === "design" && prefs.surfaces.composer === "show";
   const iconSize = design ? Number(prefs.composerButtonIconSize) : 14;
   const height = design ? Number(prefs.composerButtonSize) : 32;
   return (
-    <View testID={testID} style={{ height, flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 10, borderRadius: 999, borderWidth: 1, borderColor: c.border, backgroundColor: "transparent" }}>
+    <Pressable testID={testID} accessibilityRole="button" style={{ height, flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 10, borderRadius: 999, borderWidth: 1, borderColor: c.border, backgroundColor: "transparent" }}>
       <Icon name={icon} size={iconSize} color={c.foregroundMuted} />
       <Text style={{ color: c.foregroundMuted, fontSize: 13, fontWeight: "500" }}>{label}</Text>
-    </View>
+    </Pressable>
   );
 }
 
@@ -301,17 +301,16 @@ export function ComposerPreview({ theme, draft, prefs, layout }: { theme: Plugin
   const [viewport, setViewport] = useState<Viewport>("desktop");
   const pt = previewTheme(draft, theme);
   const s = useStyles(pt);
-  const previewDataSet = { dataSet: { cpIconSize: prefs.composerButtonIconSize, cpButtonSize: prefs.composerButtonSize } } as object;
   return (
     <View style={{ gap: 14 }}>
       <PreviewHead theme={theme} layout={layout} viewport={viewport} setViewport={setViewport} />
       <View style={{ gap: 16, padding: 20, borderRadius: 12, backgroundColor: pt.colors.surface0 }}>
         <Text style={[s.small, { fontSize: 12 }]}>Native and plugin pills share one size and style.</Text>
-        <View testID="message-input-root" {...previewDataSet} style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
           <TrackPill theme={pt} prefs={prefs} testID="composer-diff-stat-pill" icon="FileDiff" label="+1.5k −12" />
-          <TrackPill theme={pt} prefs={prefs} testID="plugin-button-preview/schedules" icon="CalendarClock" label="1" />
-          <TrackPill theme={pt} prefs={prefs} testID="plugin-button-preview/prompts" icon="NotebookPen" label="Prompts" />
-          <TrackPill theme={pt} prefs={prefs} testID="plugin-button-preview/feishu" icon="Send" label="Bind" />
+          <TrackPill theme={pt} prefs={prefs} icon="CalendarClock" label="1" />
+          <TrackPill theme={pt} prefs={prefs} icon="NotebookPen" label="Prompts" />
+          <TrackPill theme={pt} prefs={prefs} icon="Send" label="Bind" />
         </View>
       </View>
     </View>
