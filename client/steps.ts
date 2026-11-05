@@ -362,8 +362,8 @@ function runGrowing() {
  * have yet (a tab just opened, the subscription a beat behind) leads a run of one until they catch up. Except a tool call while a run is
  * growing: Paseo sometimes transforms it before the plugin's event arrives, and as a run of one it showed as its own row for ~80ms, then
  * merged (the split-then-merge flicker). It almost always joins that run, so it stays out until its event places it; if it turns out to
- * start a run instead, it is stale and the re-transform shows it. Calls only: their callId is the same in both timelines, while a
- * thought's key is its opening words, which may never match, and a thought kept out would then stay out. */
+ * start a run instead, it is stale and the re-transform shows it. A streaming thought waits the same way, but only while it streams: its
+ * key is its opening words, which may never match, so once complete an unplaced thought shows rather than staying out. */
 export function placeStep(item: Item, phase: Phase): { key: string; as: "head" | "none" } | undefined {
   const key = stepKey(item);
   const reply = item.type === "assistant_message";
@@ -375,7 +375,8 @@ export function placeStep(item: Item, phase: Phase): { key: string; as: "head" |
   seen.set(key, { item, phase });
   if (seen.size > SEEN_MAX) for (const old of [...seen.keys()].slice(0, SEEN_MAX / 4)) forget(old);
   const place = places.get(key);
-  const as = !place && item.type === "tool_call" && runGrowing() ? "none" : expected(key);
+  const waits = item.type === "tool_call" || (item.type === "reasoning" && phase === "streaming");
+  const as = !place && waits && runGrowing() ? "none" : expected(key);
   const changed = previous?.item !== item || previous.phase !== phase || made.get(key) !== as;
   made.set(key, as);
   if (!place) onUnplaced();
@@ -385,6 +386,8 @@ export function placeStep(item: Item, phase: Phase): { key: string; as: "head" |
 
 /** Keeps an agent's list current: the latest 1000 entries, then live events (those that raced the fetch are replayed past its end). */
 export function followAgent(paseo: PluginClientContext["paseo"], agentId: string) {
+  // A provider subagent's pane (`provider:<parent>:<child>`) has no daemon agent behind it, so nothing to fetch or subscribe to.
+  if (agentId.startsWith("provider:")) return () => {};
   const timeline = paseo.agents.ref(agentId).timeline;
   let pending: Array<{ seq?: number; item: Item; at: number; turn?: string }> | undefined;
   let closed = false;

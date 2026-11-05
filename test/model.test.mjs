@@ -344,6 +344,12 @@ test("steps: Claude's task tools are passed over, todo-list calls and agent mess
   for (const list of [entries, withTodo]) assert.deepEqual(stepRuns(list, isTodo).map((r) => r.steps.map(stepKey)), [["t:a", "t:b", "t:c"], ["t:d"]]);
 });
 
+test("steps: a provider subagent's pane id isn't followed (no daemon agent behind it)", async () => {
+  const { followAgent } = await import("../client/steps.ts");
+  const paseo = { agents: { ref: () => assert.fail("a provider: id has no timeline to fetch") } };
+  followAgent(paseo, "provider:parent:child")();
+});
+
 test("steps: a step transformed before its timeline catches up leads its run in place, with no re-transform", async () => {
   const { followAgent, onStaleSteps, onUnplacedStep, placeStep } = await import("../client/steps.ts");
   let handler;
@@ -397,6 +403,32 @@ test("steps: a step transformed before its timeline catches up leads its run in 
   stop();
 });
 
+test("steps: a thought streaming into a growing run waits for its event instead of flashing as its own row", async () => {
+  const { followAgent, onStaleSteps, placeStep } = await import("../client/steps.ts");
+  let handler;
+  const subscription = Object.assign(() => {}, { ready: Promise.resolve() });
+  const paseo = { agents: { ref: () => ({ timeline: {
+    refetch: async () => ({ entries: [{ item: { type: "user_message", text: "go" }, timestamp: new Date(0).toISOString() }], endCursor: { seq: 0 } }),
+    subscribe: (h) => ((handler = h), subscription),
+  } }) } };
+  let stale = 0;
+  onStaleSteps(() => stale++);
+  const stop = followAgent(paseo, "thought-agent");
+  await new Promise((r) => setTimeout(r, 0));
+  const send = (item, seq) => handler({ seq, timestamp: new Date().toISOString(), event: { type: "timeline", item } });
+  send(tool({ type: "shell", command: "ls" }, { callId: "th-a" }), 1);
+  // Paseo streams the next thought before the plugin's event has it (or with fewer opening words): it stays out rather than showing alone.
+  assert.equal(placeStep({ type: "reasoning", text: "Next I" }, "streaming").as, "none");
+  const thought = { type: "reasoning", text: "Next I will check the file." };
+  send(thought, 2);
+  assert.equal(placeStep(thought, "complete").as, "none");
+  assert.equal(stale, 0);
+  // A finished thought the timeline never matches still shows, rather than staying hidden.
+  assert.equal(placeStep({ type: "reasoning", text: "Words the daemon never sent" }, "complete").as, "head");
+  stop();
+  onStaleSteps(() => {});
+});
+
 test("css guard: positional selectors get a :where() precheck on their subject, others are left alone", async () => {
   const { guardPositional } = await import("../client/css-guard.ts");
   assert.equal(guardPositional('[data-x] > div'), '[data-x] > div');
@@ -444,4 +476,13 @@ test("todo updates: what changed, folded into the run around them, never leading
   assert.deepEqual(changesOfTodo(stepKey(t1)), [{ type: "completed", text: "t0" }, { type: "started", text: "t1" }]);
   assert.equal(stepSummary(runOf("t:a").steps.map((s) => s.item)), "Ran 2 commands and completed 1 task");
   stop();
+});
+
+test("css: menu surfaces are never an ancestor by testID or role (every button in the page walked its ancestors)", async () => {
+  const { readFileSync } = await import("node:fs");
+  for (const file of ["restyle-css", "model-picker"]) {
+    const source = readFileSync(new URL(`../client/web/${file}.ts`, import.meta.url), "utf8");
+    // `${SURFACE} {` styles the surface itself; anything else after the space is a descendant.
+    assert.doesNotMatch(source, /\$\{SURFACE\} (?!\{)/, `${file}: use IN_SURFACE (tagged by tagParts) as the ancestor`);
+  }
 });

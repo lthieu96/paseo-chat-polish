@@ -7,14 +7,15 @@ declare const document: WebDocument;
  * Gives Paseo's sidebars (left nav, explorer, Settings) the theme's sidebar color while `colors()` returns one.
  * Plugin themes can't set it: Paseo builds their surfaceSidebar from the background. On web Paseo's styles read
  * the theme from CSS variables (`--colors-surface-sidebar` on `:root.pluginDark` / `.pluginLight`), so overriding
- * the variable recolors every sidebar surface from the first frame, on every screen. Returns cleanup.
+ * the variable recolors every sidebar surface from the first frame, on every screen. Repaints on DOM changes and on each
+ * `subscribe` call (theme changes don't touch the DOM). Returns cleanup.
  * ponytail: the variable and class names are Unistyles/Paseo internals; replace with a sidebar theme token once Paseo has one.
  */
-export function paintSidebar(colors: () => { sidebar: string } | undefined) {
+export function paintSidebar(colors: () => { sidebar: string } | undefined, subscribe: (repaint: () => void) => () => void) {
   if (Platform.OS !== "web" || typeof document === "undefined") return () => {};
   const style = document.createElement("style");
   document.head.appendChild(style);
-  return watchDom({ settled: () => {
+  const paint = () => {
     const sidebar = colors()?.sidebar;
     // The explorer's tab row draws the page color (surface0) rather than the sidebar's.
     const css = sidebar
@@ -22,5 +23,7 @@ export function paintSidebar(colors: () => { sidebar: string } | undefined) {
 [data-testid="workspace-explorer-sidebar"] [data-testid="workspace-tabs-row"] { background-color: var(--colors-surface-sidebar) !important; }`
       : "";
     if (style.textContent !== css) style.textContent = css;
-  } }, () => style.remove());
+  };
+  const unsubscribe = subscribe(paint);
+  return watchDom({ settled: paint }, () => (unsubscribe(), style.remove()));
 }

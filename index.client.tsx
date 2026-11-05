@@ -10,8 +10,8 @@ import { agentEventData, hideableKind, imageData, turnMarkdown, imagesSchema, no
 import { followAgent, isTodo, isTurnTrigger, onShownAgent, onStaleSteps, onUnplacedStep, placeStep, resetMade, setReplyFolding, setStepSkip, stepKey, type Phase } from "./client/steps";
 import { renderDiagram } from "./shared/diagram";
 import { currentPrefs, savePrefs, setPrefs, subscribePrefs, usePrefsSaver } from "./client/prefs";
-import { bindThemeRegistry, currentTheme, registerTheme } from "./client/theme-registry";
-import { addIconSet, bindPromptKeys, clampUserMessages, iconTwins, jumpToPrompt, openAgentIds, paintSidebar, redrawDiagrams, setCompactHandler, readHostAppearance, restyleNative, selectionCopyMenu, setNativeColors, setRailProviders, setRichText, stylePluginViews, nativeIconSet, watchDom } from "./client/web";
+import { bindThemeRegistry, currentTheme, registerTheme, subscribeTheme } from "./client/theme-registry";
+import { addIconSet, bindPromptKeys, clampUserMessages, iconTwins, jumpToPrompt, openAgentIds, paintSidebar, subagentPaneShown, redrawDiagrams, setCompactHandler, readHostAppearance, restyleNative, selectionCopyMenu, setNativeColors, setRailProviders, setRichText, stylePluginViews, nativeIconSet, watchDom } from "./client/web";
 import { getTheme, THEME_CATALOG_ID, themeSchema } from "./shared/theme";
 import { getIconSet, getPrefs, type Prefs } from "./shared/timeline";
 import { HtmlItem, ImagesItem, NoticeItem, PlanItem, RecapItem, StepsItem, ThoughtItem, TodoItem, ToolItem } from "./client/views";
@@ -47,7 +47,7 @@ export default function contribute(client: PluginClientContext) {
     const theme = currentTheme();
     const active = readHostAppearance().pluginThemeId === THEME_CATALOG_ID;
     return active && theme?.sidebar ? { sidebar: theme.sidebar } : undefined;
-  });
+  }, subscribeTheme);
 
   const unrestyle = restyleNative(() => currentPrefs().nativeStyle === "design", { render: (source) => client.rpc(renderDiagram, { source }), on: () => currentPrefs().diagrams === "pele" });
   const unstylePluginViews = stylePluginViews();
@@ -86,7 +86,11 @@ export default function contribute(client: PluginClientContext) {
 
   // Merged steps: the run's first step becomes one row, the rest leave the list; unknown steps render as before.
   // With Paseo's Collapse turns the replies before a turn's last join the run too, which leaves Paseo nothing to fold into its summary.
-  const merging = () => currentPrefs().merge === "on";
+  // A provider subagent's pane can't be merged (no timeline to read), so while one shows every row stays as it would with merging off.
+  // Read on DOM settle, not per transformed item.
+  let subagentPane = false;
+  const mergeOn = () => currentPrefs().merge === "on";
+  const merging = () => mergeOn() && !subagentPane;
   const foldReplies = () => setReplyFolding(merging() && readHostAppearance().chatDisplay === "collapseTurns");
   const detailed = () => readHostAppearance().chatDisplay === "full";
   const stepRow = (item: Parameters<typeof placeStep>[0], phase: Phase) => {
@@ -165,7 +169,7 @@ export default function contribute(client: PluginClientContext) {
   };
   foldReplies();
   let removeTransformers = addTransformers();
-  const inputs = () => [currentPrefs().images, currentPrefs().hidden.join(), currentPrefs().merge, readHostAppearance().chatDisplay, readHostAppearance().autoExpandReasoning].join("|");
+  const inputs = () => [currentPrefs().images, currentPrefs().hidden.join(), merging(), readHostAppearance().chatDisplay, readHostAppearance().autoExpandReasoning].join("|");
   let transformedWith = inputs();
   const retransform = (force = false) => {
     if (!force && inputs() === transformedWith) return;
@@ -189,7 +193,7 @@ export default function contribute(client: PluginClientContext) {
   const followed = new Map<string, () => void>();
   const shown: string[] = [];
   const follow = () => {
-    const open = new Set(merging() ? [...openAgentIds(), ...shown] : []);
+    const open = new Set(mergeOn() ? [...openAgentIds(), ...shown] : []);
     for (const [id, stop] of followed) if (!open.has(id)) (stop(), followed.delete(id));
     for (const id of open) if (!followed.has(id)) followed.set(id, followAgent(client.paseo, id));
   };
@@ -242,6 +246,7 @@ export default function contribute(client: PluginClientContext) {
   const unwatchHost = watchDom(
     {
       settled: () => {
+        subagentPane = subagentPaneShown();
         retransform();
         follow();
       },
