@@ -344,6 +344,12 @@ test("steps: Claude's task tools are passed over, todo-list calls and agent mess
   for (const list of [entries, withTodo]) assert.deepEqual(stepRuns(list, isTodo).map((r) => r.steps.map(stepKey)), [["t:a", "t:b", "t:c"], ["t:d"]]);
 });
 
+test("steps: a provider subagent's pane id isn't followed (no daemon agent behind it)", async () => {
+  const { followAgent } = await import("../client/steps.ts");
+  const paseo = { agents: { ref: () => assert.fail("a provider: id has no timeline to fetch") } };
+  followAgent(paseo, "provider:parent:child")();
+});
+
 test("steps: a step transformed before its timeline catches up leads its run in place, with no re-transform", async () => {
   const { followAgent, onStaleSteps, onUnplacedStep, placeStep } = await import("../client/steps.ts");
   let handler;

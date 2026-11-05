@@ -12,8 +12,11 @@ const listeners = new Set<() => void>();
 /** The theme last registered, for the sidebar painter and code highlighting. */
 export const currentTheme = () => current;
 
+/** Calls `l` whenever a theme is registered; returns unsubscribe. */
+export const subscribeTheme = (l: () => void) => (listeners.add(l), () => void listeners.delete(l));
+
 export function useCurrentTheme() {
-  return useSyncExternalStore((l) => (listeners.add(l), () => void listeners.delete(l)), currentTheme);
+  return useSyncExternalStore(subscribeTheme, currentTheme);
 }
 
 export function registerTheme(theme: ThemeDraft) {

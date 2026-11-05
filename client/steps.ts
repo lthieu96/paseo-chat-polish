@@ -385,6 +385,8 @@ export function placeStep(item: Item, phase: Phase): { key: string; as: "head" |
 
 /** Keeps an agent's list current: the latest 1000 entries, then live events (those that raced the fetch are replayed past its end). */
 export function followAgent(paseo: PluginClientContext["paseo"], agentId: string) {
+  // A provider subagent's pane (`provider:<parent>:<child>`) has no daemon agent behind it, so nothing to fetch or subscribe to.
+  if (agentId.startsWith("provider:")) return () => {};
   const timeline = paseo.agents.ref(agentId).timeline;
   let pending: Array<{ seq?: number; item: Item; at: number; turn?: string }> | undefined;
   let closed = false;

@@ -194,6 +194,16 @@ export function openAgentIds(): string[] {
   return Array.from(document.querySelectorAll('[data-testid^="workspace-tab-agent_"]')).map((tab) => tab.getAttribute("data-testid")!.slice("workspace-tab-agent_".length));
 }
 
+/**
+ * A provider subagent's read-only pane is on screen. Its rows reach the transformers like any agent's, but its synthetic agent id
+ * has no daemon timeline to merge steps from. shortcut: suspends merging for every pane while one shows; drop once Paseo tells
+ * transformers which agent an item belongs to.
+ */
+export function subagentPaneShown() {
+  if (Platform.OS !== "web") return false;
+  return Array.from(document.querySelectorAll('[data-testid="provider-subagent-panel"]')).some(visible);
+}
+
 /** The agent of the selected tab on screen. ponytail: with split panes this takes the first one; the meter's own pane would need Paseo to name its agent. */
 export function activeAgentId() {
   if (Platform.OS !== "web") return undefined;
