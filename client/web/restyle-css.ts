@@ -11,6 +11,10 @@ const FOOTER_ICON = ':is(button[aria-label="Copy turn"], [data-testid="assistant
 // buttons; plugin pills have a Tooltip wrapper div. Cover both without requiring a plugin testID.
 const COMPOSER_TRACK_ROW = ':is(div:has(> [data-testid="subagents-track-header"]), div:has(> [data-testid="composer-diff-stat-pill"]), div:has(> [data-testid="composer-parent-agent-pill"]))';
 const COMPOSER_TRACK_PILLS = `:is(${COMPOSER_TRACK_ROW} > :is(button, [role="button"]), ${COMPOSER_TRACK_ROW} > div > :is(button, [role="button"]))`;
+export const COMPOSER_TRACK_CSS = `
+${COMPOSER_TRACK_PILLS} { height: var(--cp-track-height) !important; min-height: var(--cp-track-height) !important; padding: 0 10px !important; border-radius: 999px !important; border-color: var(--cp-rule) !important; }
+${COMPOSER_TRACK_PILLS} svg { width: var(--cp-track-icon) !important; height: var(--cp-track-icon) !important; }
+`;
 const COMPOSER_BUTTON =
   ':is([data-testid="message-input-attach-button"], [data-testid^="agent-feature-"], [data-testid="workspace-create-submit"], [data-testid="context-window-meter"], button:is([aria-label="Open agent features"], [aria-label="Start dictation"], [aria-label="Send message"], [aria-label="Queue message"], [aria-label="Stop agent"], [aria-label$="Voice mode"]))';
 
@@ -201,8 +205,8 @@ ${CHIP}:hover { background-color: var(--cp-control) !important; }
 [data-testid="message-input-root"] [data-testid="context-window-meter"] { border-radius: 999px !important; }
 button[aria-label="Stop agent"] { background-color: var(--cp-control) !important; border: 1px solid var(--cp-rule) !important; }
 button[aria-label="Stop agent"] svg { width: 11px !important; height: 11px !important; stroke: var(--cp-fg) !important; fill: var(--cp-fg) !important; }
-/* Paseo 0.14 gives these pills a 32px min-height; its link back to a subagent's parent joins them. */
-:is([data-testid="subagents-track-header"], [data-testid="composer-diff-stat-pill"], [data-testid="composer-parent-agent-pill"]) { height: 24px !important; min-height: 24px !important; padding: 0 10px !important; border-radius: 999px !important; border-color: var(--cp-rule) !important; }
+/* Keep Chat Polish's original pill chrome; only geometry is configurable. */
+${COMPOSER_TRACK_CSS}
 [data-testid="composer-parent-agent-pill"] { padding-left: 6px !important; }
 [data-testid="composer-parent-agent-pill"] [dir] { font-size: 12px !important; }
 /* A provider subagent's pane shows a link back to its parent where the composer would be: the composer's shape and the plugin's button. */
@@ -551,9 +555,6 @@ export const COMPOSER_BUTTON_CSS = `
 :root[data-cp-rt-track-icon="16"] { --cp-track-icon: 16px; }
 :root[data-cp-rt-track-height="26"] { --cp-track-height: 26px; }
 :root[data-cp-rt-track-height="28"] { --cp-track-height: 28px; }
-${COMPOSER_TRACK_PILLS} { height: var(--cp-track-height) !important; min-height: var(--cp-track-height) !important; padding: 0 10px !important; gap: 6px !important; border-color: var(--cp-rule) !important; border-radius: 999px !important; background-color: transparent !important; }
-${COMPOSER_TRACK_PILLS} [dir] { font-size: 13px !important; font-weight: 500 !important; }
-${COMPOSER_TRACK_PILLS} svg { width: var(--cp-track-icon) !important; height: var(--cp-track-icon) !important; flex-shrink: 0; }
 `;
 
 /** Keeps each surface independent without changing the established design. */

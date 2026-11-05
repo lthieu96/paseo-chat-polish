@@ -289,14 +289,14 @@ function TrackPill({ theme, prefs, testID, icon, label }: { theme: PluginTheme; 
   const iconSize = design ? Number(prefs.composerButtonIconSize) : 14;
   const height = design ? Number(prefs.composerButtonSize) : 32;
   return (
-    <Pressable testID={testID} accessibilityRole="button" style={{ height, flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 10, borderRadius: 999, borderWidth: 1, borderColor: c.border, backgroundColor: "transparent" }}>
+    <Pressable testID={testID} accessibilityRole="button" style={{ height, minHeight: height, flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 10, paddingVertical: design ? 0 : 4, borderRadius: 999, borderWidth: 1, borderColor: c.border, backgroundColor: c.surface1 }}>
       <Icon name={icon} size={iconSize} color={c.foregroundMuted} />
-      <Text style={{ color: c.foregroundMuted, fontSize: 13, fontWeight: "500" }}>{label}</Text>
+      <Text style={{ color: c.foregroundMuted, fontSize: 14 }}>{label}</Text>
     </Pressable>
   );
 }
 
-/** Native and third-party track pills drawn by the same preference and selector contract. */
+/** Native and third-party track pills share geometry while retaining Paseo's visual style. */
 export function ComposerPreview({ theme, draft, prefs, layout }: { theme: PluginTheme; draft: ThemeDraft; prefs: Prefs; layout: PluginScreenProps["layout"] }) {
   const [viewport, setViewport] = useState<Viewport>("desktop");
   const pt = previewTheme(draft, theme);
@@ -305,7 +305,7 @@ export function ComposerPreview({ theme, draft, prefs, layout }: { theme: Plugin
     <View style={{ gap: 14 }}>
       <PreviewHead theme={theme} layout={layout} viewport={viewport} setViewport={setViewport} />
       <View style={{ gap: 16, padding: 20, borderRadius: 12, backgroundColor: pt.colors.surface0 }}>
-        <Text style={[s.small, { fontSize: 12 }]}>Native and plugin pills share one size and style.</Text>
+        <Text style={[s.small, { fontSize: 12 }]}>Native and plugin pills share one size; Paseo keeps their visual style.</Text>
         <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
           <TrackPill theme={pt} prefs={prefs} testID="composer-diff-stat-pill" icon="FileDiff" label="+1.5k −12" />
           <View><TrackPill theme={pt} prefs={prefs} icon="CalendarClock" label="1" /></View>

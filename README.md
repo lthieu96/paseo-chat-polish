@@ -23,7 +23,7 @@ A [Paseo](https://paseo.sh) plugin that redraws the agent chat as one quiet colu
 
 Open **Chat Polish** in the sidebar or under **Settings → Plugins**. Every page has a live preview, and changes save as you pick.
 
-- **Composer & buttons.** Use one icon size, height and pill style for native and third-party track pills above the composer. Restyle them independently from user messages, tool rows and markdown, with a native-and-plugin preview. Stop, send, attach and other composer controls keep their own geometry.
+- **Composer & buttons.** Use one icon size and height for native and third-party track pills above the composer, while keeping Chat Polish's existing pill chrome and Paseo's backgrounds and typography. Restyle them independently from user messages, tool rows and markdown, with a native-and-plugin preview. Stop, send, attach and other composer controls keep their own geometry.
 - **Sidebar entry.** Show or hide the prominent sidebar item. Chat Polish remains available under **Settings → Plugins** and through Command Center even when hidden.
 
 | Messages | Rich text |

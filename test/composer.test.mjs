@@ -13,7 +13,7 @@ function load(name) {
   new Function("exports", "require", source)(exports, (id) => id === "react-native" ? { Platform: { OS: "web" } } : id.startsWith(".") ? load(resolve(id)) : require(id));
   return exports;
 }
-const { COMPOSER_BUTTON_CSS, nativeRestyleCss, NATIVE_CSS } = load("web/restyle-css");
+const { COMPOSER_BUTTON_CSS, COMPOSER_TRACK_CSS, nativeRestyleCss, NATIVE_CSS } = load("web/restyle-css");
 
 test("composer defaults keep every existing surface and use one track style", async () => {
   const prefs = prefsSchema.parse({});
@@ -30,10 +30,14 @@ test("composer defaults keep every existing surface and use one track style", as
   assert.match(COMPOSER_BUTTON_CSS, /--cp-track-height: 24px/);
   for (const size of [12, 13, 14, 16]) assert.match(COMPOSER_BUTTON_CSS, new RegExp(`data-cp-rt-track-icon="${size}"`));
   for (const size of [26, 28]) assert.match(COMPOSER_BUTTON_CSS, new RegExp(`data-cp-rt-track-height="${size}"`));
-  assert.match(COMPOSER_BUTTON_CSS, /composer-diff-stat-pill/);
-  assert.doesNotMatch(COMPOSER_BUTTON_CSS, /plugin-button-/);
-  assert.match(COMPOSER_BUTTON_CSS, /:has\(> \[data-testid="composer-diff-stat-pill"\]\)/);
-  assert.doesNotMatch(COMPOSER_BUTTON_CSS, /message-input-attach-button|Stop agent|Start dictation|Send message/);
+  assert.match(COMPOSER_TRACK_CSS, /composer-diff-stat-pill/);
+  assert.doesNotMatch(COMPOSER_TRACK_CSS, /plugin-button-/);
+  assert.match(COMPOSER_TRACK_CSS, /:has\(> \[data-testid="composer-diff-stat-pill"\]\)/);
+  assert.doesNotMatch(COMPOSER_TRACK_CSS, /message-input-attach-button|Stop agent|Start dictation|Send message/);
+  assert.doesNotMatch(COMPOSER_TRACK_CSS, /background-color|font-size|font-weight|gap:/);
+  assert.match(COMPOSER_TRACK_CSS, /padding: 0 10px/);
+  assert.match(COMPOSER_TRACK_CSS, /border-radius: 999px/);
+  assert.match(COMPOSER_TRACK_CSS, /border-color: var\(--cp-rule\)/);
 });
 
 test("each surface can independently fall back without changing the others", async () => {
