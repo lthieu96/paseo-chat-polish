@@ -2,7 +2,7 @@
 import { Platform } from "react-native";
 import { BOT_ICON, PROVIDER_ICONS } from "../provider-icons";
 import { within, type ComputedStyle, type DomElement, type MutationObserverClass, type WebDocument } from "./dom";
-import { CTX, PERMISSION, PLAN, POP, QUESTION, SURFACE, TAG } from "./selectors";
+import { CTX, PERMISSION, PLAN, POP, QUESTION, SURFACE, IN_SURFACE, TAG } from "./selectors";
 
 declare const document: WebDocument;
 declare function getComputedStyle(el: DomElement): ComputedStyle;
@@ -79,7 +79,7 @@ ${THINKING_POP} button > div:nth-child(2) { flex: 1 1 auto !important; min-width
 /* Popup surfaces use 20px squircles; nested surfaces keep their own radius scale. */
 @supports (corner-shape: squircle) {
   ${SURFACE}, ${THINKING_POP}, ${MODEL_POP}, ${CTX}, [data-testid="chat-outline-preview"], ${PERMISSION}, ${QUESTION} { border-radius: 20px !important; corner-shape: squircle; }
-  ${SURFACE} :is(button, [role="button"], [role="menuitem"], [role="option"], a[href]) { border-radius: 16px !important; corner-shape: squircle; }
+  ${IN_SURFACE} :is(button, [role="button"], [role="menuitem"], [role="option"], a[href]) { border-radius: 16px !important; corner-shape: squircle; }
   ${PLAN} { border-radius: 24px !important; corner-shape: squircle; }
   ${MODEL_POP} :is([data-cp-part="rows"], [data-testid="model-profiles-empty"]) { border-radius: 21px !important; corner-shape: squircle; }
 }

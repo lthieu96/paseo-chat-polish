@@ -217,6 +217,7 @@ export function runningRemoved(nodes: Array<{ from: DomElement }>) {
 export function tagParts(roots: DomElement[]) {
   tagSettings(roots);
   for (const [child, parentOf, part] of PARTS) for (const el of within(roots, child)) parentOf(el)?.setAttribute("data-cp-part", part);
+  for (const el of within(roots, SURFACE)) el.setAttribute("data-cp-surface", "");
   for (const card of within(roots, `${SLASH} > div`)) watchSlash(card);
   for (const body of within(roots, '[data-testid="permission-plan-card"] > div:nth-child(2)')) body.setAttribute("data-cp-plan-md", "");
   // The turn footer sits close under a reply block. Decided once per pair, not with a sibling combinator: the virtual list mounts and

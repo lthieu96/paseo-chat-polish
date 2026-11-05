@@ -1,6 +1,6 @@
 // The Chat Polish design for what Paseo draws itself: chat chrome, composer, cards, popovers, tool rows and markdown.
 import { icon } from "./icons";
-import { BUBBLE, CHIP, CODE_BLOCK, CTX, CTX_HEAD, HEADING, INLINE_CODE, LANG, LIMIT, MARK, MARK_OL, md, MD, MSG, PERMISSION, PLAN, QUESTION, ROW, ROW_ICON, SLASH, SLASH_GLIDE_MS, SURFACE, TAG, TRACK_PANEL, USAGE, WORKING_BOX } from "./selectors";
+import { BUBBLE, CHIP, CODE_BLOCK, CTX, CTX_HEAD, HEADING, INLINE_CODE, LANG, LIMIT, MARK, MARK_OL, md, MD, MSG, PERMISSION, PLAN, QUESTION, ROW, ROW_ICON, SLASH, SLASH_GLIDE_MS, SURFACE, IN_SURFACE, TAG, TRACK_PANEL, USAGE, WORKING_BOX } from "./selectors";
 
 // Values come from CSS variables set by setNativeColors (restyle.ts), so a theme switch restyles without re-tagging.
 
@@ -106,14 +106,14 @@ ${SURFACE} { border-radius: 12px !important; border-color: var(--colors-border) 
 /* Dark raised sits too close to the page (1.15:1), so dark themes lift surfaces to control; light themes keep raised (white), as control is darker than the page there. */
 ${SURFACE} { background-color: var(--cp-control) !important; }
 :root:is(.light, .pluginLight) ${SURFACE} { background-color: var(--cp-raised) !important; }
-${SURFACE} :is(button, [role="button"], [role="menuitem"], [role="option"], a[href]) { border-radius: 16px !important; }
+${IN_SURFACE} :is(button, [role="button"], [role="menuitem"], [role="option"], a[href]) { border-radius: 16px !important; }
 /* Reset inherited cursor styles throughout the popup; restore pointer only across active rows. */
-${SURFACE}, ${SURFACE} * { cursor: default !important; }
-${SURFACE} :is(input, textarea, [contenteditable="true"]) { cursor: text !important; }
-${SURFACE} :is(button, [role="button"], [role="menuitem"], [role="option"], a[href]):not(:disabled):not([aria-disabled="true"]),
-${SURFACE} :is(button, [role="button"], [role="menuitem"], [role="option"], a[href]):not(:disabled):not([aria-disabled="true"]) * { cursor: pointer !important; }
-${SURFACE} :is(button, [role="button"], [role="menuitem"], [role="option"], a[href]):not(:disabled):not([aria-disabled="true"]):is(:hover, :focus-visible, [aria-selected="true"]) { background-color: color-mix(in srgb, var(--cp-control), var(--cp-fg) 12%) !important; }
-:root:is(.light, .pluginLight) ${SURFACE} :is(button, [role="button"], [role="menuitem"], [role="option"], a[href]):not(:disabled):not([aria-disabled="true"]):is(:hover, :focus-visible, [aria-selected="true"]) { background-color: color-mix(in srgb, var(--cp-raised), var(--cp-fg) 8%) !important; }
+${SURFACE}, ${IN_SURFACE} * { cursor: default !important; }
+${IN_SURFACE} :is(input, textarea, [contenteditable="true"]) { cursor: text !important; }
+${IN_SURFACE} :is(button, [role="button"], [role="menuitem"], [role="option"], a[href]):not(:disabled):not([aria-disabled="true"]),
+${IN_SURFACE} :is(button, [role="button"], [role="menuitem"], [role="option"], a[href]):not(:disabled):not([aria-disabled="true"]) * { cursor: pointer !important; }
+${IN_SURFACE} :is(button, [role="button"], [role="menuitem"], [role="option"], a[href]):not(:disabled):not([aria-disabled="true"]):is(:hover, :focus-visible, [aria-selected="true"]) { background-color: color-mix(in srgb, var(--cp-control), var(--cp-fg) 12%) !important; }
+:root:is(.light, .pluginLight) ${IN_SURFACE} :is(button, [role="button"], [role="menuitem"], [role="option"], a[href]):not(:disabled):not([aria-disabled="true"]):is(:hover, :focus-visible, [aria-selected="true"]) { background-color: color-mix(in srgb, var(--cp-raised), var(--cp-fg) 8%) !important; }
 /* The composer's track panels (subagents, tasks) light a row on a child inset 4px; the fill goes there, not on the full-width row, or both show. */
 :root ${TRACK_PANEL} [role="menuitem"]:not(:disabled):not([aria-disabled="true"]):is(:hover, :focus-visible, [aria-selected="true"]) { background-color: transparent !important; }
 ${TRACK_PANEL} [role="menuitem"] > div { border-radius: 11px !important; }

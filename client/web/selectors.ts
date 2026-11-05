@@ -43,6 +43,9 @@ export const SECONDARY = ':is([data-testid="permission-request-deny"], [data-tes
 export const ACTION = '[data-testid^="permission-request-action-"]';
 export const WORKING_BOX = '[data-cp-part="loader"]';
 export const SURFACE = ':is([data-testid="combobox-desktop-container"], [data-cp-part="menu"], [role="menu"], [role="listbox"], [data-testid="command-center-panel"])';
+// A SURFACE as an ancestor, tagged by tagParts. Its testIDs and roles sit on most ancestors, so `${SURFACE} x` walked every ancestor of
+// every x in the page; a rare attribute lets the browser reject them at once (plugin CSS cost of a full style recalc: ~9ms to ~4ms at 1.8k nodes).
+export const IN_SURFACE = "[data-cp-surface]";
 export const SETTINGS_PANE = '[data-testid="settings-detail-pane"]';
 // The panels the composer's subagent and task pills open (Paseo 0.14 rows light an inset child).
 export const TRACK_PANEL = ':is([data-testid="subagents-track-header-panel"], [data-testid="agent-task-list-header-panel"])';

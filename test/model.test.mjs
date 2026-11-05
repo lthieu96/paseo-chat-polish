@@ -477,3 +477,12 @@ test("todo updates: what changed, folded into the run around them, never leading
   assert.equal(stepSummary(runOf("t:a").steps.map((s) => s.item)), "Ran 2 commands and completed 1 task");
   stop();
 });
+
+test("css: menu surfaces are never an ancestor by testID or role (every button in the page walked its ancestors)", async () => {
+  const { readFileSync } = await import("node:fs");
+  for (const file of ["restyle-css", "model-picker"]) {
+    const source = readFileSync(new URL(`../client/web/${file}.ts`, import.meta.url), "utf8");
+    // `${SURFACE} {` styles the surface itself; anything else after the space is a descendant.
+    assert.doesNotMatch(source, /\$\{SURFACE\} (?!\{)/, `${file}: use IN_SURFACE (tagged by tagParts) as the ancestor`);
+  }
+});
