@@ -9,10 +9,12 @@ import { ICON_VARS } from "./icons";
 import { redrawDiagrams, setDiagramColors, themeMermaid, type PeleDiagrams } from "./mermaid";
 import { decoratePopovers, markLitRows, MODEL_SELECTOR_CSS, noteClick, noteThinkingFallback } from "./model-picker";
 import { runningRemoved, tagParts } from "./parts";
-import { NATIVE_CSS } from "./restyle-css";
+import { nativeRestyleCss } from "./restyle-css";
+import { currentPrefs, subscribePrefs } from "../prefs";
 import { markBlocks, RICH_TEXT_CSS } from "./rich-text";
 
 declare const document: WebDocument;
+declare function getComputedStyle(el: DomElement): { getPropertyValue(name: string): string };
 
 const MONO_FALLBACK = "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
 
@@ -37,6 +39,28 @@ export function setNativeColors(c: { surface0: string; surface1: string; surface
   };
   for (const [k, v] of Object.entries(vars)) document.documentElement.style.setProperty(k, v);
   setDiagramColors(c);
+}
+
+const COLOR_VARS = {
+  surface0: "--colors-surface0",
+  surface1: "--colors-surface1",
+  surface2: "--colors-surface2",
+  border: "--colors-border",
+  foreground: "--colors-foreground",
+  foregroundMuted: "--colors-foreground-muted",
+  accent: "--colors-accent",
+  accentForeground: "--colors-accent-foreground",
+  statusSuccess: "--colors-success",
+  statusWarning: "--colors-warning",
+  statusDanger: "--colors-destructive",
+} as const;
+
+/** Reads the app theme without a mounted sidebar item. */
+export function syncNativeColors() {
+  if (Platform.OS !== "web" || typeof document === "undefined") return;
+  const style = getComputedStyle(document.documentElement);
+  const colors = Object.fromEntries(Object.entries(COLOR_VARS).map(([key, variable]) => [key, style.getPropertyValue(variable).trim()])) as Parameters<typeof setNativeColors>[0];
+  setNativeColors(colors);
 }
 
 type CssRuleLike = { selectorText?: string; cssRules?: ArrayLike<CssRuleLike> };
@@ -77,6 +101,7 @@ export function restyleNative(enabled: () => boolean, pele?: PeleDiagrams) {
   let style: DomElement | undefined;
   const unthemeMermaid = themeMermaid(() => !!style, pele);
   const slowMenus = quickMenus(() => !!style);
+  syncNativeColors();
   const off = () => {
     if (!style) return;
     style.remove();
@@ -89,19 +114,27 @@ export function restyleNative(enabled: () => boolean, pele?: PeleDiagrams) {
     for (const el of Array.from(document.querySelectorAll("[data-cp-rail], [data-cp-tip], [data-cp-hint], [data-cp-redraw], [data-cp-redraw-card], [data-cp-diagram-full]"))) el.remove();
     for (const el of Array.from(document.querySelectorAll("[data-cp-redrawn]"))) el.removeAttribute("data-cp-redrawn");
   };
+  const ensureStyle = () => {
+    if (!enabled()) return off();
+    const css = nativeRestyleCss(currentPrefs());
+    const text = css.prefixCss + css.toolRowsCss + css.userMessagesCss + css.baseCss + css.markdownCss + css.composerCss + (currentPrefs().surfaces.markdown === "show" ? RICH_TEXT_CSS : "") + MODEL_SELECTOR_CSS + ICON_VARS.join("\n");
+    if (!style) {
+      style = document.createElement("style");
+      document.head.appendChild(style);
+      document.addEventListener("click", noteClick, true);
+      document.addEventListener("pointerover", notePointer, true);
+      redrawDiagrams();
+    }
+    style.textContent = text;
+    const sheet = (style as unknown as { sheet?: { cssRules: ArrayLike<CssRuleLike> } }).sheet;
+    if (sheet) guardRules(sheet.cssRules);
+  };
+  const unsubscribePrefs = subscribePrefs(ensureStyle);
   const stop = watchDom({
     added: (roots) => {
-      if (!enabled()) return off();
-      if (!style) {
-        style = document.createElement("style");
-        style.textContent = NATIVE_CSS + RICH_TEXT_CSS + MODEL_SELECTOR_CSS + ICON_VARS.join("\n");
-        document.head.appendChild(style);
-        const sheet = (style as unknown as { sheet?: { cssRules: ArrayLike<CssRuleLike> } }).sheet;
-        if (sheet) guardRules(sheet.cssRules);
-        document.addEventListener("click", noteClick, true);
-        document.addEventListener("pointerover", notePointer, true);
-        redrawDiagrams();
-      }
+      syncNativeColors();
+      ensureStyle();
+      if (!style) return;
       tagParts(roots);
       markBlocks(roots);
       decoratePopovers(roots);
@@ -115,12 +148,14 @@ export function restyleNative(enabled: () => boolean, pele?: PeleDiagrams) {
       ghostOutlinePreview(nodes);
     },
     settled: (roots) => {
+      syncNativeColors();
       if (!style) return;
       noteThinkingFallback();
       markBlocks(roots);
     },
   }, off);
   return () => {
+    unsubscribePrefs();
     stop();
     unthemeMermaid();
     slowMenus();

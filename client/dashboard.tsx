@@ -8,7 +8,7 @@ import { ThemePage } from "./dashboard/theme-page";
 import { usePrefs } from "./prefs";
 import { canSetAppTheme } from "./web";
 
-export function Dashboard({ theme, layout, host }: PluginScreenProps) {
+export function Dashboard({ theme, layout, host }: Pick<PluginScreenProps, "theme" | "layout" | "host">) {
   const [page, setPage] = useState<Page>("theme");
   const prefs = usePrefs();
   const { settings, change } = usePrefsSettings();

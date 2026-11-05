@@ -11,10 +11,11 @@ import { useStyles } from "../views";
 import { Button, Columns, TopBar } from "./controls";
 import { PAGES, type Page } from "./nav";
 import { PrefsEditor } from "./prefs-editor";
-import { HtmlPreview, Preview } from "./preview";
+import { ComposerPreview, HtmlPreview, Preview } from "./preview";
 import { RichPreview } from "./rich-preview";
 
 const PAGE_SUBTITLES: Record<Exclude<Page, "theme">, string> = {
+  composer: "Track pills above the composer, their icons and the sidebar entry.",
   messages: "Your messages, images in replies and the working indicator.",
   steps: "The thoughts and tool calls between two replies.",
   rich: "One style per markdown element in replies. Click a tile to switch.",
@@ -31,7 +32,7 @@ export function PrefsPage({ theme, layout, page, settings, change }: Pick<Plugin
   const s = useStyles(theme);
   const failed = !!settings.saveError;
   const status = failed ? `Save failed: ${String(settings.saveError)}` : settings.saving ? "Saving…" : "Saved automatically";
-  const PagePreview = page === "rich" ? RichPreview : page === "html" ? HtmlPreview : Preview;
+  const PagePreview = page === "rich" ? RichPreview : page === "html" ? HtmlPreview : page === "composer" ? ComposerPreview : Preview;
   return (
     <>
       <TopBar theme={theme} layout={layout} title={PAGES.find((p) => p.id === page)!.label} badge={PAGES.find((p) => p.id === page)!.badge} subtitle={PAGE_SUBTITLES[page]}>

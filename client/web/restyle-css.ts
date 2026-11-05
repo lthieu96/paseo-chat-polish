@@ -1,11 +1,13 @@
 // The Chat Polish design for what Paseo draws itself: chat chrome, composer, cards, popovers, tool rows and markdown.
 import { icon } from "./icons";
+import type { Prefs } from "../../shared/timeline";
 import { BUBBLE, CHIP, CODE_BLOCK, CTX, CTX_HEAD, HEADING, INLINE_CODE, LANG, LIMIT, MARK, MARK_OL, md, MD, MSG, PERMISSION, PLAN, QUESTION, ROW, ROW_ICON, SLASH, SLASH_GLIDE_MS, SURFACE, IN_SURFACE, TAG, TRACK_PANEL, USAGE, WORKING_BOX } from "./selectors";
 
 // Values come from CSS variables set by setNativeColors (restyle.ts), so a theme switch restyles without re-tagging.
 
 const FOOTER = '[data-cp-part="footer"]';
 const FOOTER_ICON = ':is(button[aria-label="Copy turn"], [data-testid="assistant-fork-menu-trigger"])';
+const COMPOSER_TRACK_PILLS = ':is([data-testid="subagents-track-header"], [data-testid="composer-diff-stat-pill"], [data-testid="composer-parent-agent-pill"], [data-testid^="plugin-button-"])';
 const COMPOSER_BUTTON =
   ':is([data-testid="message-input-attach-button"], [data-testid^="agent-feature-"], [data-testid="workspace-create-submit"], [data-testid="context-window-meter"], button:is([aria-label="Open agent features"], [aria-label="Start dictation"], [aria-label="Send message"], [aria-label="Queue message"], [aria-label="Stop agent"], [aria-label$="Voice mode"]))';
 
@@ -537,3 +539,36 @@ ${MD} th { background: var(--cp-raised) !important; font-size: 12px !important; 
 ${MD} hr { border-top-color: var(--cp-rule) !important; }
 :root:not([data-cp-rt-images="native"]) ${MD} img { width: var(--cp-thumb-w) !important; height: var(--cp-thumb-h) !important; object-fit: cover !important; border: 1px solid var(--cp-rule) !important; border-radius: 8px !important; background-color: var(--cp-raised) !important; margin: 6px 8px 2px 0 !important; }
 ${CHAT_CHROME_CSS}`;
+
+export const COMPOSER_BUTTON_CSS = `
+:root { --cp-track-icon: 13px; --cp-track-height: 24px; }
+:root[data-cp-rt-track-icon="12"] { --cp-track-icon: 12px; }
+:root[data-cp-rt-track-icon="13"] { --cp-track-icon: 13px; }
+:root[data-cp-rt-track-icon="14"] { --cp-track-icon: 14px; }
+:root[data-cp-rt-track-icon="16"] { --cp-track-icon: 16px; }
+:root[data-cp-rt-track-height="26"] { --cp-track-height: 26px; }
+:root[data-cp-rt-track-height="28"] { --cp-track-height: 28px; }
+[data-testid="message-input-root"] ${COMPOSER_TRACK_PILLS} { height: var(--cp-track-height) !important; min-height: var(--cp-track-height) !important; padding: 0 10px !important; gap: 6px !important; border-color: var(--cp-rule) !important; border-radius: 999px !important; background-color: transparent !important; }
+[data-testid="message-input-root"] ${COMPOSER_TRACK_PILLS} [dir] { font-size: 13px !important; font-weight: 500 !important; }
+[data-testid="message-input-root"] ${COMPOSER_TRACK_PILLS} svg { width: var(--cp-track-icon) !important; height: var(--cp-track-icon) !important; flex-shrink: 0; }
+`;
+
+/** Keeps each surface independent without changing the established design. */
+export function nativeRestyleCss(prefs: Prefs) {
+  const base = NATIVE_CSS.replace(CHAT_CHROME_CSS, "");
+  const toolStart = base.indexOf(`${ROW} > button { padding: 2px 8px 2px 12px`);
+  const bubbleStart = base.indexOf(`${BUBBLE} { padding: 10px 14px`);
+  const densityStart = base.indexOf("/* Density (Prefs.density)");
+  const markdownStart = base.indexOf(`${MSG} span { line-height: 1.6`);
+  if ([toolStart, bubbleStart, densityStart, markdownStart].some((index) => index < 0)) {
+    throw new Error("Native CSS surface boundaries changed; update nativeRestyleCss");
+  }
+  return {
+    prefixCss: base.slice(0, toolStart),
+    baseCss: base.slice(densityStart, markdownStart),
+    toolRowsCss: prefs.surfaces.toolRows === "show" ? base.slice(toolStart, bubbleStart) : "",
+    userMessagesCss: prefs.surfaces.userMessages === "show" ? base.slice(bubbleStart, densityStart) : "",
+    composerCss: prefs.surfaces.composer === "show" ? CHAT_CHROME_CSS + COMPOSER_BUTTON_CSS : "",
+    markdownCss: prefs.surfaces.markdown === "show" ? base.slice(markdownStart) : "",
+  };
+}

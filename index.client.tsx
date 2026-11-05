@@ -9,9 +9,9 @@ import { sidebarIcon } from "./client/mark";
 import { agentEventData, hideableKind, imageData, turnMarkdown, imagesSchema, noticeData, noticeSchema, planSchema, stepsSchema, thoughtSchema, todoData, todoSchema, toolData, toolSchema } from "./client/model";
 import { followAgent, isTodo, isTurnTrigger, onShownAgent, onStaleSteps, onUnplacedStep, placeStep, resetMade, setReplyFolding, setStepSkip, stepKey, type Phase } from "./client/steps";
 import { renderDiagram } from "./shared/diagram";
-import { currentPrefs, savePrefs, setPrefs, subscribePrefs, usePrefsSaver } from "./client/prefs";
+import { bindPrefsSaver, currentPrefs, savePrefs, setPrefs, subscribePrefs } from "./client/prefs";
 import { bindThemeRegistry, currentTheme, registerTheme, subscribeTheme } from "./client/theme-registry";
-import { addIconSet, bindPromptKeys, clampUserMessages, iconTwins, jumpToPrompt, openAgentIds, paintSidebar, subagentPaneShown, redrawDiagrams, setCompactHandler, readHostAppearance, restyleNative, selectionCopyMenu, setNativeColors, setRailProviders, setRichText, stylePluginViews, nativeIconSet, watchDom } from "./client/web";
+import { addIconSet, bindPromptKeys, clampUserMessages, iconTwins, jumpToPrompt, openAgentIds, paintSidebar, subagentPaneShown, redrawDiagrams, setCompactHandler, readHostAppearance, restyleNative, selectionCopyMenu, setRailProviders, setRichText, stylePluginViews, nativeIconSet, watchDom } from "./client/web";
 import { getTheme, THEME_CATALOG_ID, themeSchema } from "./shared/theme";
 import { getIconSet, getPrefs, type Prefs } from "./shared/timeline";
 import { HtmlItem, ImagesItem, NoticeItem, PlanItem, RecapItem, StepsItem, ThoughtItem, TodoItem, ToolItem } from "./client/views";
@@ -20,14 +20,10 @@ import { recapSchema } from "./shared/recap";
 
 const KIND = "chat-polish";
 
-// Toasts come from a hook; the sidebar item, always mounted on desktop, lends its toast to Command Center callbacks.
+// Toasts come from a hook; a visible sidebar item lends it to Command Center callbacks.
 let toast: ToastApi | undefined;
 
-function DashboardItem({ currentScreen, openScreen, theme }: PluginSidebarItemProps) {
-  // Always mounted on desktop, so it is where the restyle learns the app theme's colors.
-  useEffect(() => setNativeColors(theme.colors), [theme]);
-  // Also always mounted, so it saves the prefs Command Center toggles change.
-  usePrefsSaver();
+function DashboardItem({ currentScreen, openScreen }: PluginSidebarItemProps) {
   const hostToast = useToast();
   useEffect(() => {
     toast = hostToast;
@@ -36,6 +32,7 @@ function DashboardItem({ currentScreen, openScreen, theme }: PluginSidebarItemPr
 }
 
 export default function contribute(client: PluginClientContext) {
+  const unbindPrefsSaver = bindPrefsSaver(client);
   const unbindTheme = bindThemeRegistry(client);
   // Register the default right away, then swap in the theme saved from the dashboard.
   registerTheme(themeSchema.parse({}));
@@ -213,7 +210,7 @@ export default function contribute(client: PluginClientContext) {
     });
   });
   // Prefs Paseo's own rows follow too reach the restyle as <html> attributes.
-  const markRoot = (p: Prefs) => setRichText({ ...p.richText, images: p.images, steps: p.steps, density: p.density === "normal" ? "a" : p.density, "icon-steps": p.rowIcons.steps === "hide" ? "hide" : "a", "icon-tool": p.rowIcons.tool === "hide" ? "hide" : "a", loader: p.loader === "dots" ? "a" : p.loader, "loader-size": p.loaderSize === "s" ? "a" : p.loaderSize, icons: p.iconSet === "lucide" ? "a" : p.iconSet });
+  const markRoot = (p: Prefs) => setRichText({ ...p.richText, images: p.images, steps: p.steps, density: p.density === "normal" ? "a" : p.density, "icon-steps": p.rowIcons.steps === "hide" ? "hide" : "a", "icon-tool": p.rowIcons.tool === "hide" ? "hide" : "a", loader: p.loader === "dots" ? "a" : p.loader, "loader-size": p.loaderSize === "s" ? "a" : p.loaderSize, icons: p.iconSet === "lucide" ? "a" : p.iconSet, "track-icon": p.composerButtonIconSize, "track-height": p.composerButtonSize });
   markRoot(currentPrefs());
   // The chosen icon set comes from the daemon once, the first time it's picked.
   const requestedIcons = new Set<string>();
@@ -320,9 +317,23 @@ export default function contribute(client: PluginClientContext) {
   const unsubscribeToggles = subscribePrefs(addToggles);
 
   client.addScreen({ id: "dashboard", title: "Chat Polish", Component: Dashboard });
-  client.addSidebarHeaderItem({ id: "dashboard", title: "Chat Polish", Component: DashboardItem });
+  client.addSettingsScreen({ id: "dashboard", title: "Chat Polish", icon: "Sparkles", Component: Dashboard });
+  let removeSidebar: (() => void) | undefined;
+  const syncSidebar = () => {
+    if (currentPrefs().sidebarEntry === "show" && !removeSidebar) {
+      removeSidebar = client.addSidebarHeaderItem({ id: "dashboard", title: "Chat Polish", Component: DashboardItem });
+    } else if (currentPrefs().sidebarEntry === "hide" && removeSidebar) {
+      removeSidebar();
+      removeSidebar = undefined;
+    }
+  };
+  syncSidebar();
+  const unsubscribeSidebar = subscribePrefs(syncSidebar);
   return () => {
     clearImageCache();
+    unsubscribeSidebar();
+    removeSidebar?.();
+    unbindPrefsSaver();
     unsetCompact();
     unsubscribeToggles();
     removeToggles.forEach((r) => void r());

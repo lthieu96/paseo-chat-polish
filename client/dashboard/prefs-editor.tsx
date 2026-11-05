@@ -163,11 +163,51 @@ function HtmlGuide({ theme, prefs, onChange }: { theme: PluginTheme; prefs: Pref
   );
 }
 
+function ComposerEditor({ theme, prefs, onChange }: { theme: PluginTheme; prefs: Prefs; onChange(p: Prefs): void }) {
+  return (
+    <View style={{ gap: 24 }}>
+      <Group theme={theme} title="Track pills">
+        <Row theme={theme} first label="Restyle composer" hint="Applies one size and style to native and plugin pills above the input. Other areas stay unchanged.">
+          <Switch theme={theme} label="Restyle composer" value={prefs.surfaces.composer === "show"} onChange={(on) => onChange({ ...prefs, surfaces: { ...prefs.surfaces, composer: on ? "show" : "hide" } })} />
+        </Row>
+        <Row theme={theme} label="Icons" hint="Every native and plugin icon in the track, including chevrons.">
+          <Segmented
+            theme={theme}
+            value={prefs.composerButtonIconSize}
+            onChange={(value) => onChange({ ...prefs, composerButtonIconSize: value })}
+            options={[["12", "", "12"], ["13", "", "13", true], ["14", "", "14"], ["16", "", "16"]]}
+          />
+        </Row>
+        <Row theme={theme} label="Height" hint="Pills keep their natural width, so labels are never squeezed into an icon-only box.">
+          <Segmented
+            theme={theme}
+            value={prefs.composerButtonSize}
+            onChange={(value) => onChange({ ...prefs, composerButtonSize: value })}
+            options={[["24", "", "24", true], ["26", "", "26"], ["28", "", "28"]]}
+          />
+        </Row>
+      </Group>
+      <Group theme={theme} title="Plugin">
+        <Row theme={theme} first label="Sidebar entry" hint="Chat Polish always stays available under Settings → Plugins and Command Center.">
+          <Segmented
+            theme={theme}
+            value={prefs.sidebarEntry}
+            onChange={(value) => onChange({ ...prefs, sidebarEntry: value })}
+            options={[["show", "", "Show", true], ["hide", "", "Hide"]]}
+          />
+        </Row>
+      </Group>
+      {prefs.surfaces.composer === "hide" ? <Notice theme={theme}>Only composer pills fall back to Paseo's own styling. User messages, tool rows and markdown keep their current settings.</Notice> : null}
+    </View>
+  );
+}
+
 /** Settings for one page: grouped cards (Messages, Steps), a tile picker per markdown element (Rich text) or the HTML pages guide. */
 export function PrefsEditor({ theme, page, prefs, onChange }: { theme: PluginTheme; page: Exclude<Page, "theme">; prefs: Prefs; onChange(p: Prefs): void }) {
   const set = <K extends keyof Prefs>(key: K) => (value: Prefs[K]) => onChange({ ...prefs, [key]: value });
   const s = useStyles(theme);
   const c = theme.colors;
+  if (page === "composer") return <ComposerEditor theme={theme} prefs={prefs} onChange={onChange} />;
   if (page === "html") return <HtmlGuide theme={theme} prefs={prefs} onChange={onChange} />;
   if (page === "messages") {
     const paseoSyntax = readSyntaxTheme();
@@ -210,7 +250,10 @@ export function PrefsEditor({ theme, page, prefs, onChange }: { theme: PluginThe
               </Row>
             </Group>
             <Group theme={theme} title="Your messages">
-              <Row theme={theme} first label="Long messages" hint="Over 8 lines; clamp shows six.">
+              <Row theme={theme} first label="Restyle user messages" hint="Bubbles, attachments and the Sent by caption fall back to Paseo when off.">
+                <Switch theme={theme} label="Restyle user messages" value={prefs.surfaces.userMessages === "show"} onChange={(on) => onChange({ ...prefs, surfaces: { ...prefs.surfaces, userMessages: on ? "show" : "hide" } })} />
+              </Row>
+              <Row theme={theme} label="Long messages" hint="Over 8 lines; clamp shows six.">
                 <Segmented
                   theme={theme}
                   value={prefs.userMessages}
@@ -293,7 +336,10 @@ export function PrefsEditor({ theme, page, prefs, onChange }: { theme: PluginThe
             ) : null
           }
         >
-          <Row theme={theme} first label="Merge into one row" hint="One row like “Thought 2 times, ran 3 commands”.">
+          <Row theme={theme} first label="Restyle tool rows" hint="Native tool groups, rows and detail surfaces fall back to Paseo when off.">
+            <Switch theme={theme} label="Restyle tool rows" value={prefs.surfaces.toolRows === "show"} onChange={(on) => onChange({ ...prefs, surfaces: { ...prefs.surfaces, toolRows: on ? "show" : "hide" } })} />
+          </Row>
+          <Row theme={theme} label="Merge into one row" hint="One row like “Thought 2 times, ran 3 commands”.">
             <Switch theme={theme} label="Merge into one row" value={prefs.merge === "on"} onChange={(on) => set("merge")(on ? "on" : "off")} />
           </Row>
           <Row theme={theme} label="Strength" hint="How faded rows sit until you hover them.">
@@ -379,6 +425,7 @@ export function PrefsEditor({ theme, page, prefs, onChange }: { theme: PluginThe
   return (
     <View style={{ gap: 20 }}>
       {prefs.nativeStyle === "paseo" ? <Notice theme={theme}>Restyle Paseo's items is off, so these styles don't apply until you switch it back on.</Notice> : null}
+      {prefs.surfaces.markdown === "hide" ? <Notice theme={theme}>Markdown is using Paseo's native rendering. Rich text choices remain saved for when you turn it back on.</Notice> : null}
       {RICH_TEXT.map((k) => (
         <View key={k} style={{ gap: 8 }}>
           <Text style={[s.verb, { fontSize: 13 }]}>{RICH_TEXT_OPTIONS[k].title}</Text>

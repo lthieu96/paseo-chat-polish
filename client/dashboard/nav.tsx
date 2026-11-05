@@ -11,10 +11,11 @@ import { alpha, PMONO, useReducedMotion, useStyles } from "../views";
 import { canSetAppTheme } from "../web";
 import { SQUIRCLE_CARD, Switch } from "./controls";
 
-export type Page = "theme" | "messages" | "steps" | "rich" | "html";
+export type Page = "theme" | "composer" | "messages" | "steps" | "rich" | "html";
 
 const ALL_PAGES: Array<{ id: Page; icon: string; label: string; group: string; badge?: string }> = [
   { id: "theme", icon: "Palette", label: "Theme", group: "APPEARANCE" },
+  { id: "composer", icon: "MousePointer2", label: "Composer & buttons", group: "APPEARANCE" },
   { id: "messages", icon: "MessageSquareText", label: "Messages", group: "CHAT" },
   { id: "steps", icon: "ListTree", label: "Steps", group: "CHAT" },
   { id: "rich", icon: "Type", label: "Rich text", group: "CHAT" },

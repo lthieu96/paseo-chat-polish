@@ -61,6 +61,14 @@ export const prefsSchema = z.object({
   loaderSize: z.enum(["s", "m", "l"]).default("s"),
   /** Paseo's own items (tool call groups, bubbles, markdown) restyled to the design on desktop, or left as Paseo draws them. */
   nativeStyle: z.enum(["design", "paseo"]).default("design"),
+  /** Per-area fallbacks used while nativeStyle is "design". */
+  surfaces: z.object({ composer: shown, userMessages: shown, toolRows: shown, markdown: shown }).prefault({}),
+  /** All native and third-party pills in the track above the composer, in px. */
+  composerButtonIconSize: z.enum(["12", "13", "14", "16"]).default("13"),
+  /** Track pill height; labelled pills keep their natural width. */
+  composerButtonSize: z.enum(["24", "26", "28"]).default("24"),
+  /** Keep the prominent sidebar entry, or open Chat Polish through Settings → Plugins / Command Center. */
+  sidebarEntry: z.enum(["show", "hide"]).default("show"),
   /** A recap row the daemon adds after each turn that changed files or had a failing command. */
   recap: z.enum(["on", "off"]).default("on"),
   /** Mermaid diagrams in Paseo's own replies drawn by Pele (pele.run) in the theme's colors, or by Paseo's mermaid (desktop and web, with nativeStyle "design"). */

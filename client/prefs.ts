@@ -1,5 +1,6 @@
-import { useSettings } from "@getpaseo/plugin/client";
-import { createContext, useContext, useEffect, useRef, useSyncExternalStore } from "react";
+import type { PluginClientContext } from "@getpaseo/plugin/client";
+import { settingsRpc } from "@getpaseo/plugin";
+import { createContext, useContext, useSyncExternalStore } from "react";
 import { prefsSchema, prefsSettings, type Prefs } from "../shared/timeline";
 
 // Saved prefs, shared by transformers (read at transform time) and renderers (subscribed).
@@ -24,25 +25,43 @@ export function usePrefs() {
   return override ?? live;
 }
 
-// Settings can only be saved from a component; Command Center toggles hand their change to one that is always mounted.
-const savers = new Set<(next: Prefs) => void>();
+let persist: ((next: Prefs) => void) | undefined;
 
-/** Applies prefs now and saves them through a mounted `usePrefsSaver` (the sidebar item); without one they last until reload. */
-export function savePrefs(next: Prefs) {
-  setPrefs(next);
-  savers.forEach((save) => save(next));
+/** Saves through the settings RPC, independent of any mounted screen or sidebar item. */
+export function bindPrefsSaver(client: PluginClientContext) {
+  const read = settingsRpc(prefsSettings.id).read;
+  const write = settingsRpc(prefsSettings.id).write;
+  let revision: string | undefined;
+  let queue = Promise.resolve();
+  persist = (next) => {
+    queue = queue.then(async () => {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        if (!revision) {
+          const current = await client.rpc(read, {});
+          if (current.status !== "ready") throw new Error(current.error);
+          revision = current.revision;
+        }
+        const result = await client.rpc(write, { revision, values: next });
+        if (result.status === "saved") {
+          revision = result.revision;
+          return;
+        }
+        if (result.status !== "conflict") throw new Error(result.error);
+        revision = undefined;
+      }
+      throw new Error("Settings changed repeatedly while saving");
+    }).catch((error: unknown) => {
+      console.warn("[chat-polish] Couldn't save timeline preferences", error);
+    });
+  };
+  return () => {
+    persist = undefined;
+    queue = Promise.resolve();
+  };
 }
 
-export function usePrefsSaver() {
-  const settings = useSettings(prefsSettings);
-  const latest = useRef(settings);
-  latest.current = settings;
-  useEffect(() => {
-    const save = (next: Prefs) => {
-      const s = latest.current;
-      if (s.status === "ready") void s.save(next, s.revision);
-    };
-    savers.add(save);
-    return () => void savers.delete(save);
-  }, []);
+/** Applies immediately and persists in order, including Command Center changes with no dashboard open. */
+export function savePrefs(next: Prefs) {
+  setPrefs(next);
+  persist?.(next);
 }
