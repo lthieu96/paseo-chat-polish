@@ -84,6 +84,10 @@ __d(function(g,r,i,a,m,e,d){"use strict";Object.defineProperty(e,'__esModule',{v
           checks.senderPromptBubble = getComputedStyle(sentBubble).paddingLeft === '14px' && getComputedStyle(document.querySelector('#s14 > div > button')).paddingLeft !== '14px'
             && document.getElementById('sa14row').dataset.cpPart === 'att-files' && document.querySelector('#sa14 > div > div').hasAttribute('data-cp-attach');
           sent.remove(); await wait();
+          // Berkeley Mono's metrics get pulled up to SF's offset with the same line box height; SF and SF Pro (centered higher) are left alone.
+          const fix = load('web/control-font').centeredMetrics({ ascent: 1.048, descent: 0.246, capHeight: 0.68 });
+          checks.controlFontMetrics = Math.abs(fix.ascent - 1.013) < 0.001 && Math.abs(fix.ascent + fix.descent - 1.294) < 1e-9 && load('web/control-font').centeredMetrics({ ascent: 0.967, descent: 0.211, capHeight: 0.705 }) === undefined
+            && load('web/control-font').centeredMetrics({ ascent: 0.952, descent: 0.241, capHeight: 0.705 }) === undefined;
           // Paseo 0.14's chat display setting, with the tool call display it replaced as the fallback.
           const realNow = Date.now; let clock = 0; Date.now = () => (clock += 5000);
           const display = (settings) => (localStorage.setItem('@paseo:app-settings', JSON.stringify(settings)), load('web/host').readHostAppearance().chatDisplay);
@@ -251,7 +255,7 @@ __d(function(g,r,i,a,m,e,d){"use strict";Object.defineProperty(e,'__esModule',{v
     assert.equal(report.error, undefined, report.error);
     assert.deepEqual(report.errors, []);
     for (const [check, passed] of Object.entries(report.checks)) assert.equal(passed, true, check);
-    assert.equal(Object.keys(report.checks).length, 26);
+    assert.equal(Object.keys(report.checks).length, 27);
   } finally {
     server?.closeAllConnections(); server?.close();
     rmSync(temp, { recursive: true, force: true });

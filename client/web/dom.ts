@@ -64,6 +64,8 @@ interface Canvas2d {
   fillStyle: string;
   fillRect(x: number, y: number, w: number, h: number): void;
   getImageData(x: number, y: number, w: number, h: number): { data: ArrayLike<number> };
+  font: string;
+  measureText(text: string): { fontBoundingBoxAscent: number; fontBoundingBoxDescent: number; actualBoundingBoxAscent: number };
 }
 export interface KeyEvent {
   key: string;

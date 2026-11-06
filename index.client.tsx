@@ -11,7 +11,7 @@ import { followAgent, isTodo, isTurnTrigger, onShownAgent, onStaleSteps, onUnpla
 import { renderDiagram } from "./shared/diagram";
 import { currentPrefs, savePrefs, setPrefs, subscribePrefs, usePrefsSaver } from "./client/prefs";
 import { bindThemeRegistry, currentTheme, registerTheme, subscribeTheme } from "./client/theme-registry";
-import { addIconSet, bindPromptKeys, clampUserMessages, iconTwins, jumpToPrompt, openAgentIds, paintSidebar, subagentPaneShown, redrawDiagrams, setCompactHandler, readHostAppearance, restyleNative, selectionCopyMenu, setNativeColors, setRailProviders, setRichText, stylePluginViews, nativeIconSet, watchDom } from "./client/web";
+import { addIconSet, bindPromptKeys, centerControlText, clampUserMessages, iconTwins, jumpToPrompt, openAgentIds, paintSidebar, subagentPaneShown, redrawDiagrams, setCompactHandler, readHostAppearance, restyleNative, selectionCopyMenu, setNativeColors, setRailProviders, setRichText, stylePluginViews, nativeIconSet, watchDom } from "./client/web";
 import { getTheme, THEME_CATALOG_ID, themeSchema } from "./shared/theme";
 import { getIconSet, getPrefs, type Prefs } from "./shared/timeline";
 import { HtmlItem, ImagesItem, NoticeItem, PlanItem, RecapItem, StepsItem, ThoughtItem, TodoItem, ToolItem } from "./client/views";
@@ -51,6 +51,7 @@ export default function contribute(client: PluginClientContext) {
 
   const unrestyle = restyleNative(() => currentPrefs().nativeStyle === "design", { render: (source) => client.rpc(renderDiagram, { source }), on: () => currentPrefs().diagrams === "pele" });
   const unstylePluginViews = stylePluginViews();
+  const uncenter = centerControlText();
   const unclamp = clampUserMessages(() => currentPrefs().userMessages === "clamp");
   const unselect = selectionCopyMenu(() => currentPrefs().selectionCopy === "on");
   const unicons = nativeIconSet(() => currentPrefs().iconSet);
@@ -333,6 +334,7 @@ export default function contribute(client: PluginClientContext) {
     followed.forEach((stop) => stop());
     removeTransformers();
     unpaintSidebar();
+    uncenter();
     unclamp();
     unselect();
     unicons();
