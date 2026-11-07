@@ -61,7 +61,7 @@ ${MODEL_POP} ${MODEL_ROW} svg { stroke: var(--cp-accent) !important; }
 @media (prefers-reduced-motion: reduce) { [data-cp-rail] [data-cp-status="loading"] svg { animation: none !important; } }
 [data-cp-rail] [data-cp-status="error"] svg { color: #e06c75; }
 @keyframes cp-spin { to { transform: rotate(360deg); } }
-[data-cp-tip] { position: absolute; z-index: 1; display: none; max-width: 220px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--cp-rule); background: var(--cp-sunken); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4); font-size: 12px; line-height: 1.45; color: var(--cp-muted); pointer-events: none; }
+[data-cp-tip] { position: absolute; z-index: 1; display: none; max-width: 220px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--cp-rule); background: var(--cp-sunken); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4); font-size: 12px; line-height: 1.45; color: var(--cp-muted); overflow-wrap: anywhere; pointer-events: none; }
 [data-cp-tip] b { display: block; margin-bottom: 2px; font-weight: 600; color: var(--cp-fg); }
 
 ${THINKING_POP} { border-radius: 12px !important; border-color: var(--cp-rule) !important; }
@@ -250,6 +250,23 @@ function wireRail(pop: DomElement, rail: DomElement) {
     tip.style.setProperty("display", "block");
   });
   rail.addEventListener("mouseleave", () => tip.style.setProperty("display", "none"));
+  // A model row cut off by its ellipsis shows its whole name and description on hover.
+  pop.addEventListener("mouseover", (event) => {
+    const row = (event.target as DomElement | null)?.closest?.(MODEL_ROW);
+    if (!row && (event.target as DomElement | null)?.closest?.("[data-cp-rail]")) return;
+    const parts = Array.from(row?.querySelector('[data-cp-part="model-text"]')?.children ?? []);
+    if (!row || !parts.some((el) => el.scrollWidth > el.clientWidth)) return tip.style.setProperty("display", "none");
+    const [name = "", description = ""] = parts.map((el) => el.textContent ?? "");
+    tip.innerHTML = `<b>${esc(name)}</b>${esc(description)}`;
+    const box = pop.getBoundingClientRect();
+    const at = row.getBoundingClientRect();
+    tip.style.setProperty("left", `${at.left - box.left + 8}px`);
+    tip.style.setProperty("display", "block");
+    // The popover clips its overflow, so a row near the bottom gets the tip above it.
+    const below = at.bottom + 4 + tip.getBoundingClientRect().height <= box.bottom;
+    tip.style.setProperty("top", `${below ? at.bottom - box.top + 4 : at.top - box.top - 4 - tip.getBoundingClientRect().height}px`);
+  });
+  pop.addEventListener("mouseleave", () => tip.style.setProperty("display", "none"));
 }
 
 /** The model a composer's chips show, matched by its label and, when labels repeat across providers, its thinking option count. */

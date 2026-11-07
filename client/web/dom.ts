@@ -15,6 +15,8 @@ export interface DomElement {
   previousElementSibling: DomElement | null;
   nextElementSibling: DomElement | null;
   scrollHeight: number;
+  scrollWidth: number;
+  clientWidth: number;
   textContent: string | null;
   querySelector(selector: string): DomElement | null;
   querySelectorAll(selector: string): ArrayLike<DomElement>;
