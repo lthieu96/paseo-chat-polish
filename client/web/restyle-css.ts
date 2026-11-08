@@ -1,6 +1,6 @@
 // The Chat Polish design for what Paseo draws itself: chat chrome, composer, cards, popovers, tool rows and markdown.
 import { icon } from "./icons";
-import { BUBBLE, CHIP, CODE_BLOCK, CTX, CTX_HEAD, HEADING, INLINE_CODE, LANG, LIMIT, MARK, MARK_OL, md, MD, MSG, PERMISSION, PLAN, QUESTION, ROW, ROW_ICON, SLASH, SLASH_GLIDE_MS, SURFACE, IN_SURFACE, TAG, TRACK_PANEL, USAGE, WORKING_BOX } from "./selectors";
+import { BUBBLE, CHIP, CODE_BLOCK, CTX, CTX_HEAD, HEADING, INLINE_CODE, LANG, LIMIT, MARK, MARK_OL, md, MD, MSG, DOC_MD, PERMISSION, PLAN, QUESTION, ROW, ROW_ICON, SLASH, SLASH_GLIDE_MS, SURFACE, IN_SURFACE, TAG, TRACK_PANEL, USAGE, WORKING_BOX } from "./selectors";
 
 // Values come from CSS variables set by setNativeColors (restyle.ts), so a theme switch restyles without re-tagging.
 
@@ -514,26 +514,26 @@ ${THUMBS} > button div { width: 100% !important; height: 100% !important; backgr
 
 /* The same design on Paseo 0.12's renderer. A whole reply is one block now, so the gap between paragraphs is its children's
    margin: the 0.11 spacing (item margin plus padding on both ends), with the 1.6 line height's leading on top. */
-${MD} > * { margin-bottom: calc(var(--cp-d-item) + 2 * var(--cp-d-pad)) !important; }
-${MD} > :last-child, ${MD} :is(blockquote, .enrm-admonition, li) > p:last-child { margin-bottom: 0 !important; }
-${MD} :is(p, li, blockquote) { line-height: 1.6 !important; }
-${MD} code { border-radius: 4px !important; padding: 2px 5px !important; }
-${MD} strong { font-weight: 600 !important; }
-${MD} h1 { font-size: 24px !important; line-height: 1.3 !important; }
-${MD} h2 { font-size: 20px !important; line-height: 1.3 !important; }
-${MD} h3 { font-size: 16px !important; line-height: 1.3 !important; }
-${MD} li { margin-top: 0 !important; }
-${MD} li:not(:last-child) { margin-bottom: var(--cp-d-li) !important; }
-${MD} ol > li::marker { font-family: var(--cp-mono); font-size: calc(var(--cp-code) + 1px); }
-${MD} blockquote { background: transparent !important; border-inline-start: 2px solid var(--cp-accent) !important; border-radius: 0 !important; padding: 2px 0 2px 14px !important; }
-${MD} blockquote p { font-style: italic !important; color: var(--cp-muted) !important; }
-${MD} table { border-collapse: separate !important; border-spacing: 0 !important; border: 1px solid var(--cp-rule) !important; border-radius: 8px !important; overflow: hidden !important; }
-${MD} > div:not(.enrm-admonition) { border-radius: 8px !important; }
-${MD} :is(th, td) { padding: 9px 14px !important; border-width: 0 0 1px !important; border-color: var(--cp-rule) !important; line-height: 1.45 !important; }
-${MD} tbody > tr:last-child > td { border-bottom-width: 0 !important; }
-${MD} tbody > tr { background: transparent !important; }
-${MD} td { font-size: calc(var(--cp-content) - 1px) !important; }
-${MD} th { background: var(--cp-raised) !important; font-size: 12px !important; font-weight: 600 !important; color: var(--cp-muted) !important; }
-${MD} hr { border-top-color: var(--cp-rule) !important; }
+${DOC_MD} > * { margin-bottom: calc(var(--cp-d-item) + 2 * var(--cp-d-pad)) !important; }
+${DOC_MD} > :last-child, ${DOC_MD} :is(blockquote, .enrm-admonition, li) > p:last-child { margin-bottom: 0 !important; }
+${DOC_MD} :is(p, li, blockquote) { line-height: 1.6 !important; }
+${DOC_MD} code { border-radius: 4px !important; padding: 2px 5px !important; }
+${DOC_MD} strong { font-weight: 600 !important; }
+${DOC_MD} h1 { font-size: 24px !important; line-height: 1.3 !important; }
+${DOC_MD} h2 { font-size: 20px !important; line-height: 1.3 !important; }
+${DOC_MD} h3 { font-size: 16px !important; line-height: 1.3 !important; }
+${DOC_MD} li { margin-top: 0 !important; }
+${DOC_MD} li:not(:last-child) { margin-bottom: var(--cp-d-li) !important; }
+${DOC_MD} ol > li::marker { font-family: var(--cp-mono); font-size: calc(var(--cp-code) + 1px); }
+${DOC_MD} blockquote { background: transparent !important; border-inline-start: 2px solid var(--cp-accent) !important; border-radius: 0 !important; padding: 2px 0 2px 14px !important; }
+${DOC_MD} blockquote p { font-style: italic !important; color: var(--cp-muted) !important; }
+${DOC_MD} table { border-collapse: separate !important; border-spacing: 0 !important; border: 1px solid var(--cp-rule) !important; border-radius: 8px !important; overflow: hidden !important; }
+${DOC_MD} > div:not(.enrm-admonition) { border-radius: 8px !important; }
+${DOC_MD} :is(th, td) { padding: 9px 14px !important; border-width: 0 0 1px !important; border-color: var(--cp-rule) !important; line-height: 1.45 !important; }
+${DOC_MD} tbody > tr:last-child > td { border-bottom-width: 0 !important; }
+${DOC_MD} tbody > tr { background: transparent !important; }
+${DOC_MD} td { font-size: calc(var(--cp-content) - 1px) !important; }
+${DOC_MD} th { background: var(--cp-raised) !important; font-size: 12px !important; font-weight: 600 !important; color: var(--cp-muted) !important; }
+${DOC_MD} hr { border-top-color: var(--cp-rule) !important; }
 :root:not([data-cp-rt-images="native"]) ${MD} img { width: var(--cp-thumb-w) !important; height: var(--cp-thumb-h) !important; object-fit: cover !important; border: 1px solid var(--cp-rule) !important; border-radius: 8px !important; background-color: var(--cp-raised) !important; margin: 6px 8px 2px 0 !important; }
 ${CHAT_CHROME_CSS}`;

@@ -3,7 +3,7 @@ import { Platform } from "react-native";
 import { within, type DomElement, type WebDocument } from "./dom";
 import { icon } from "./icons";
 import { redrawDiagram } from "./mermaid";
-import { ADMONITION, CODE_BLOCK, HEADING, INLINE_CODE, LANG, MARK, MARK_OL, MARK_UL, md, MSG, TASK_BOX } from "./selectors";
+import { ADMONITION, CODE_BLOCK, HEADING, INLINE_CODE, LANG, MARK, MARK_OL, MARK_UL, md, DOC, MSG, TASK_BOX } from "./selectors";
 
 declare const document: WebDocument;
 
@@ -78,7 +78,8 @@ const CHECK_MASK = icon("Check", '<path d="M20 6 9 17l-5-5"/>');
 const IMPORTANT_MASK = icon("MessageSquareWarning", '<path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"/><path d="M12 15h.01"/><path d="M12 7v4"/>');
 const CAUTION_MASK = icon("OctagonAlert", '<path d="M12 16h.01"/><path d="M12 8v4"/><path d="M15.312 2a2 2 0 0 1 1.414.586l4.688 4.688A2 2 0 0 1 22 8.688v6.624a2 2 0 0 1-.586 1.414l-4.688 4.688a2 2 0 0 1-1.414.586H8.688a2 2 0 0 1-1.414-.586l-4.688-4.688A2 2 0 0 1 2 15.312V8.688a2 2 0 0 1 .586-1.414l4.688-4.688A2 2 0 0 1 8.688 2z"/>');
 
-const RT = (element: string, variant: string) => `:root[data-cp-rt-${element}="${variant}"] ${MSG}`;
+// DOC: the variants also reach a .md file open in the file pane.
+const RT = (element: string, variant: string) => `:root[data-cp-rt-${element}="${variant}"] ${DOC}`;
 const QUOTE = `${md("blockquote")}:not([data-cp-callout])`;
 const CALLOUT = `${md("blockquote")}[data-cp-callout]`;
 const TASK_ITEM = `${MSG} ${md("li")}[data-cp-task]`;
