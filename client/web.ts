@@ -13,4 +13,5 @@ export { bindPromptKeys, followExpansionAtBottom, jumpToPrompt } from "./web/pro
 export { restyleNative, setNativeColors } from "./web/restyle";
 export { setRichText } from "./web/rich-text";
 export { selectionCopyMenu } from "./web/selection-copy";
+export { stackImages } from "./web/image-stacks";
 export { paintSidebar } from "./web/sidebar";

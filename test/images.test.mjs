@@ -89,3 +89,21 @@ test("image cache evicts by bytes and recency, and skips oversized strings", asy
   assert.equal(calls.get("oversized"), 2);
   clearImageCache();
 });
+
+test("file: URLs and paths are read through the server; http, data and blob URLs load directly", async () => {
+  clearImageCache();
+  const asked = [];
+  const read = async ({ path }) => (asked.push(path), { dataUrl: `data:image/png;base64,${Buffer.from(path).toString("base64")}` });
+  // Agents link screenshots as file:// URLs; the renderer can't load those, so the server reads them.
+  const fromFile = await loadImage("file:///tmp/shot.png", "thumbnail", read);
+  const fromPath = await loadImage("/tmp/other.png", "thumbnail", read);
+  const fromDrive = await loadImage("C:\\shots\\win.png", "thumbnail", read);
+  assert.deepEqual(asked, ["file:///tmp/shot.png", "/tmp/other.png", "C:\\shots\\win.png"]);
+  assert.match(fromFile, /^data:image\/png;base64,/);
+  assert.match(fromPath, /^data:image\/png;base64,/);
+  assert.match(fromDrive, /^data:image\/png;base64,/);
+  for (const direct of ["https://example.com/a.png", "http://localhost:8080/b.png", "data:image/png;base64,AAAA", "blob:http://localhost/123"]) {
+    assert.equal(await loadImage(direct, "thumbnail", read), direct);
+  }
+  assert.equal(asked.length, 3);
+});

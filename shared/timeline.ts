@@ -68,7 +68,11 @@ export const prefsSchema = z.object({
   /** New agents get an html_render tool and use it when asked for a visual; its pages show inline (desktop and web). Off until turned on (dashboard or Command Center); agents keep what they were created with. */
   html: z.enum(["on", "off"]).default("off"),
   /** Image-only replies as thumbnails; "native" leaves them to Paseo. */
-  images: z.enum(["small", "large", "native"]).default("small"),
+  images: z.enum(["small", "large", "xlarge", "native"]).default("small"),
+  /** Two or more images in a row show as one stack that spreads on a click. Off until turned on. */
+  imageStacks: z.enum(["on", "off"]).default("off"),
+  /** How images group into a stack: a run with nothing between, a section (up to a heading or divider), or the whole reply. */
+  imageStackBy: z.enum(["row", "section", "reply"]).default("row"),
   /** One style variant per markdown element in Paseo's own replies (desktop, with nativeStyle "design"); "a" is the base design. */
   richText: z.object({ quote: variant, table: tableVariant, code: variant, inline: variant, heading: variant, list: variant, callout: variant, rule: variant }).prefault({}),
 });

@@ -11,10 +11,10 @@ import { followAgent, isTodo, isTurnTrigger, onShownAgent, onStaleSteps, onUnpla
 import { renderDiagram } from "./shared/diagram";
 import { currentPrefs, savePrefs, setPrefs, subscribePrefs, usePrefsSaver } from "./client/prefs";
 import { bindThemeRegistry, currentTheme, registerTheme, subscribeTheme } from "./client/theme-registry";
-import { addIconSet, bindPromptKeys, centerControlText, clampUserMessages, iconTwins, jumpToPrompt, openAgentIds, paintSidebar, subagentPaneShown, redrawDiagrams, setCompactHandler, readHostAppearance, restyleNative, selectionCopyMenu, setNativeColors, setRailProviders, setRichText, stylePluginViews, nativeIconSet, watchDom } from "./client/web";
+import { addIconSet, bindPromptKeys, centerControlText, clampUserMessages, iconTwins, jumpToPrompt, openAgentIds, paintSidebar, subagentPaneShown, redrawDiagrams, setCompactHandler, readHostAppearance, restyleNative, selectionCopyMenu, setNativeColors, stackImages, setRailProviders, setRichText, stylePluginViews, nativeIconSet, watchDom } from "./client/web";
 import { getTheme, THEME_CATALOG_ID, themeSchema } from "./shared/theme";
 import { getIconSet, getPrefs, type Prefs } from "./shared/timeline";
-import { HtmlItem, ImagesItem, NoticeItem, PlanItem, RecapItem, StepsItem, ThoughtItem, TodoItem, ToolItem } from "./client/views";
+import { HtmlItem, ImagesItem, NoticeItem, StackViewerHost, PlanItem, RecapItem, StepsItem, ThoughtItem, TodoItem, ToolItem } from "./client/views";
 import { htmlData, htmlSchema } from "./client/html";
 import { recapSchema } from "./shared/recap";
 
@@ -32,7 +32,13 @@ function DashboardItem({ currentScreen, openScreen, theme }: PluginSidebarItemPr
   useEffect(() => {
     toast = hostToast;
   }, [hostToast]);
-  return <SidebarRow icon={sidebarIcon} active={currentScreen?.screenId === "dashboard"} onPress={() => openScreen({ screenId: "dashboard" })} />;
+  return (
+    <>
+      <SidebarRow icon={sidebarIcon} active={currentScreen?.screenId === "dashboard"} onPress={() => openScreen({ screenId: "dashboard" })} />
+      {/* Always mounted too, so it can show the viewer for image stacks in replies Paseo draws itself. */}
+      <StackViewerHost />
+    </>
+  );
 }
 
 export default function contribute(client: PluginClientContext) {
@@ -54,6 +60,7 @@ export default function contribute(client: PluginClientContext) {
   const uncenter = centerControlText();
   const unclamp = clampUserMessages(() => currentPrefs().userMessages === "clamp");
   const unselect = selectionCopyMenu(() => currentPrefs().selectionCopy === "on");
+  const unstack = stackImages();
   const unicons = nativeIconSet(() => currentPrefs().iconSet);
 
   // The composer's model selector rail lists every provider, which Paseo only renders for new chats.
@@ -214,7 +221,7 @@ export default function contribute(client: PluginClientContext) {
     });
   });
   // Prefs Paseo's own rows follow too reach the restyle as <html> attributes.
-  const markRoot = (p: Prefs) => setRichText({ ...p.richText, images: p.images, steps: p.steps, density: p.density === "normal" ? "a" : p.density, "icon-steps": p.rowIcons.steps === "hide" ? "hide" : "a", "icon-tool": p.rowIcons.tool === "hide" ? "hide" : "a", loader: p.loader === "dots" ? "a" : p.loader, "loader-size": p.loaderSize === "s" ? "a" : p.loaderSize, icons: p.iconSet === "lucide" ? "a" : p.iconSet });
+  const markRoot = (p: Prefs) => setRichText({ ...p.richText, images: p.images, stacks: p.imageStacks, stackby: p.imageStackBy, steps: p.steps, density: p.density === "normal" ? "a" : p.density, "icon-steps": p.rowIcons.steps === "hide" ? "hide" : "a", "icon-tool": p.rowIcons.tool === "hide" ? "hide" : "a", loader: p.loader === "dots" ? "a" : p.loader, "loader-size": p.loaderSize === "s" ? "a" : p.loaderSize, icons: p.iconSet === "lucide" ? "a" : p.iconSet });
   markRoot(currentPrefs());
   // The chosen icon set comes from the daemon once, the first time it's picked.
   const requestedIcons = new Set<string>();
@@ -337,6 +344,7 @@ export default function contribute(client: PluginClientContext) {
     uncenter();
     unclamp();
     unselect();
+    unstack();
     unicons();
     unsubscribeProviders();
     unrestyle();

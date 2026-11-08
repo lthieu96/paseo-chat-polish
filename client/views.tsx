@@ -18,6 +18,7 @@ import { usePrefs } from "./prefs";
 import { useCurrentTheme } from "./theme-registry";
 import { followExpansionAtBottom, loadPaseoLightbox, readHostAppearance, type HostAppearance, type PaseoLightbox } from "./web";
 import type { HtmlData } from "./html";
+import { closeStackViewer, registerStackViewerHost, setStackViewerIndex, useStackViewer } from "./stack-viewer";
 import { HtmlFrame, lastFrameHeight, useHovered, useHtmlTheme, windowButtonsInset } from "./html-frame";
 import { htmlPage } from "../shared/page";
 import { inlineImages, localImages, openHtml, storedPage } from "../shared/html";
@@ -900,13 +901,15 @@ function useImage(url: string, variant: "thumbnail" | "original" = "original") {
   return state.key === key ? state : {};
 }
 
-const THUMB = { small: { width: 200, height: 128 }, large: { width: 320, height: 200 } };
+const THUMB = { small: { width: 200, height: 128 }, large: { width: 320, height: 200 }, xlarge: { width: 480, height: 300 } };
+/** The thumbnail size for the Images choice (Inline uses Small where the plugin still draws one). */
+const thumbSize = (images: string) => THUMB[images === "large" || images === "xlarge" ? images : "small"];
 
 function Thumbnail({ alt, url, theme, onOpen }: { alt: string; url: string; theme: PluginTheme; onOpen(): void }) {
   const s = useStyles(theme);
   const c = theme.colors;
   const { uri, failed } = useImage(url, "thumbnail");
-  const size = THUMB[usePrefs().images === "large" ? "large" : "small"];
+  const size = thumbSize(usePrefs().images);
   const frame = [size, { borderRadius: 8, borderWidth: StyleSheet.hairlineWidth, borderColor: c.border, backgroundColor: c.surface1, overflow: "hidden" as const }];
   if (!uri) {
     return (
@@ -1064,23 +1067,116 @@ function PaseoImage({ Viewer, images, index, onIndex, onClose }: { Viewer: Paseo
   return <Viewer source={{ type: "uri", uri: uri ?? "" }} onClose={onClose} />;
 }
 
-export function ImagesItem({ item, theme }: PluginTimelineItemProps<z.output<typeof imagesSchema>>) {
-  const [open, setOpen] = useState<number>();
-  const Viewer = usePaseoLightbox();
-  const viewer = open === undefined ? null : Viewer ? (
-    <PaseoImage Viewer={Viewer} images={item.data.images} index={open} onIndex={setOpen} onClose={() => setOpen(undefined)} />
+/** The viewer for a set of images: Paseo's own (from usePaseoLightbox, called where the images mount) once found, else the plugin's. */
+function ImageViewer({ Viewer, images, index, onIndex, onClose }: { Viewer?: PaseoLightbox; images: Array<{ alt: string; url: string }>; index: number; onIndex(i: number): void; onClose(): void }) {
+  return Viewer ? (
+    <PaseoImage Viewer={Viewer} images={images} index={index} onIndex={onIndex} onClose={onClose} />
   ) : (
-    <Lightbox images={item.data.images} index={open} onIndex={setOpen} onClose={() => setOpen(undefined)} />
+    <Lightbox images={images} index={index} onIndex={onIndex} onClose={onClose} />
   );
+}
+
+// Spread stacks, keyed by their first image, so one stays spread when Paseo's virtual list remounts its reply.
+const spreadStacks = new Set<string>();
+// How far each card behind a closed stack sits from the one in front: right, up, and turned.
+const FAN = { x: 9, y: -7, deg: 2.5 };
+
+/** One of the next images, as a card fanned out behind the first image of a closed stack. */
+function StackCard({ url, depth, theme }: { url: string; depth: number; theme: PluginTheme }) {
+  const c = theme.colors;
+  const { uri } = useImage(url, "thumbnail");
+  const size = thumbSize(usePrefs().images);
+  return (
+    <View
+      pointerEvents="none"
+      style={[
+        size,
+        {
+          position: "absolute",
+          left: 0,
+          top: 0,
+          borderRadius: 8,
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: c.border,
+          backgroundColor: c.surface1,
+          overflow: "hidden",
+          transform: [{ translateX: FAN.x * depth }, { translateY: FAN.y * depth }, { rotate: `${FAN.deg * depth}deg` }],
+        },
+      ]}
+    >
+      {uri ? <Image source={{ uri }} style={size} resizeMode="cover" /> : null}
+    </View>
+  );
+}
+
+/**
+ * A reply's images. One shows as a thumbnail. Two or more show as a stack: the first image with the next two fanned
+ * behind it and a "+N" badge. Pressing the stack spreads it into a row of thumbnails, each opening the viewer, which steps
+ * (← →) through this stack's images only; "Stack" folds it back.
+ */
+export function ImagesItem({ item, theme }: PluginTimelineItemProps<z.output<typeof imagesSchema>>) {
+  const images = item.data.images;
+  const c = theme.colors;
+  const s = useStyles(theme);
+  const key = images[0]?.url ?? "";
+  const stacks = usePrefs().imageStacks === "on";
+  const Viewer = usePaseoLightbox();
+  const [open, setOpen] = useState<number>();
+  const [spread, setSpreadState] = useState(() => spreadStacks.has(key));
+  const setSpread = (value: boolean) => {
+    if (value) spreadStacks.add(key);
+    else spreadStacks.delete(key);
+    setSpreadState(value);
+  };
+  const viewer = open === undefined ? null : <ImageViewer Viewer={Viewer} images={images} index={open} onIndex={setOpen} onClose={() => setOpen(undefined)} />;
+
+  if (stacks && images.length > 1 && !spread) {
+    const behind = images.slice(1, 3);
+    return (
+      // Room above and to the right for the fanned cards.
+      <View style={{ alignSelf: "flex-start", marginTop: 11 + 14, marginRight: 20, paddingBottom: 1 }}>
+        {behind
+          .map((img, i) => <StackCard key={i} url={img.url} depth={i + 1} theme={theme} />)
+          .reverse()}
+        <Thumbnail alt={`stack of ${images.length} images`} url={images[0]!.url} theme={theme} onOpen={() => setSpread(true)} />
+        <View pointerEvents="none" style={{ position: "absolute", right: 8, bottom: 8, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, backgroundColor: "rgba(8,9,11,0.72)" }}>
+          <Text style={{ color: "#ffffff", fontSize: 12, fontWeight: "600", fontVariant: ["tabular-nums"] }}>{`+${images.length - 1}`}</Text>
+        </View>
+        {viewer}
+      </View>
+    );
+  }
   return (
     // Rows leave 8pt less below and take 2pt more above (TIGHT), so thumbnails between two rows sit 19pt from each.
-    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 11, paddingBottom: 1 }}>
-      {item.data.images.map((img, i) => (
+    <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8, marginTop: 11, paddingBottom: 1 }}>
+      {images.map((img, i) => (
         <Thumbnail key={i} alt={img.alt} url={img.url} theme={theme} onOpen={() => setOpen(i)} />
       ))}
+      {stacks && images.length > 1 ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Fold these images back into a stack"
+          onPress={() => setSpread(false)}
+          style={({ hovered }: { hovered?: boolean; pressed: boolean }) => ({ height: 26, paddingHorizontal: 11, justifyContent: "center", borderRadius: 999, borderWidth: StyleSheet.hairlineWidth, borderColor: c.border, backgroundColor: hovered ? c.surface2 : c.surface1 })}
+        >
+          <Text style={s.small}>Stack</Text>
+        </Pressable>
+      ) : null}
       {viewer}
     </View>
   );
+}
+
+/**
+ * Shows the viewer for a stack of images Paseo drew itself, opened by image-stacks.ts from a click. Mounted once, in the
+ * sidebar row that is always mounted on desktop.
+ */
+export function StackViewerHost() {
+  const shown = useStackViewer();
+  const Viewer = usePaseoLightbox();
+  useEffect(registerStackViewerHost, []);
+  if (!shown) return null;
+  return <ImageViewer Viewer={Viewer} images={shown.images} index={shown.index} onIndex={setStackViewerIndex} onClose={closeStackViewer} />;
 }
 
 const count = (n: number, one: string) => `${n} ${one}${n === 1 ? "" : "s"}`;

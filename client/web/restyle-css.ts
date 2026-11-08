@@ -511,6 +511,7 @@ ${THUMBS} > button { width: var(--cp-thumb-w) !important; height: var(--cp-thumb
 ${THUMBS} > button div { width: 100% !important; height: 100% !important; background-size: cover !important; }
 :root { --cp-thumb-w: 200px; --cp-thumb-h: 128px; }
 :root[data-cp-rt-images="large"] { --cp-thumb-w: 320px; --cp-thumb-h: 200px; }
+:root[data-cp-rt-images="xlarge"] { --cp-thumb-w: 480px; --cp-thumb-h: 300px; }
 
 /* The same design on Paseo 0.12's renderer. A whole reply is one block now, so the gap between paragraphs is its children's
    margin: the 0.11 spacing (item margin plus padding on both ends), with the 1.6 line height's leading on top. */

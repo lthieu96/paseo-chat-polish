@@ -233,10 +233,28 @@ export function PrefsEditor({ theme, page, prefs, onChange }: { theme: PluginThe
               options={[
                 ["small", "", "Small"],
                 ["large", "", "Large"],
+                ["xlarge", "", "Extra large"],
                 ["native", "", "Inline", true],
               ]}
             />
           </Row>
+          <Row theme={theme} label="Image stacks" hint="Images in a row show as one stack; a click spreads it.">
+            <Switch theme={theme} label="Image stacks" value={prefs.imageStacks === "on"} onChange={(on) => set("imageStacks")(on ? "on" : "off")} />
+          </Row>
+          {prefs.imageStacks === "on" ? (
+            <Row theme={theme} label="Stack by" hint="In a row: text between images starts a new stack. Section: only a heading or divider does. Whole reply: one stack per agent message.">
+              <Segmented
+                theme={theme}
+                value={prefs.imageStackBy}
+                onChange={set("imageStackBy")}
+                options={[
+                  ["row", "", "In a row"],
+                  ["section", "", "Section"],
+                  ["reply", "", "Whole reply"],
+                ]}
+              />
+            </Row>
+          ) : null}
         </Group>
         {canSetAppTheme ? (
           <Group theme={theme} title="Working indicator">
