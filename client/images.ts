@@ -34,7 +34,8 @@ export function clearImageCache() {
 
 /** Share in-flight reads, bound retained strings by bytes, and load originals only for the viewer. */
 export function loadImage(url: string, variant: Variant, read: Read): Promise<string> {
-  if (/^(https?:|data:)/.test(url)) return Promise.resolve(url);
+  // blob: too, for the sources of images Paseo draws itself. file: URLs and paths go to the server, which can read them.
+  if (/^(https?:|data:|blob:)/.test(url)) return Promise.resolve(url);
   const key = `${variant}:${url}`;
   const cached = cache.get(key);
   if (cached) {

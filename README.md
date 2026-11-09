@@ -13,11 +13,14 @@ A [Paseo](https://paseo.sh) plugin that redraws the agent chat as one quiet colu
 - **Rich text styles.** Three or four looks each for quotes, tables, code blocks, inline code, headings, lists, callouts and rules.
 - **Diagrams.** Mermaid diagrams drawn by [Pele](https://pele.run) in the theme's colors, or by Paseo's mermaid with the same chart colors. Switch on the Rich text page, which previews both. A diagram left showing its source (Paseo's safety check rejects labels like `<id>`, or a render got stuck) has a redraw button that has Pele draw it as Paseo's own diagram, with zoom and full screen.
 - **HTML pages (experimental).** Ask an agent to chart, visualize, simulate or mock up something and it draws an interactive page right in the chat, in the theme's colors, with local images (screenshots, generated images) inlined. With the optional headless browser installed, each page is laid out at desktop and phone widths before it shows, and the agent fixes overlapping or cut-off text, script errors or overflow it finds; an agent can also preview a page (canvas drawings, dense SVG) and see a screenshot before publishing it. Hover a page to open it full screen, in your browser, or copy its HTML. Off by default: turn it on in the dashboard's **HTML pages** tab, and download the headless browser there too if you want pages checked; agents created from then on get the tools.
+- **Image stacks.** Two or more images in a row in a reply show as one stack. Hovering it (or clicking, if you prefer) deals them into a row that scrolls sideways; click an image to open the viewer, with ← → through that stack, and the row stays open until you fold it. Off by default: turn it on under **Messages → Images**, which also adds an Extra large thumbnail size.
 - **Working indicator.** Paseo's dots, or a sparkle, spokes, dot ring, orb, matrix or snake loader.
 - **Icon sets.** Paseo's Lucide icons, or Untitled UI or Hugeicons ones across the app (desktop and web). Icons without a twin stay Lucide.
 - **Extras.** Turn recaps, ⌥⌘↑/↓ to jump between your prompts, and Command Center (⌘K) toggles.
 
 ![Merged steps, a diff and a shell run in the chat](images/chat.png)
+
+![Image stacks: a closed stack, the row spread out, and the row kept open after viewing an image](images/image-stacks.png)
 
 ## Dashboard
 

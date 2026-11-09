@@ -18,6 +18,7 @@ import { usePrefs } from "./prefs";
 import { useCurrentTheme } from "./theme-registry";
 import { followExpansionAtBottom, loadPaseoLightbox, readHostAppearance, type HostAppearance, type PaseoLightbox } from "./web";
 import type { HtmlData } from "./html";
+import { closeStackViewer, registerStackViewerHost, setStackViewerIndex, useStackViewer } from "./stack-viewer";
 import { HtmlFrame, lastFrameHeight, useHovered, useHtmlTheme, windowButtonsInset } from "./html-frame";
 import { htmlPage } from "../shared/page";
 import { inlineImages, localImages, openHtml, storedPage } from "../shared/html";
@@ -900,14 +901,18 @@ function useImage(url: string, variant: "thumbnail" | "original" = "original") {
   return state.key === key ? state : {};
 }
 
-const THUMB = { small: { width: 200, height: 128 }, large: { width: 320, height: 200 } };
+// A thumbnail opens full size; web only (cursor isn't a native style).
+const ZOOM_CURSOR = (Platform.OS === "web" ? { cursor: "zoom-in" } : {}) as object;
+const THUMB = { small: { width: 200, height: 128 }, large: { width: 320, height: 200 }, xlarge: { width: 480, height: 300 } };
+/** The thumbnail size for the Images choice (Inline uses Small where the plugin still draws one). */
+const thumbSize = (images: string) => THUMB[images === "large" || images === "xlarge" ? images : "small"];
 
-function Thumbnail({ alt, url, theme, onOpen }: { alt: string; url: string; theme: PluginTheme; onOpen(): void }) {
+function Thumbnail({ alt, url, theme, onOpen, edge, focusable = true }: { alt: string; url: string; theme: PluginTheme; onOpen(): void; edge?: string; focusable?: boolean }) {
   const s = useStyles(theme);
   const c = theme.colors;
   const { uri, failed } = useImage(url, "thumbnail");
-  const size = THUMB[usePrefs().images === "large" ? "large" : "small"];
-  const frame = [size, { borderRadius: 8, borderWidth: StyleSheet.hairlineWidth, borderColor: c.border, backgroundColor: c.surface1, overflow: "hidden" as const }];
+  const size = thumbSize(usePrefs().images);
+  const frame = [size, { borderRadius: 8, borderWidth: edge ? 1 : StyleSheet.hairlineWidth, borderColor: edge ?? c.border, backgroundColor: c.surface1, overflow: "hidden" as const }, ZOOM_CURSOR];
   if (!uri) {
     return (
       <View style={[frame, { alignItems: "center", justifyContent: "center", gap: 6 }]}>
@@ -917,10 +922,28 @@ function Thumbnail({ alt, url, theme, onOpen }: { alt: string; url: string; them
     );
   }
   return (
-    <Pressable accessibilityRole="imagebutton" accessibilityLabel={`Open ${alt}`} onPress={onOpen} style={frame}>
+    <Pressable accessibilityRole="imagebutton" accessibilityLabel={`Open ${alt}`} onPress={onOpen} focusable={focusable} style={frame}>
       <Image source={{ uri }} style={size} resizeMode="cover" />
     </Pressable>
   );
+}
+
+/**
+ * The viewer's image at index without a blank frame between images: the last image stays (stale) until the next is
+ * ready, and the neighbours load ahead so ← → usually swap at once.
+ */
+function useSteadyImage(images: Array<{ url: string }>, index: number) {
+  const n = images.length;
+  const current = useImage(images[index]!.url);
+  const next = useImage(images[(index + 1) % n]!.url).uri;
+  const prev = useImage(images[(index + n - 1) % n]!.url).uri;
+  useEffect(() => {
+    // Best effort: a neighbour that fails to load reports it when it's shown.
+    for (const uri of [next, prev]) if (uri) void Image.prefetch(uri).catch(() => {});
+  }, [next, prev]);
+  const last = useRef<{ uri?: string; failed?: boolean }>({});
+  if (current.uri || current.failed) last.current = current;
+  return { ...last.current, stale: !current.uri && !current.failed };
 }
 
 type KeyTarget = { addEventListener(type: "keydown", l: (e: { key: string; preventDefault(): void }) => void): void; removeEventListener(type: "keydown", l: (e: { key: string; preventDefault(): void }) => void): void };
@@ -945,15 +968,15 @@ function LightboxButton({ icon, label, onPress, size = 32 }: { icon: string; lab
  */
 function Lightbox({ images, index, onIndex, onClose }: { images: Array<{ alt: string; url: string }>; index: number; onIndex(i: number): void; onClose(): void }) {
   const image = images[index]!;
-  const { uri, failed } = useImage(image.url);
+  const { uri, failed, stale } = useSteadyImage(images, index);
   const win = useWindowDimensions();
   const [natural, setNatural] = useState<{ w: number; h: number }>();
   const [zoomed, setZoomed] = useState(false);
   const many = images.length > 1;
   const go = useCallback((step: number) => (setZoomed(false), onIndex((index + step + images.length) % images.length)), [index, images.length, onIndex]);
+  // The previous size stays until the next image is measured, so the frame doesn't collapse between images.
   useEffect(() => {
-    setNatural(undefined);
-    if (uri) Image.getSize(uri, (w, h) => setNatural({ w, h }), () => {});
+    if (uri) Image.getSize(uri, (w, h) => setNatural({ w, h }), () => setNatural(undefined));
   }, [uri]);
   useEffect(() => {
     const target = Platform.OS === "web" ? (globalThis as unknown as KeyTarget) : undefined;
@@ -1002,7 +1025,8 @@ function Lightbox({ images, index, onIndex, onClose }: { images: Array<{ alt: st
             >
             {uri ? (
               <Pressable accessibilityRole="imagebutton" accessibilityLabel={zoomed ? "Fit to window" : "Zoom in"} onPress={() => setZoomed((z) => !z)} style={{ cursor: zoomed ? "zoom-out" : "zoom-in" } as object}>
-                <Image source={{ uri }} style={[shown, { borderRadius: 6 }]} resizeMode="contain" />
+                {/* Dimmed while it's still the previous image and the next one loads. */}
+                <Image source={{ uri }} style={[shown, { borderRadius: 6, opacity: stale ? 0.45 : 1 }]} resizeMode="contain" />
               </Pressable>
             ) : (
               <View pointerEvents="none" style={[shown, { alignItems: "center", justifyContent: "center", gap: 8 }]}>
@@ -1046,7 +1070,8 @@ function usePaseoLightbox() {
 
 /** A reply image in Paseo's own viewer, like an attached one; ← → step through the reply's other images, as in the plugin's viewer. */
 function PaseoImage({ Viewer, images, index, onIndex, onClose }: { Viewer: PaseoLightbox; images: Array<{ alt: string; url: string }>; index: number; onIndex(i: number): void; onClose(): void }) {
-  const { uri, failed } = useImage(images[index]!.url);
+  // Steady: returning null between images would close Paseo's modal and fade it in again, a flash on every ← →.
+  const { uri, failed } = useSteadyImage(images, index);
   useEffect(() => {
     const target = images.length > 1 ? (globalThis as unknown as KeyTarget) : undefined;
     if (!target) return;
@@ -1059,28 +1084,253 @@ function PaseoImage({ Viewer, images, index, onIndex, onClose }: { Viewer: Paseo
     target.addEventListener("keydown", onKey);
     return () => target.removeEventListener("keydown", onKey);
   }, [images.length, index, onIndex]);
-  // Nothing while the original loads; an empty uri is Paseo's "couldn't load" state.
+  // Nothing until the first image loads; an empty uri is Paseo's "couldn't load" state.
   if (!uri && !failed) return null;
   return <Viewer source={{ type: "uri", uri: uri ?? "" }} onClose={onClose} />;
 }
 
-export function ImagesItem({ item, theme }: PluginTimelineItemProps<z.output<typeof imagesSchema>>) {
-  const [open, setOpen] = useState<number>();
-  const Viewer = usePaseoLightbox();
-  const viewer = open === undefined ? null : Viewer ? (
-    <PaseoImage Viewer={Viewer} images={item.data.images} index={open} onIndex={setOpen} onClose={() => setOpen(undefined)} />
+/** The viewer for a set of images: Paseo's own (from usePaseoLightbox, called where the images mount) once found, else the plugin's. */
+function ImageViewer({ Viewer, images, index, onIndex, onClose }: { Viewer?: PaseoLightbox; images: Array<{ alt: string; url: string }>; index: number; onIndex(i: number): void; onClose(): void }) {
+  return Viewer ? (
+    <PaseoImage Viewer={Viewer} images={images} index={index} onIndex={onIndex} onClose={onClose} />
   ) : (
-    <Lightbox images={item.data.images} index={open} onIndex={setOpen} onClose={() => setOpen(undefined)} />
+    <Lightbox images={images} index={index} onIndex={onIndex} onClose={onClose} />
   );
+}
+
+// Where each card behind a closed stack's face sits: right, up, and turned (cards from the fourth on share the third's
+// spot, hidden).
+const FAN = { x: 9, y: -6.5, deg: 2.5 };
+const STACK_GAP = 8;
+// Room above the cards for the fan (the third card rises 13pt), and below for the row's scrollbar.
+const STACK_TOP = 16;
+const STACK_BOTTOM = 12;
+// Hover intent: a pointer crossing a stack while scrolling doesn't spread it.
+const STACK_HOVER_MS = 150;
+const STACK_FOLD_MS = 110;
+const STACK_LIFT = { dataSet: { cpStackLift: "" } } as object;
+const STACK_SCROLL = { dataSet: { cpStackScroll: "" } } as object;
+type UpTarget = { addEventListener(type: "pointerup", listener: () => void, options: { once: true }): void };
+
+/** A count over a card, in the theme's colors. */
+function StackBadge({ text, theme }: { text: string; theme: PluginTheme }) {
+  const c = theme.colors;
+  return (
+    <View pointerEvents="none" style={{ position: "absolute", right: 8, bottom: 8, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, borderWidth: StyleSheet.hairlineWidth, borderColor: c.border, backgroundColor: c.surface2 }}>
+      <Text style={{ color: c.foreground, fontSize: 12, fontWeight: "600", fontVariant: ["tabular-nums"] }}>{text}</Text>
+    </View>
+  );
+}
+
+/**
+ * Two or more images as a stack: the first with the next two fanned behind it and a "+N" badge. Hovering (web), or a
+ * press with Spread on: Click, deals every image into its slot in one row that scrolls sideways; pressing an image there
+ * opens the viewer and keeps the row open (no longer folding when the pointer leaves) until the fold button, top right.
+ * In hover mode touch has no hover, so a tap opens the viewer at the tapped image (usually the face); in Click mode the
+ * fold button shows on any open stack, since touch has no pointer leaving. Only cards in view animate, and only by
+ * a few points. The height never changes (the top strip the fan sticks into and room for the scrollbar are reserved).
+ */
+function ImageStack({ images, theme, onOpen }: { images: Array<{ alt: string; url: string }>; theme: PluginTheme; onOpen(i: number): void }) {
+  const c = theme.colors;
+  const prefs = usePrefs();
+  const size = thumbSize(prefs.images);
+  const byClick = prefs.imageStackOpen === "click";
+  const [width, setWidth] = useState(0);
+  // closed → open → folding (row cards shrink toward the first, which sits where the pile's face will) → settling (the
+  // two cards behind the face fan out from under it) → closed.
+  const [phase, setPhase] = useState<"closed" | "open" | "folding" | "settling">("closed");
+  const spread = phase === "open" || phase === "folding";
+  const [pinned, setPinned] = useState(false);
+  const scroll = useRef<{ scrollTo(options: { x: number; animated: boolean }): void } | null>(null);
+  // Folded with its button: the pointer is still over the stack, so hover mustn't reopen it until the pointer leaves.
+  const held = useRef(false);
+  // Whether the pointer is over the stack, for a scrollbar drag that ends outside it.
+  const inside = useRef(false);
+  // Just opened: the card under the pointer that opened it isn't lit (lighting it dimmed every card as it dealt in); the
+  // highlight starts once the pointer moves to another card. -2: no move yet since opening; -1: lighting as usual.
+  const quiet = useRef(-1);
+  // The card under the pointer in the spread row: raised and ringed, the others dimmed.
+  const [active, setActive] = useState<number>();
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => () => clearTimeout(timer.current), []);
+  const step = size.width + STACK_GAP;
+  const inView = Math.max(1, Math.ceil(width / step));
+  const open = () => {
+    clearTimeout(timer.current);
+    if (phase !== "open") quiet.current = -2;
+    setPhase("open");
+  };
+  const fold = () => {
+    if (phase !== "open") return;
+    clearTimeout(timer.current);
+    setPinned(false);
+    // The dimmed cards stay dimmed while they fold away; undimming first made them flash bright before fading out.
+    setPhase("folding");
+    // A scrolled row glides back to the start while its cards fold, so the face is in place when the pile returns.
+    scroll.current?.scrollTo({ x: 0, animated: true });
+    timer.current = setTimeout(() => {
+      setActive(undefined);
+      setPhase("settling");
+      timer.current = setTimeout(() => setPhase("closed"), 170);
+    }, STACK_FOLD_MS);
+  };
+  const height = STACK_TOP + size.height + STACK_BOTTOM;
+  return (
+    <View onLayout={(e) => setWidth(e.nativeEvent.layout.width)} style={{ marginTop: 11 - 2, height }}>
+      <View
+        onPointerEnter={() => {
+          inside.current = true;
+          if (byClick || phase === "open" || held.current) return;
+          // Back in while it folds: it opens again at once.
+          if (phase === "folding") return open();
+          clearTimeout(timer.current);
+          timer.current = setTimeout(open, STACK_HOVER_MS);
+        }}
+        onPointerLeave={(e) => {
+          inside.current = false;
+          held.current = false;
+          // Pinned rows stay (undimmed); in Click mode a touch "leaves" right after the tap that spread it, so there only a
+          // mouse moving away folds the stack.
+          if (pinned) return setActive(undefined);
+          if (byClick && e.nativeEvent.pointerType !== "mouse") return;
+          // Dragging the scrollbar out of the box: fold on release, and only if the pointer is still outside.
+          if (phase === "open" && e.nativeEvent.buttons && Platform.OS === "web") {
+            (globalThis as unknown as UpTarget).addEventListener("pointerup", () => setTimeout(() => inside.current || fold(), 0), { once: true });
+            return;
+          }
+          if (phase === "open") fold();
+          else if (phase === "closed") clearTimeout(timer.current);
+        }}
+        // Closed, only the pile takes hover; open, the whole row does. One cursor over all of it, gaps included, or it
+        // flickers between zoom-in and the arrow as the pointer crosses the row.
+        style={[{ height, width: spread ? "100%" : size.width + 2 * FAN.x }, ZOOM_CURSOR]}
+      >
+        <ScrollView
+          ref={scroll as never}
+          {...STACK_SCROLL}
+          horizontal
+          scrollEnabled={spread}
+          showsHorizontalScrollIndicator={spread}
+          // A fixed height with the scrollbar inside the bottom room: a classic scrollbar would otherwise add its height on open.
+          style={{ height, overflow: spread ? undefined : "visible" }}
+          contentContainerStyle={{ width: spread ? images.length * step - STACK_GAP : size.width + 2 * FAN.x, height: STACK_TOP + size.height }}
+        >
+          {images.map((img, i) => {
+            const depth = Math.min(i, 2);
+            const lit = spread && active === i;
+            const transform = spread ? [{ translateX: i * step }] : [{ translateX: FAN.x * depth }, { translateY: FAN.y * depth }, { rotate: `${FAN.deg * depth}deg` }];
+            // deal: in view as the row opens; still: out of view, placed at once; out: folding toward the face; fan: settling
+            // out from under it. The face sits in the same spot closed and open, so it stays put (dealing it made it blink).
+            const motion =
+              i === 0 ? "rest"
+              : phase === "open" ? (i < inView ? "deal" : "still")
+              : phase === "folding" ? (i >= inView ? "still" : "out")
+              : phase === "settling" && (i === 1 || i === 2) ? "fan"
+              : "rest";
+            return (
+              <View
+                key={i}
+                {...({ dataSet: { cpStackCard: motion } } as object)}
+                pointerEvents={!spread && i > 2 ? "none" : "auto"}
+                style={[{ position: "absolute", left: 0, top: STACK_TOP, zIndex: lit ? images.length + 1 : images.length - i, opacity: !spread && i > 2 ? 0 : 1, transform }, Platform.OS === "web" && motion === "deal" ? ({ animationDelay: `${(Math.min(i, 8) - 1) * 22}ms` } as object) : null]}
+              >
+                <View
+                  {...STACK_LIFT}
+                  // Move, not enter: the card that ends up under a resting pointer as the row deals out lights up on its first move.
+                  onPointerMove={() => {
+                  if (!spread || active === i) return;
+                  if (quiet.current === -2) return void (quiet.current = i);
+                  if (quiet.current === i) return;
+                  quiet.current = -1;
+                  setActive(i);
+                }}
+                  // One even 2px accent edge: the thumbnail's border turns accent with a 1px ring right outside it, on the same
+                  // 8pt radius. No scale: it blurred the edges unevenly.
+                  style={{
+                    borderRadius: 8,
+                    // Folding, the face undims at once: the cards fanning back out behind it would show through.
+                    opacity: spread && active !== undefined && !lit && !(phase === "folding" && i === 0) ? 0.62 : 1,
+                    transform: [{ translateY: lit ? -4 : 0 }],
+                    ...(Platform.OS === "web" ? ({ boxShadow: lit ? `0 0 0 1px ${c.accent}, 0 4px 8px rgba(0,0,0,0.28)` : "0 0 0 0 transparent" } as object) : null),
+                  }}
+                >
+                  <Thumbnail
+                    alt={`${img.alt} (${i + 1} of ${images.length})`}
+                    url={img.url}
+                    theme={theme}
+                    onOpen={() => {
+                      if (byClick && !spread) return open();
+                      if (spread) setPinned(true);
+                      onOpen(i);
+                    }}
+                    edge={lit ? c.accent : undefined}
+                    // Hidden cards of a closed stack are out of the tab order (invisible stops, with an invisible focus ring).
+                    focusable={spread || i < 3}
+                  />
+                  {!spread && i === 0 ? <StackBadge text={`+${images.length - 1}`} theme={theme} /> : null}
+                </View>
+              </View>
+            );
+          })}
+        </ScrollView>
+        {/* Open, the hover box reaches 14pt past the scrollbar: a pointer that overshoots it on the way there, or while
+            dragging it, stays inside instead of folding the stack. */}
+        {spread ? <View style={{ position: "absolute", left: 0, right: 0, top: height, height: 14 }} /> : null}
+      </View>
+      {/* Pinned (an image was opened from the row), or open in Click mode, where touch has no pointer leaving to fold it. */}
+      {pinned || (byClick && phase === "open") ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Fold the images back into a stack"
+          onPress={() => {
+            held.current = true;
+            fold();
+          }}
+          style={({ hovered }: { hovered?: boolean; pressed: boolean }) => ({ position: "absolute", top: 0, right: 4, zIndex: images.length + 2, width: 24, height: 24, borderRadius: 999, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: hovered ? c.accent : c.border, backgroundColor: c.surface2 })}
+        >
+          <Icon name="Minimize2" size={13} color={c.foregroundMuted} />
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
+
+/** A reply's images: thumbnails in a row, or with Image stacks on and two or more images, a stack (ImageStack). Each opens the viewer, ← → between them. */
+export function ImagesItem({ item, theme }: PluginTimelineItemProps<z.output<typeof imagesSchema>>) {
+  const images = item.data.images;
+  const stacks = usePrefs().imageStacks === "on";
+  const Viewer = usePaseoLightbox();
+  const [open, setOpen] = useState<number>();
+  const viewer = open === undefined ? null : <ImageViewer Viewer={Viewer} images={images} index={open} onIndex={setOpen} onClose={() => setOpen(undefined)} />;
+  if (stacks && images.length > 1) {
+    return (
+      <>
+        <ImageStack images={images} theme={theme} onOpen={setOpen} />
+        {viewer}
+      </>
+    );
+  }
   return (
     // Rows leave 8pt less below and take 2pt more above (TIGHT), so thumbnails between two rows sit 19pt from each.
     <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 11, paddingBottom: 1 }}>
-      {item.data.images.map((img, i) => (
+      {images.map((img, i) => (
         <Thumbnail key={i} alt={img.alt} url={img.url} theme={theme} onOpen={() => setOpen(i)} />
       ))}
       {viewer}
     </View>
   );
+}
+
+/**
+ * Shows the viewer for a stack of images Paseo drew itself, opened by image-stacks.ts from a click. Mounted once, with
+ * the dashboard's sidebar row (not mounted while the sidebar is hidden; image-stacks.ts falls back to Paseo's viewer).
+ */
+export function StackViewerHost() {
+  const shown = useStackViewer();
+  const Viewer = usePaseoLightbox();
+  useEffect(registerStackViewerHost, []);
+  if (!shown) return null;
+  return <ImageViewer Viewer={Viewer} images={shown.images} index={shown.index} onIndex={setStackViewerIndex} onClose={closeStackViewer} />;
 }
 
 const count = (n: number, one: string) => `${n} ${one}${n === 1 ? "" : "s"}`;

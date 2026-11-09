@@ -137,13 +137,22 @@ function settle() {
   settleTimer = undefined;
   const roots = distinctRoots(textRoots);
   textRoots.clear();
-  for (const w of watchers) w.settled?.(roots);
+  for (const w of watchers) guarded(() => w.settled?.(roots));
 }
 
 /**
  * Watches the DOM for the restyles below; also how the plugin notices host settings that change without
  * telling plugins. Returns cleanup, which runs `cleanup` after the watcher is removed.
  */
+/** Runs one watcher; a throw is logged and the other watchers still run (and the settle pass still gets scheduled). */
+function guarded(run: () => void) {
+  try {
+    run();
+  } catch (error) {
+    console.warn("[chat-polish] DOM watcher failed", error);
+  }
+}
+
 export function watchDom(watcher: DomWatcher, cleanup: () => void) {
   if (Platform.OS !== "web" || typeof document === "undefined") return () => {};
   watchers.add(watcher);
@@ -169,8 +178,8 @@ export function watchDom(watcher: DomWatcher, cleanup: () => void) {
         }
       }
       const added = distinctRoots(roots);
-      if (added.length) for (const w of watchers) w.added?.(added);
-      if (removed.length) for (const w of watchers) w.removed?.(removed);
+      if (added.length) for (const w of watchers) guarded(() => w.added?.(added));
+      if (removed.length) for (const w of watchers) guarded(() => w.removed?.(removed));
       settleTimer ??= setTimeout(settle, 250);
     });
     observer.observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ["class", "style", "hidden", "aria-hidden", "aria-expanded", "data-state"] });

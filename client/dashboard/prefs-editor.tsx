@@ -233,10 +233,27 @@ export function PrefsEditor({ theme, page, prefs, onChange }: { theme: PluginThe
               options={[
                 ["small", "", "Small"],
                 ["large", "", "Large"],
+                ["xlarge", "", "Extra large"],
                 ["native", "", "Inline", true],
               ]}
             />
           </Row>
+          <Row theme={theme} label="Image stacks" hint="Images in a row show as one stack that spreads into a row; a click on an image there opens the viewer. In replies with text, only while Restyle Paseo's items is on.">
+            <Switch theme={theme} label="Image stacks" value={prefs.imageStacks === "on"} onChange={(on) => set("imageStacks")(on ? "on" : "off")} />
+          </Row>
+          {prefs.imageStacks === "on" ? (
+            <Row theme={theme} label="Spread on" hint="Point at a stack, or click it, to spread it. Moving away folds it, until you open an image; then its fold button does.">
+              <Segmented
+                theme={theme}
+                value={prefs.imageStackOpen}
+                onChange={set("imageStackOpen")}
+                options={[
+                  ["hover", "", "Hover"],
+                  ["click", "", "Click"],
+                ]}
+              />
+            </Row>
+          ) : null}
         </Group>
         {canSetAppTheme ? (
           <Group theme={theme} title="Working indicator">
