@@ -4,6 +4,9 @@ export const TAG = "data-chat-polish";
 // Assistant replies, plus the plan body Paseo renders with the same markdown (tagged in tagParts: a positional pseudo-class here
 // would be tested on every ancestor of every markdown node).
 export const MSG = ':is([data-testid="assistant-message"], [data-cp-plan-md])';
+// MSG plus a .md file open in the file pane, which Paseo draws with the same markdown renderer. The rich-text design applies
+// to all three; image sizing stays on MSG, so pictures in a file keep their size.
+export const DOC = ':is([data-testid="assistant-message"], [data-cp-plan-md], [data-testid="markdown-preview-frame"])';
 // Paseo 0.14's collapsed turn summary is the same badge as a tool group.
 export const ROW = ':is([data-testid="tool-call-group"], [data-testid="tool-call-badge"], [data-testid="turn-summary"])';
 // A prompt's bubble. From Paseo 0.14 a prompt another agent sent leads with a "Sent by" button, so the bubble isn't the first child.
@@ -19,12 +22,13 @@ export const HEADING = (n: number) => `${md(`h${n}`)} > [dir] > span`;
 export const MARK = "[data-paseo-markdown-list-marker]";
 export const MARK_UL = `${md("ul")} > ${md("li")} > ${MARK}`;
 export const MARK_OL = `${md("ol")} > ${md("li")} > ${MARK}`;
-export const CODE_BLOCK = `${MSG} ${md("pre")}`;
+export const CODE_BLOCK = `${DOC} ${md("pre")}`;
 // Paseo 0.12 renders markdown as plain HTML (p, h1, li, table, …) inside .enrm-text, styled inline and without the marks above,
 // except code fences, which keep them. The md() rules for other elements only match 0.11's renderer (plugin v0.2.x).
 export const MD = `${MSG} .enrm-text`;
-export const TASK_BOX = `${MD} li > span > input[type="checkbox"]`;
-export const ADMONITION = `${MD} .enrm-admonition`;
+export const DOC_MD = `${DOC} .enrm-text`;
+export const TASK_BOX = `${DOC_MD} li > span > input[type="checkbox"]`;
+export const ADMONITION = `${DOC_MD} .enrm-admonition`;
 // Fences that name a language (```ts); Paseo leaves the attribute off otherwise.
 export const LANG = '[data-paseo-markdown-language]:not([data-paseo-markdown-language=""])';
 export const SLASH = '[data-testid="composer-autocomplete-popover"]';

@@ -1,6 +1,6 @@
 // The DOM as typed here: the plugin compiles without lib.dom (it also runs on React Native), so each file declares the globals it uses with these types.
 import { Platform } from "react-native";
-import { MSG, SETTINGS_PANE } from "./selectors";
+import { DOC, SETTINGS_PANE } from "./selectors";
 
 declare const document: WebDocument;
 declare function getComputedStyle(el: DomElement): ComputedStyle;
@@ -159,7 +159,7 @@ export function watchDom(watcher: DomWatcher, cleanup: () => void) {
         const target = node.nodeType === 1 ? record.target as DomElement : node.parentElement;
         if (!target) continue;
         // Text mutations need only revisit their own markdown subtree, rather than every historical reply.
-        if (!record.attributeName && target.closest(MSG)) textRoots.add(target);
+        if (!record.attributeName && target.closest(DOC)) textRoots.add(target);
         // A hovered row that opens only turns its chevron, a style change; tagParts reads it to mark the row open.
         if (record.attributeName === "style" && target.parentElement?.hasAttribute("data-cp-chev")) roots.push(target);
         // A running row's label text changed (the next step); tagParts animates it in.
