@@ -60,10 +60,10 @@ export async function readImageFile({ path, variant = "original" }: RpcInput<typ
   if ((await stat(file)).size > MAX_BYTES) throw new Error(`Image larger than ${MAX_BYTES / 1024 / 1024} MB: ${file}`);
   const sharp = variant === "thumbnail" ? loadSharp() : null;
   if (sharp) {
-    // Twice the largest tile size, without decoding unbounded pixel counts or sending the original for a thumbnail.
+    // Twice the largest tile size (Extra large, 480 × 300), without decoding unbounded pixel counts or sending the original.
     const preview = await sharp(file, { limitInputPixels: 40_000_000 })
       .rotate()
-      .resize({ width: 640, height: 400, fit: "inside", withoutEnlargement: true })
+      .resize({ width: 960, height: 600, fit: "inside", withoutEnlargement: true })
       .webp({ quality: 75 })
       .toBuffer();
     return { dataUrl: `data:image/webp;base64,${preview.toString("base64")}` };

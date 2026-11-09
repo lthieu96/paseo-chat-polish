@@ -4,17 +4,9 @@ export type ImageNode = { nodeType: number; nodeName: string; nodeValue: string 
 
 // Elements that end a stack even without text: a divider, and blocks a picture can't share a run with.
 const BREAKS = new Set(["HR", "PRE", "TABLE", "INPUT", "IFRAME", "VIDEO", "SVG", "CANVAS", "UL", "OL", "BLOCKQUOTE"]);
-// What ends a stack by section: a heading or a divider.
-const SECTION_BREAKS = new Set(["H1", "H2", "H3", "H4", "H5", "H6", "HR"]);
 
-/** How images group into stacks (Prefs.imageStackBy): a run with nothing between, everything in a section, or the whole reply. */
-export type StackBy = "row" | "section" | "reply";
-
-/**
- * The groups of images in a rendered reply, in reading order. "row": images with no visible text, divider or block between
- * them. "section": everything up to the next heading or divider. "reply": all of them.
- */
-export function imageRuns(root: ImageNode, by: StackBy = "row"): ImageNode[][] {
+/** The runs of images in a rendered reply, in reading order: images with no visible text, divider or block between them. */
+export function imageRuns(root: ImageNode): ImageNode[][] {
   const runs: ImageNode[][] = [];
   let run: ImageNode[] = [];
   const end = () => {
@@ -23,7 +15,7 @@ export function imageRuns(root: ImageNode, by: StackBy = "row"): ImageNode[][] {
   };
   const walk = (node: ImageNode) => {
     if (node.nodeType === 3) {
-      if (by === "row" && node.nodeValue?.trim()) end();
+      if (node.nodeValue?.trim()) end();
       return;
     }
     if (node.nodeType !== 1) return;
@@ -33,14 +25,10 @@ export function imageRuns(root: ImageNode, by: StackBy = "row"): ImageNode[][] {
       return;
     }
     if (name === "BR") return;
-    if (by === "row" && BREAKS.has(name)) {
+    if (BREAKS.has(name)) {
       // A block ends the run on both sides; images inside it can still stack with each other.
       end();
       for (const child of Array.from(node.childNodes)) walk(child);
-      end();
-      return;
-    }
-    if (by === "section" && SECTION_BREAKS.has(name)) {
       end();
       return;
     }

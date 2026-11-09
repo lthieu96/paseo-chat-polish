@@ -17,8 +17,8 @@ test("image RPC sends a small preview and retains the original for the lightbox"
     const preview = await readImageFile({ path: pathToFileURL(file).href, variant: "thumbnail" });
     const decoded = Buffer.from(preview.dataUrl.split(",")[1], "base64");
     const metadata = await sharp(decoded).metadata();
-    assert.equal(metadata.width, 640);
-    assert.equal(metadata.height, 320);
+    assert.equal(metadata.width, 960);
+    assert.equal(metadata.height, 480);
     assert.match(preview.dataUrl, /^data:image\/webp;base64,/);
     const full = await readImageFile({ path: file });
     assert.deepEqual(Buffer.from(full.dataUrl.split(",")[1], "base64"), original);

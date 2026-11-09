@@ -67,12 +67,12 @@ export const prefsSchema = z.object({
   diagrams: z.enum(["pele", "mermaid"]).default("pele"),
   /** New agents get an html_render tool and use it when asked for a visual; its pages show inline (desktop and web). Off until turned on (dashboard or Command Center); agents keep what they were created with. */
   html: z.enum(["on", "off"]).default("off"),
-  /** Image-only replies as thumbnails; "native" leaves them to Paseo. */
-  images: z.enum(["small", "large", "xlarge", "native"]).default("small"),
-  /** Two or more images in a row show as one stack that spreads on a click. Off until turned on. */
-  imageStacks: z.enum(["on", "off"]).default("off"),
-  /** How images group into a stack: a run with nothing between, a section (up to a heading or divider), or the whole reply. */
-  imageStackBy: z.enum(["row", "section", "reply"]).default("row"),
+  /** Image-only replies as thumbnails, and the card size of image stacks; "native" leaves them to Paseo. */
+  images: z.enum(["small", "large", "xlarge", "native"]).catch("small"),
+  /** Two or more images in a row show as one stack that spreads into a row (imageStackOpen). Off until turned on. */
+  imageStacks: z.enum(["on", "off"]).catch("off"),
+  /** What spreads a stack into a row: hovering it, or clicking it (then a click on an image opens it). Leaving folds it either way, until an image is opened from the row; then only its fold button does. */
+  imageStackOpen: z.enum(["hover", "click"]).catch("hover"),
   /** One style variant per markdown element in Paseo's own replies (desktop, with nativeStyle "design"); "a" is the base design. */
   richText: z.object({ quote: variant, table: tableVariant, code: variant, inline: variant, heading: variant, list: variant, callout: variant, rule: variant }).prefault({}),
 });

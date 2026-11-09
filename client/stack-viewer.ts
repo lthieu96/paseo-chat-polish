@@ -1,5 +1,6 @@
 // The image viewer for a stack of images Paseo drew itself (a reply with text), opened from a click in the DOM.
-// image-stacks.ts calls openStackViewer; StackViewerHost (views.tsx), mounted in the always-mounted sidebar row, shows it.
+// image-stacks.ts calls openStackViewer; StackViewerHost (views.tsx), mounted with the dashboard's sidebar row (not while
+// the sidebar is hidden), shows it.
 import { useSyncExternalStore } from "react";
 
 export type StackImage = { alt: string; url: string };

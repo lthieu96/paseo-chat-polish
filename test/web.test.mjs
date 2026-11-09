@@ -14,7 +14,7 @@ test("DOM restyling, accordion transitions, and bottom following stay stable", {
   const temp = mkdtempSync(join(tmpdir(), "chat-polish-web-test-"));
   let server;
   try {
-    const names = ["css-guard", "provider-icons", "web", ...readdirSync(new URL("../client/web/", import.meta.url)).map((file) => `web/${file.replace(/\.ts$/, "")}`)];
+    const names = ["css-guard", "provider-icons", "stack-viewer", "web", ...readdirSync(new URL("../client/web/", import.meta.url)).map((file) => `web/${file.replace(/\.ts$/, "")}`)];
     const sources = Object.fromEntries(names.map((name) => [name, ts.transpileModule(readFileSync(new URL(`../client/${name}.ts`, import.meta.url), "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText]));
     // Paseo's bundle exports its mermaid document as a minified string literal, with JS-only escapes like \xHH.
     const bundle = String.raw`Object.defineProperty(a,"mermaidRuntimeHtml",{get:function(){return o}});const o='<!doctype html>\n<p class="x" title=\'y\'>\x3c!-- __PASEO_MERMAID_RUNTIME_RECEIVE__ \\x41 \u0041 \u{1F600} \v \/ --\x3e</p>';
@@ -54,7 +54,7 @@ __d(function(g,r,i,a,m,e,d){"use strict";Object.defineProperty(e,'__esModule',{v
           const exports = modules[name] = {};
           // "./dom" from "web/parts" is "web/dom"; "../css-guard" is "css-guard".
           const resolve = (id) => id.split('/').reduce((path, part) => part === '..' ? path.slice(0, -1) : part === '.' ? path : [...path, part], name.split('/').slice(0, -1)).join('/');
-          new Function('exports', 'require', sources[name])(exports, (id) => id === 'react-native' ? { Platform: { OS: 'web' } } : load(resolve(id)));
+          new Function('exports', 'require', sources[name])(exports, (id) => id === 'react-native' ? { Platform: { OS: 'web' } } : id === 'react' ? { useSyncExternalStore() {} } : load(resolve(id)));
           return exports;
         }
         (async () => {
@@ -236,6 +236,35 @@ __d(function(g,r,i,a,m,e,d){"use strict";Object.defineProperty(e,'__esModule',{v
           checks.diffWrapRestoresWrapping = firstCode.getBoundingClientRect().height > 18 && diff.scrollWidth <= diff.clientWidth + 1;
           diff.remove();
           unstyle();
+          // Image stacks in replies Paseo draws: built over the originals, given back as a run changes, gone with the pref and on cleanup.
+          batches = 0; capped = false;
+          document.documentElement.setAttribute('data-cp-rt-stacks', 'on');
+          const pic = (id) => '<img id="' + id + '" alt="' + id + '" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=">';
+          const stackReply = document.createElement('div'); stackReply.dataset.testid = 'assistant-message';
+          stackReply.innerHTML = '<div class="enrm-text"><p id="sp1">' + pic('sa') + pic('sb') + '</p><p id="sp2">' + pic('sc') + '</p><p>after</p></div>';
+          document.body.appendChild(stackReply);
+          const unstack = web.stackImages(); await wait(100);
+          const visible = (id) => getComputedStyle(document.getElementById(id)).display !== 'none';
+          const stackOf = () => stackReply.querySelectorAll('[data-cp-stack]');
+          checks.stackBuilt = stackOf().length === 1 && stackOf()[0].nextElementSibling.id === 'sa' && stackOf()[0].querySelectorAll('[data-cp-card]').length === 3
+            && !['sa', 'sb', 'sc'].some(visible) && document.getElementById('sp2').hasAttribute('data-cp-stack-hole');
+          // Text streamed in between: the last image leaves the stack and shows again.
+          document.getElementById('sp2').insertBefore(document.createTextNode('caption '), document.getElementById('sc')); await wait(350);
+          checks.stackGivesBack = stackOf()[0].querySelectorAll('[data-cp-card]').length === 2 && visible('sc') && !visible('sa') && !document.getElementById('sp2').hasAttribute('data-cp-stack-hole');
+          // No viewer host: a press on a card reaches the image underneath once, and Paseo's handlers never see the card's click.
+          let imageClicks = 0, cardClicks = 0;
+          document.getElementById('sa').addEventListener('click', () => imageClicks++);
+          const countCards = (event) => { if (event.target.closest?.('[data-cp-card]')) cardClicks++; };
+          document.addEventListener('click', countCards);
+          stackOf()[0].querySelector('[data-cp-card]').click(); await wait();
+          document.removeEventListener('click', countCards);
+          checks.stackFallbackClick = imageClicks === 1 && cardClicks === 0;
+          // Turning stacks off shows the originals again; cleanup leaves nothing behind.
+          document.documentElement.setAttribute('data-cp-rt-stacks', 'off'); await wait();
+          checks.stackOffShowsOriginals = ['sa', 'sb', 'sc'].every(visible) && getComputedStyle(stackOf()[0]).display === 'none';
+          unstack(); await wait();
+          checks.stackCleanup = !document.querySelector('[data-cp-stack], [data-cp-stacked], [data-cp-stack-hole]') && !capped;
+          stackReply.remove(); document.documentElement.removeAttribute('data-cp-rt-stacks');
           document.title = JSON.stringify({ checks, errors });
         })().catch((error) => { document.title = JSON.stringify({ error: error.stack, checks }); }).finally(() => fetch('/done'));
       </script></body></html>`;
@@ -255,7 +284,7 @@ __d(function(g,r,i,a,m,e,d){"use strict";Object.defineProperty(e,'__esModule',{v
     assert.equal(report.error, undefined, report.error);
     assert.deepEqual(report.errors, []);
     for (const [check, passed] of Object.entries(report.checks)) assert.equal(passed, true, check);
-    assert.equal(Object.keys(report.checks).length, 27);
+    assert.equal(Object.keys(report.checks).length, 32);
   } finally {
     server?.closeAllConnections(); server?.close();
     rmSync(temp, { recursive: true, force: true });

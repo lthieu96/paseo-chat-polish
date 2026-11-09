@@ -238,19 +238,18 @@ export function PrefsEditor({ theme, page, prefs, onChange }: { theme: PluginThe
               ]}
             />
           </Row>
-          <Row theme={theme} label="Image stacks" hint="Images in a row show as one stack; a click spreads it.">
+          <Row theme={theme} label="Image stacks" hint="Images in a row show as one stack that spreads into a row; a click on an image there opens the viewer. In replies with text, only while Restyle Paseo's items is on.">
             <Switch theme={theme} label="Image stacks" value={prefs.imageStacks === "on"} onChange={(on) => set("imageStacks")(on ? "on" : "off")} />
           </Row>
           {prefs.imageStacks === "on" ? (
-            <Row theme={theme} label="Stack by" hint="In a row: text between images starts a new stack. Section: only a heading or divider does. Whole reply: one stack per agent message.">
+            <Row theme={theme} label="Spread on" hint="Point at a stack, or click it, to spread it. Moving away folds it, until you open an image; then its fold button does.">
               <Segmented
                 theme={theme}
-                value={prefs.imageStackBy}
-                onChange={set("imageStackBy")}
+                value={prefs.imageStackOpen}
+                onChange={set("imageStackOpen")}
                 options={[
-                  ["row", "", "In a row"],
-                  ["section", "", "Section"],
-                  ["reply", "", "Whole reply"],
+                  ["hover", "", "Hover"],
+                  ["click", "", "Click"],
                 ]}
               />
             </Row>
