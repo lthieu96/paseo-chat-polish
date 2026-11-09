@@ -52,6 +52,9 @@ export const prefsSchema = z.object({
   ),
   /** Each run of thoughts and tool calls between two replies folded into one row that opens to the steps (desktop and web). */
   merge: z.enum(["on", "off"]).default("on"),
+  /** The plugin's chat rows on phones (the iOS and Android apps, and web windows under 720pt). Off leaves the chat to Paseo there, with no
+   * timeline transformers and no followed timelines, which opens long chats faster; themes, fonts and the dashboard still apply. */
+  phoneChat: z.enum(["on", "off"]).catch("on"),
   /** Every icon, Paseo's own and the plugin's: Lucide (Paseo's set), or Untitled UI or Hugeicons wherever they have a twin (desktop and web).
    * An unknown saved set falls back to Lucide. */
   iconSet: z.enum(["lucide", ...ICON_SETS]).catch("lucide"),

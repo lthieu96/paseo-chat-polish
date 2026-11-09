@@ -3,12 +3,14 @@ import type { PluginClientContext, PluginSidebarItemProps } from "@getpaseo/plug
 import { copyText, useToast, type ToastApi } from "@getpaseo/plugin/client/react-native";
 import { SidebarRow } from "@getpaseo/plugin/client/ui";
 import { useEffect } from "react";
+import { Dimensions, Platform } from "react-native";
 import { Dashboard } from "./client/dashboard";
 import { clearImageCache } from "./client/images";
 import { sidebarIcon } from "./client/mark";
 import { agentEventData, hideableKind, imageData, turnMarkdown, imagesSchema, noticeData, noticeSchema, planSchema, stepsSchema, thoughtSchema, todoData, todoSchema, toolData, toolSchema } from "./client/model";
 import { followAgent, isTodo, isTurnTrigger, onShownAgent, onStaleSteps, onUnplacedStep, placeStep, resetMade, setReplyFolding, setStepSkip, stepKey, type Phase } from "./client/steps";
 import { renderDiagram } from "./shared/diagram";
+import { isPhone, polishesChat, rememberedPhoneChat, rememberPhoneChat } from "./client/phone";
 import { currentPrefs, savePrefs, setPrefs, subscribePrefs, usePrefsSaver } from "./client/prefs";
 import { bindThemeRegistry, currentTheme, registerTheme, subscribeTheme } from "./client/theme-registry";
 import { addIconSet, bindPromptKeys, centerControlText, clampUserMessages, iconTwins, jumpToPrompt, openAgentIds, paintSidebar, subagentPaneShown, tagWindow, redrawDiagrams, setCompactHandler, readHostAppearance, restyleNative, selectionCopyMenu, setNativeColors, stackImages, setRailProviders, setRichText, stylePluginViews, nativeIconSet, watchDom } from "./client/web";
@@ -97,7 +99,11 @@ export default function contribute(client: PluginClientContext) {
   // A provider subagent's pane can't be merged (no timeline to read), so while one shows every row stays as it would with merging off.
   // Read on DOM settle, not per transformed item.
   let subagentPane = false;
-  const mergeOn = () => currentPrefs().merge === "on";
+  // With Chat on phones off, a phone keeps Paseo's rows: no transformers, no followed timelines (read when they'd be added).
+  // Until the saved prefs arrive, a browser goes by the choice it last saw.
+  let earlyPhoneChat = rememberedPhoneChat();
+  const chatOn = () => polishesChat({ phoneChat: earlyPhoneChat ?? currentPrefs().phoneChat }, isPhone(Platform.OS, Dimensions.get("window").width));
+  const mergeOn = () => currentPrefs().merge === "on" && chatOn();
   const merging = () => mergeOn() && !subagentPane;
   const foldReplies = () => setReplyFolding(merging() && readHostAppearance().chatDisplay === "collapseTurns");
   const detailed = () => readHostAppearance().chatDisplay === "full";
@@ -122,6 +128,7 @@ export default function contribute(client: PluginClientContext) {
 
   // Transformers read prefs when they run; re-register when hiding or images change so Paseo re-transforms.
   const addTransformers = () => {
+    if (!chatOn()) return () => {};
     const removers = [
       client.addTimelineTransformer({
         id: `${KIND}-tool`,
@@ -177,7 +184,7 @@ export default function contribute(client: PluginClientContext) {
   };
   foldReplies();
   let removeTransformers = addTransformers();
-  const inputs = () => [currentPrefs().images, currentPrefs().hidden.join(), merging(), readHostAppearance().chatDisplay, readHostAppearance().autoExpandReasoning].join("|");
+  const inputs = () => [chatOn(), currentPrefs().images, currentPrefs().hidden.join(), merging(), readHostAppearance().chatDisplay, readHostAppearance().autoExpandReasoning].join("|");
   let transformedWith = inputs();
   const retransform = (force = false) => {
     if (!force && inputs() === transformedWith) return;
@@ -241,6 +248,8 @@ export default function contribute(client: PluginClientContext) {
   loadIcons();
   let diagrams = currentPrefs().diagrams;
   const unsubscribePrefs = subscribePrefs(() => {
+    earlyPhoneChat = undefined;
+    rememberPhoneChat(currentPrefs().phoneChat);
     markRoot(currentPrefs());
     loadIcons();
     if (diagrams !== currentPrefs().diagrams) {
@@ -252,6 +261,11 @@ export default function contribute(client: PluginClientContext) {
     follow();
   });
   // Paseo doesn't tell plugins when Chat display changes; its settings screen re-renders, so check on DOM changes.
+  // A web window crossing the phone width.
+  const resized = Dimensions.addEventListener("change", () => {
+    retransform();
+    follow();
+  });
   const unwatchHost = watchDom(
     {
       settled: () => {
@@ -307,6 +321,7 @@ export default function contribute(client: PluginClientContext) {
     const hidesReads = p.hidden.includes("read") && p.hidden.includes("search");
     const anyIcon = Object.values(p.rowIcons).includes("show");
     return [
+      ["phone", p.phoneChat === "on" ? "Leave the chat to Paseo on phones" : "Show Chat Polish rows on phones", "Smartphone", { phoneChat: p.phoneChat === "on" ? "off" : "on" }],
       ["merge", p.merge === "on" ? "Show each thought and tool call as its own row" : "Merge thoughts and tool calls between replies", "Layers", { merge: p.merge === "on" ? "off" : "on" }],
       ["icons", anyIcon ? "Hide icons on thought and tool rows" : "Show icons on thought and tool rows", "Shapes", { rowIcons: anyIcon ? { steps: "hide", tool: "hide", thought: "hide" } : { steps: "show", tool: "show", thought: "show" } }],
       ["steps", p.steps !== "full" ? "Show thought and tool rows at full strength" : "Fade thought and tool rows", "Blend", { steps: p.steps !== "full" ? "full" : "faded" }],
@@ -338,6 +353,7 @@ export default function contribute(client: PluginClientContext) {
     unbindPromptKeys();
     unsubscribePrefs();
     unwatchHost();
+    resized.remove();
     clearTimeout(staleTimer);
     followed.forEach((stop) => stop());
     removeTransformers();
