@@ -17,7 +17,6 @@ const PARTS: Array<[string, (el: DomElement) => DomElement | null | undefined, s
   ['[data-testid="sidebar-display-preferences-menu"]', (el) => el.parentElement?.parentElement?.parentElement?.firstElementChild, "ws-label"],
   // A workspace row's title, beside its status indicator.
   ['[data-testid^="workspace-status-indicator-"]', (el) => el.nextElementSibling?.firstElementChild?.firstElementChild, "ws-title"],
-  ['[data-testid="menu-button"]', (el) => el.parentElement?.parentElement, "header"],
   ['[data-testid="workspace-open-in-editor-primary"]', (el) => el.parentElement, "outlined"],
 ];
 
@@ -50,6 +49,12 @@ export function tagWindow(roots: DomElement[]) {
   // The main area: the header's wrapper and the panes under it, on a workspace and in Settings (both draw composer-dock-header).
   // Floating shows the window color around it, so the shell layers that paint behind it are tagged too.
   for (const header of within(roots, '[data-testid="composer-dock-header"]')) {
+    // The header row is the first descendant with a bottom rule; found by style since its contents differ (no menu button in the desktop app).
+    for (let el = header.firstElementChild; el && el.getAttribute(WIN) !== "header"; el = el.firstElementChild)
+      if (getComputedStyle(el).borderBottomWidth !== "0px") {
+        el.setAttribute(WIN, "header");
+        break;
+      }
     const panel = header.parentElement;
     if (!panel || panel.getAttribute(WIN) === "panel") continue;
     panel.setAttribute(WIN, "panel");
