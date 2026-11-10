@@ -172,6 +172,8 @@ export function watchDom(watcher: DomWatcher, cleanup: () => void) {
         if (!record.attributeName && target.closest(DOC)) textRoots.add(target);
         // A hovered row that opens only turns its chevron, a style change; tagParts reads it to mark the row open.
         if (record.attributeName === "style" && target.parentElement?.hasAttribute("data-cp-chev")) roots.push(target);
+        // A changed-file row whose indent changed in place; tagWindow re-reads its depth.
+        if (record.attributeName === "style" && target.hasAttribute("data-cp-depth")) roots.push(target);
         // A running row's label text changed (the next step); tagParts animates it in.
         if (!record.attributeName && target.parentElement?.hasAttribute("data-cp-running-label")) roots.push(target);
         if (record.attributeName && settings) {

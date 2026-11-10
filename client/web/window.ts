@@ -1,6 +1,8 @@
 // The window chrome around the chat (left sidebar, workspace header and tabs, Explorer): its restyle (Prefs.windowStyle) and the tags it keys on.
-import { within, type ComputedStyle, type DomElement } from "./dom";
+import { Platform } from "react-native";
+import { within, type ComputedStyle, type DomElement, type WebDocument } from "./dom";
 
+declare const document: WebDocument;
 declare function getComputedStyle(el: DomElement): ComputedStyle;
 
 const WIN = "data-cp-win";
@@ -27,46 +29,82 @@ const DECK = '[data-testid^="workspace-deck-entry-"]';
  * Tags the row that takes floating's right inset: the one holding the panel and its workspace's Explorer (the gap to the Explorer
  * lives inside the Explorer, see WINDOW_CSS), or the panel's parent where there is no Explorer (Settings, or before it mounts).
  */
-function tagRow(panel: DomElement) {
+function findRow(panel: DomElement) {
   const explorer = panel.closest(DECK)?.querySelector(EXPLORER);
   let row = panel.parentElement;
   if (explorer) while (row && !row.querySelector(EXPLORER)) row = row.parentElement;
   // A plugin screen (the dashboard) wraps its panel in a display: contents div, which can't take padding.
   else while (row && getComputedStyle(row).display === "contents") row = row.parentElement;
+  return row;
+}
+
+function setRow(panel: DomElement, row: DomElement | null) {
   const old = (panel.closest(DECK) ?? panel.parentElement?.parentElement)?.querySelector(`[${WIN}="row"]`);
   if (old && old !== row) old.removeAttribute(WIN);
   if (row && row.getAttribute(WIN) !== "row") row.setAttribute(WIN, "row");
 }
 
+const set = (el: DomElement, name: string, value: string) => el.getAttribute(name) !== value && el.setAttribute(name, value);
+
+// The window style tagWindow last saw; a switch re-tags the whole page, since the tags are skipped while it is off and the shell layers
+// behind the panel are only looked for while floating.
+let lastStyle: string | null = null;
+// Panels whose shell layers were already looked for.
+const walked = new WeakSet<DomElement>();
+
 /**
- * Tags the window chrome inside the added roots (data-cp-win and friends). Styles are read only once per main panel, for the shell
- * layers behind it.
+ * Tags the window chrome inside the added roots (data-cp-win and friends) while the window restyle is on; call with no roots after the
+ * window style changes. Styles are read once per main panel, all before any tag is written, so tagging forces one style pass.
  */
 export function tagWindow(roots: DomElement[]) {
-  for (const [selector, target, part] of PARTS)
-    for (const el of within(roots, selector)) {
-      const t = target(el);
-      if (t && t.getAttribute(WIN) !== part) t.setAttribute(WIN, part);
-    }
+  if (Platform.OS !== "web" || typeof document === "undefined") return;
+  const style = document.documentElement.getAttribute("data-cp-rt-window");
+  if (style !== lastStyle) roots = style ? [document.body as DomElement] : [];
+  lastStyle = style;
+  if (!style) return;
+  // Reads: the header row, the shell layers behind a new panel (floating only), the rows that take the right inset.
+  const writes: Array<() => void> = [];
   // The main area: the header's wrapper and the panes under it, on a workspace and in Settings (both draw composer-dock-header).
-  // Floating shows the window color around it, so the shell layers that paint behind it are tagged too.
   for (const header of within(roots, '[data-testid="composer-dock-header"]')) {
     // The header row is the first descendant with a bottom rule; found by style since its contents differ (no menu button in the desktop app).
     for (let el = header.firstElementChild; el && el.getAttribute(WIN) !== "header"; el = el.firstElementChild)
       if (getComputedStyle(el).borderBottomWidth !== "0px") {
-        el.setAttribute(WIN, "header");
+        const row = el;
+        writes.push(() => set(row, WIN, "header"));
         break;
       }
     const panel = header.parentElement;
-    if (!panel || panel.getAttribute(WIN) === "panel") continue;
-    panel.setAttribute(WIN, "panel");
-    for (let el = panel.parentElement; el && !el.matches('[data-testid="wide-shell"]'); el = el.parentElement)
-      if (getComputedStyle(el).backgroundColor !== CLEAR) el.setAttribute("data-cp-win-bg", "");
-    tagRow(panel);
+    if (!panel) continue;
+    // Floating shows the window color around the panel, so the shell layers that paint behind it are tagged too.
+    if (style === "floating" && !walked.has(panel)) {
+      walked.add(panel);
+      for (let el = panel.parentElement; el && !el.matches('[data-testid="wide-shell"]'); el = el.parentElement)
+        if (getComputedStyle(el).backgroundColor !== CLEAR) {
+          const layer = el;
+          writes.push(() => set(layer, "data-cp-win-bg", ""));
+        }
+    }
+    if (panel.getAttribute(WIN) === "panel") continue;
+    const row = findRow(panel);
+    writes.push(() => (panel.setAttribute(WIN, "panel"), setRow(panel, row)));
   }
   for (const explorer of within(roots, EXPLORER)) {
     const panel = explorer.closest(DECK)?.querySelector(`[${WIN}="panel"]`);
-    if (panel) tagRow(panel);
+    if (panel) {
+      const row = findRow(panel);
+      writes.push(() => setRow(panel, row));
+    }
+  }
+  for (const write of writes) write();
+  for (const [selector, target, part] of PARTS)
+    for (const el of within(roots, selector)) {
+      const t = target(el);
+      if (t) set(t, WIN, part);
+    }
+  // Indent depth of changed-file rows, from Paseo's inline padding (12px a level); dom.ts re-tags a row whose padding changes.
+  for (const el of within(roots, INDENTED)) {
+    const depth = String(Math.round(parseFloat(el.style.getPropertyValue("padding-left")) / 12) || 0);
+    set(el, "data-cp-depth", depth);
   }
   // Paseo draws the Changes branch row empty on a detached HEAD (no branch switcher, PR or git actions); with its rule gone it reads as a gap.
   for (const root of roots) {
@@ -93,21 +131,26 @@ const TAB = 'button[data-testid^="workspace-tab-"]';
 const TAB_LABEL = `${TAB} > div > [dir]`;
 const DIFF_FILE = '[data-testid^="diff-tree-file-"]';
 const DIFF_FOLDER = '[data-testid^="diff-folder-"]';
-const TREE_NAME = ':is([data-testid^="diff-tree-file-"], [data-testid^="diff-folder-"], [data-testid^="file-explorer-row-"])[data-testid$="-name"]';
-const ROW_HEIGHT = ':is([data-testid^="diff-tree-file-"], [data-testid^="diff-folder-"])[data-testid$="-toggle"], [data-testid^="file-explorer-row-"][tabindex]';
+const INDENTED = `${DIFF_FILE}[data-testid$="-toggle"][style*="padding-left"], ${DIFF_FOLDER}[data-testid$="-toggle"] > div[style*="padding-left"]`;
+// Rules repeat a prefix over a list rather than end in a multi-part :is(), so the browser can file each under its attribute or tag.
+const each = (pre: string, list: string[], post = "") => list.map((s) => `${pre} ${s}${post}`).join(", ");
+const LEFT_EDGE = [`[${WIN}="left"]`, 'nav[data-testid="settings-sidebar"]'];
+const TREE_NAMES = ['[data-testid^="diff-tree-file-"][data-testid$="-name"]', '[data-testid^="diff-folder-"][data-testid$="-name"]', '[data-testid^="file-explorer-row-"][data-testid$="-name"]'];
+const ROW_HEIGHTS = ['[data-testid^="diff-tree-file-"][data-testid$="-toggle"]', '[data-testid^="diff-folder-"][data-testid$="-toggle"]', '[data-testid^="file-explorer-row-"][tabindex]'];
 const LEFT_HANDLE = '[data-testid="left-sidebar-resize-handle"]';
 const EXPLORER_HANDLE = '[data-testid="workspace-explorer-sidebar-resize-handle"]';
 const EXPLORER_HIT = `${EXPLORER_HANDLE} > [role="separator"]`;
 const EXPLORER_HIGHLIGHT = '[data-testid="workspace-explorer-sidebar-resize-handle-highlight"]';
 
-// Indent guides: Paseo indents changed-file rows 12px a level with an inline padding; each ancestor level gets a 1px line under its chevron.
+// Indent guides: Paseo indents changed-file rows 12px a level with an inline padding (tagged as data-cp-depth); each ancestor level gets a
+// 1px line under its chevron.
 // Longhands, not the background shorthand, so Paseo's hover fill and the selected fill still show under the lines.
 const guides = (depth: number) => {
   const lines = Array.from({ length: depth - 1 }, (_, k) => k);
   return `background-image: ${lines.map(() => "linear-gradient(var(--cp-w-hair), var(--cp-w-hair))").join(", ")}; background-position: ${lines.map((k) => `${12 * (k + 1) + 7}px 0`).join(", ")}; background-size: 1px 100%; background-repeat: no-repeat;`;
 };
 const INDENT = Array.from({ length: 11 }, (_, i) => i + 2)
-  .map((depth) => `${W} :is(${DIFF_FILE}[data-testid$="-toggle"], ${DIFF_FOLDER}[data-testid$="-toggle"] > div)[style*="padding-left: ${12 * depth}px;"] { ${guides(depth)} }`)
+  .map((depth) => `${W} [data-cp-depth="${depth}"] { ${guides(depth)} }`)
   .join("\n");
 
 export const WINDOW_CSS = `
@@ -127,11 +170,11 @@ ${W}${LIGHT} {
 
 /* Left sidebar: lighter rules and smaller type (Paseo's colors and weights stay); the edge to the main area is the background step
    (flat) or the panel's own border (floating). */
-${W} :is([${WIN}="left"], nav[data-testid="settings-sidebar"]) { --colors-border: var(--cp-w-hair); border-right-color: transparent !important; }
-${FLAT}${LIGHT} :is([${WIN}="left"], nav[data-testid="settings-sidebar"]) { border-right-color: var(--colors-border) !important; }
+${each(W, LEFT_EDGE)} { --colors-border: var(--cp-w-hair); border-right-color: transparent !important; }
+${each(FLAT + LIGHT, LEFT_EDGE)} { border-right-color: var(--colors-border) !important; }
 ${W} [${WIN}="nav"] [role="button"] > [dir] { font-size: 13px !important; }
 /* The rules under the nav and above the footer stop 10px short of both sides, so they don't run into the edge. */
-${W} :is([${WIN}="nav"], [data-testid="sidebar-footer"]) { border-color: transparent !important; background-image: linear-gradient(var(--cp-w-hair), var(--cp-w-hair)); background-size: calc(100% - 20px) 1px; background-repeat: no-repeat; }
+${each(W, [`[${WIN}="nav"]`, '[data-testid="sidebar-footer"]'])} { border-color: transparent !important; background-image: linear-gradient(var(--cp-w-hair), var(--cp-w-hair)); background-size: calc(100% - 20px) 1px; background-repeat: no-repeat; }
 ${W} [${WIN}="nav"] { background-position: center bottom; }
 ${W} [data-testid="sidebar-footer"] { background-position: center top; }
 ${W} [${WIN}="ws-label"] { font-size: 11.5px !important; letter-spacing: 0.02em; }
@@ -151,15 +194,15 @@ ${W} ${TAB}[aria-selected="true"] + div stop { stop-color: var(--colors-surface1
 /* Explorer: the sidebar's color and rules; no rules between the branch row, "All changes" and the tree (the one under the tabs and the
    one above Commits stay); a denser tree with indent guides, dimmer folders and status letters. */
 ${W} [data-testid="workspace-explorer-sidebar"] { --colors-border: var(--cp-w-hair); }
-${W} :is([data-testid="changes-repository-header"], [data-testid="changes-header"], [data-testid="files-pane-header"]) { border-bottom-color: transparent !important; }
+${each(W, ['[data-testid="changes-repository-header"]', '[data-testid="changes-header"]', '[data-testid="files-pane-header"]'])} { border-bottom-color: transparent !important; }
 ${W} [data-testid="changes-repository-header"][data-cp-empty] { display: none !important; }
 ${W} [data-testid="workspace-explorer-sidebar"] ${TAB_LABEL} { font-size: 12.5px !important; }
-${W} ${TREE_NAME} { font-size: 12.5px !important; }
+${each(W, TREE_NAMES)} { font-size: 12.5px !important; }
 ${W} ${DIFF_FOLDER}[data-testid$="-name"] { color: var(--colors-foreground-muted) !important; }
 /* Paseo also fades folder names to 76%, which takes light themes' muted text under 4.5:1. */
 ${W}${LIGHT} ${DIFF_FOLDER}[data-testid$="-name"] { opacity: 1 !important; }
-${W} ${DIFF_FOLDER}[data-testid$="-stat"] > div { color: var(--cp-w-faint) !important; }
-${W} :is(${ROW_HEIGHT}) { height: 26px !important; min-height: 0 !important; padding-top: 0 !important; padding-bottom: 0 !important; }
+${W} ${DIFF_FOLDER}[data-testid$="-stat"] > [dir] { color: var(--cp-w-faint) !important; }
+${each(W, ROW_HEIGHTS)} { height: 26px !important; min-height: 0 !important; padding-top: 0 !important; padding-bottom: 0 !important; }
 ${W} ${DIFF_FILE}[data-testid$="-toggle"][aria-selected="true"] { background-color: var(--colors-surface-sidebar-selected) !important; border-radius: 6px; }
 ${W} ${DIFF_FILE}[data-testid$="-toggle"][aria-selected="true"] [data-testid$="-name"] { color: var(--cp-w-strong) !important; }
 ${INDENT}
