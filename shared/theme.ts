@@ -53,6 +53,24 @@ export const PRESETS: Preset[] = [
     syntax: "github-light",
   },
   {
+    // Ivory a shade darker: cream paper and ink from HEX's AgentMail poster; the accent is darkened from #ff6600 to keep 3:1 on the background.
+    id: "parchment",
+    name: "Parchment",
+    appearance: "light",
+    colors: {
+      background: "#dedbd1",
+      foreground: "#141113",
+      raised: "#e8e6df",
+      control: "#d2cfc4",
+      border: "#c4c0b4",
+      accent: "#c84b00",
+      mutedForeground: "#524e47",
+      ring: "#77736a",
+    },
+    sidebar: "#d5d2c7",
+    syntax: "github-light",
+  },
+  {
     id: "dusk",
     name: "Dusk",
     appearance: "dark",
