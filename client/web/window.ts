@@ -17,7 +17,6 @@ const PARTS: Array<[string, (el: DomElement) => DomElement | null | undefined, s
   ['[data-testid="sidebar-display-preferences-menu"]', (el) => el.parentElement?.parentElement?.parentElement?.firstElementChild, "ws-label"],
   // A workspace row's title, beside its status indicator.
   ['[data-testid^="workspace-status-indicator-"]', (el) => el.nextElementSibling?.firstElementChild?.firstElementChild, "ws-title"],
-  ['[data-testid="workspace-open-in-editor-primary"]', (el) => el.parentElement, "outlined"],
 ];
 
 const EXPLORER = '[data-testid="workspace-explorer-sidebar"]';
@@ -125,11 +124,10 @@ ${W} [${WIN}="ws-label"] { font-size: 11.5px !important; letter-spacing: 0.02em;
 ${W} [${WIN}="ws-title"] { font-size: 13px !important; }
 ${W} [data-testid="sidebar-workspace-timestamp"] { font-size: 11.5px !important; }
 
-/* Header and tabs: medium title, faint project name, GitHub button without its outline; the active tab raised, the others faint. */
+/* Header and tabs: medium title, faint project name; the active tab raised, the others faint. */
 ${W} [${WIN}="header"], ${W} [data-testid="workspace-tabs-row"] { border-bottom-color: var(--cp-w-hair) !important; }
 ${W} [data-testid="workspace-header-title"] { font-weight: 500 !important; color: var(--cp-w-strong) !important; }
 ${W} [data-testid="workspace-header-subtitle"] { color: var(--cp-w-faint) !important; }
-${W} [${WIN}="outlined"] { border-color: transparent !important; }
 ${W} ${TAB}[aria-selected="true"] { background-color: var(--colors-surface1) !important; }
 ${W} ${TAB_LABEL} { font-size: 13px !important; color: var(--cp-w-faint) !important; }
 ${W} ${TAB}[aria-selected="true"] > div > [dir] { color: var(--cp-w-strong) !important; }
