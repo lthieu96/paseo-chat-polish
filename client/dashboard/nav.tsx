@@ -9,7 +9,7 @@ import { Icon } from "../icons";
 import { APP_ICON } from "../mark";
 import { alpha, PMONO, useReducedMotion, useStyles } from "../views";
 import { canSetAppTheme } from "../web";
-import { SQUIRCLE_CARD, Switch } from "./controls";
+import { Segmented, SQUIRCLE_CARD, Switch } from "./controls";
 
 export type Page = "theme" | "messages" | "steps" | "rich" | "html";
 
@@ -35,6 +35,22 @@ export function RestyleCard({ theme, prefs, onChange }: { theme: PluginTheme; pr
         <Switch theme={theme} label="Restyle Paseo's items" value={prefs.nativeStyle === "design"} onChange={(on) => onChange({ ...prefs, nativeStyle: on ? "design" : "paseo" })} />
       </View>
       <Text style={[s.small, { fontSize: 12 }]}>Bubbles, tool groups and markdown. Rich text and loaders need it.</Text>
+      {/* The window chrome is part of the restyle, so its choice shows only while the restyle is on. */}
+      {prefs.nativeStyle === "design" ? (
+        <View style={{ gap: 6, marginTop: 4 }}>
+          <Text style={[s.small, { fontSize: 12 }]}>Window</Text>
+          <Segmented
+            theme={theme}
+            value={prefs.windowStyle}
+            onChange={(windowStyle) => onChange({ ...prefs, windowStyle })}
+            options={[
+              ["paseo", "", "Paseo", true],
+              ["flat", "", "Flat"],
+              ["floating", "", "Floating"],
+            ]}
+          />
+        </View>
+      ) : null}
     </View>
   );
 }

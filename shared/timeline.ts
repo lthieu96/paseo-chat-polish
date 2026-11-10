@@ -61,6 +61,9 @@ export const prefsSchema = z.object({
   loaderSize: z.enum(["s", "m", "l"]).default("s"),
   /** Paseo's own items (tool call groups, bubbles, markdown) restyled to the design on desktop, or left as Paseo draws them. */
   nativeStyle: z.enum(["design", "paseo"]).default("design"),
+  /** The window chrome around the chat (sidebars, header, tabs, Explorer), restyled with nativeStyle "design" (desktop and web): the main
+   * area flush with the sidebars, set apart only by their color ("flat"), or inset as a bordered panel ("floating"); "paseo" leaves it alone. */
+  windowStyle: z.enum(["paseo", "flat", "floating"]).catch("flat"),
   /** A recap row the daemon adds after each turn that changed files or had a failing command. */
   recap: z.enum(["on", "off"]).default("on"),
   /** Mermaid diagrams in Paseo's own replies drawn by Pele (pele.run) in the theme's colors, or by Paseo's mermaid (desktop and web, with nativeStyle "design"). */

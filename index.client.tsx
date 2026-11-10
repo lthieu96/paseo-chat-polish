@@ -221,7 +221,7 @@ export default function contribute(client: PluginClientContext) {
     });
   });
   // Prefs Paseo's own rows follow too reach the restyle as <html> attributes.
-  const markRoot = (p: Prefs) => setRichText({ ...p.richText, images: p.images, stacks: p.nativeStyle === "design" ? p.imageStacks : "off", stackopen: p.imageStackOpen, steps: p.steps, density: p.density === "normal" ? "a" : p.density, "icon-steps": p.rowIcons.steps === "hide" ? "hide" : "a", "icon-tool": p.rowIcons.tool === "hide" ? "hide" : "a", loader: p.loader === "dots" ? "a" : p.loader, "loader-size": p.loaderSize === "s" ? "a" : p.loaderSize, icons: p.iconSet === "lucide" ? "a" : p.iconSet });
+  const markRoot = (p: Prefs) => setRichText({ ...p.richText, images: p.images, stacks: p.nativeStyle === "design" ? p.imageStacks : "off", stackopen: p.imageStackOpen, steps: p.steps, density: p.density === "normal" ? "a" : p.density, window: p.windowStyle === "paseo" ? "a" : p.windowStyle, "icon-steps": p.rowIcons.steps === "hide" ? "hide" : "a", "icon-tool": p.rowIcons.tool === "hide" ? "hide" : "a", loader: p.loader === "dots" ? "a" : p.loader, "loader-size": p.loaderSize === "s" ? "a" : p.loaderSize, icons: p.iconSet === "lucide" ? "a" : p.iconSet });
   markRoot(currentPrefs());
   // The chosen icon set comes from the daemon once, the first time it's picked.
   const requestedIcons = new Set<string>();

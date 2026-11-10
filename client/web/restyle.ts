@@ -11,6 +11,7 @@ import { decoratePopovers, markLitRows, MODEL_SELECTOR_CSS, noteClick, noteThink
 import { runningRemoved, tagParts } from "./parts";
 import { NATIVE_CSS } from "./restyle-css";
 import { markBlocks, RICH_TEXT_CSS } from "./rich-text";
+import { tagWindow, WINDOW_CSS } from "./window";
 
 declare const document: WebDocument;
 
@@ -94,7 +95,7 @@ export function restyleNative(enabled: () => boolean, pele?: PeleDiagrams) {
       if (!enabled()) return off();
       if (!style) {
         style = document.createElement("style");
-        style.textContent = NATIVE_CSS + RICH_TEXT_CSS + MODEL_SELECTOR_CSS + ICON_VARS.join("\n");
+        style.textContent = NATIVE_CSS + RICH_TEXT_CSS + MODEL_SELECTOR_CSS + WINDOW_CSS + ICON_VARS.join("\n");
         document.head.appendChild(style);
         const sheet = (style as unknown as { sheet?: { cssRules: ArrayLike<CssRuleLike> } }).sheet;
         if (sheet) guardRules(sheet.cssRules);
@@ -103,6 +104,7 @@ export function restyleNative(enabled: () => boolean, pele?: PeleDiagrams) {
         redrawDiagrams();
       }
       tagParts(roots);
+      tagWindow(roots);
       markBlocks(roots);
       decoratePopovers(roots);
       markLitRows(roots);
