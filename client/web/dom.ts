@@ -98,6 +98,7 @@ export interface ComputedStyle {
   zIndex: string;
   boxShadow: string;
   overflowAnchor: string;
+  display: string;
 }
 export type ResizeObserverClass = new (cb: () => void) => { observe(target: DomElement): void; disconnect(): void };
 export type MutationObserverClass = new (cb: (records: Array<{ addedNodes: ArrayLike<unknown>; removedNodes: ArrayLike<unknown>; target: unknown; attributeName?: string | null; type: string }>) => void) => {

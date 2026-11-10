@@ -113,6 +113,12 @@ export const toContribution = (t: ThemeDraft): PluginThemeContribution => ({ id:
 
 export const isHex = (v: string) => hex.safeParse(v).success;
 
+/**
+ * Text color for an accent fill: Paseo uses the page color (`onPage`), which on a light theme's bright accent can sit near 3:1, so the
+ * theme's text color is taken when it reads better. Dark themes keep the page color.
+ */
+export const onAccent = (accent: string, onPage: string, text: string) => (contrast(text, accent) > contrast(onPage, accent) ? text : onPage);
+
 /** WCAG contrast ratio between two #rrggbb colors. */
 export function contrast(a: string, b: string) {
   const lum = (h: string) => {

@@ -20,6 +20,7 @@ const PARTS: Array<[string, (el: DomElement) => DomElement | null | undefined, s
 ];
 
 const EXPLORER = '[data-testid="workspace-explorer-sidebar"]';
+const REPO = '[data-testid="changes-repository-header"]';
 const DECK = '[data-testid^="workspace-deck-entry-"]';
 
 /**
@@ -30,6 +31,8 @@ function tagRow(panel: DomElement) {
   const explorer = panel.closest(DECK)?.querySelector(EXPLORER);
   let row = panel.parentElement;
   if (explorer) while (row && !row.querySelector(EXPLORER)) row = row.parentElement;
+  // A plugin screen (the dashboard) wraps its panel in a display: contents div, which can't take padding.
+  else while (row && getComputedStyle(row).display === "contents") row = row.parentElement;
   const old = (panel.closest(DECK) ?? panel.parentElement?.parentElement)?.querySelector(`[${WIN}="row"]`);
   if (old && old !== row) old.removeAttribute(WIN);
   if (row && row.getAttribute(WIN) !== "row") row.setAttribute(WIN, "row");
@@ -65,6 +68,12 @@ export function tagWindow(roots: DomElement[]) {
     const panel = explorer.closest(DECK)?.querySelector(`[${WIN}="panel"]`);
     if (panel) tagRow(panel);
   }
+  // Paseo draws the Changes branch row empty on a detached HEAD (no branch switcher, PR or git actions); with its rule gone it reads as a gap.
+  for (const root of roots) {
+    const repo = root.closest(REPO) ?? root.querySelector(REPO);
+    const empty = !!repo && !repo.querySelector(":scope > * > *");
+    if (repo && empty !== repo.hasAttribute("data-cp-empty")) empty ? repo.setAttribute("data-cp-empty", "") : repo.removeAttribute("data-cp-empty");
+  }
   // Changed files' status icon (Paseo labels it New, Modified or Deleted) as a letter. Other locales keep Paseo's icon.
   for (const svg of within(roots, '[data-testid^="diff-tree-file-"] svg[aria-label]')) {
     const letter = FILE_STATUS[svg.getAttribute("aria-label")!];
@@ -92,9 +101,13 @@ const EXPLORER_HIT = `${EXPLORER_HANDLE} > [role="separator"]`;
 const EXPLORER_HIGHLIGHT = '[data-testid="workspace-explorer-sidebar-resize-handle-highlight"]';
 
 // Indent guides: Paseo indents changed-file rows 12px a level with an inline padding; each ancestor level gets a 1px line under its chevron.
-const guides = (depth: number) => Array.from({ length: depth - 1 }, (_, k) => `linear-gradient(var(--cp-w-hair), var(--cp-w-hair)) ${12 * (k + 1) + 7}px 0 / 1px 100% no-repeat`).join(", ");
+// Longhands, not the background shorthand, so Paseo's hover fill and the selected fill still show under the lines.
+const guides = (depth: number) => {
+  const lines = Array.from({ length: depth - 1 }, (_, k) => k);
+  return `background-image: ${lines.map(() => "linear-gradient(var(--cp-w-hair), var(--cp-w-hair))").join(", ")}; background-position: ${lines.map((k) => `${12 * (k + 1) + 7}px 0`).join(", ")}; background-size: 1px 100%; background-repeat: no-repeat;`;
+};
 const INDENT = Array.from({ length: 11 }, (_, i) => i + 2)
-  .map((depth) => `${W} :is(${DIFF_FILE}[data-testid$="-toggle"], ${DIFF_FOLDER}[data-testid$="-toggle"] > div)[style*="padding-left: ${12 * depth}px;"] { background: ${guides(depth)}; }`)
+  .map((depth) => `${W} :is(${DIFF_FILE}[data-testid$="-toggle"], ${DIFF_FOLDER}[data-testid$="-toggle"] > div)[style*="padding-left: ${12 * depth}px;"] { ${guides(depth)} }`)
   .join("\n");
 
 export const WINDOW_CSS = `
@@ -106,7 +119,8 @@ ${W} {
 }
 ${W}${LIGHT} {
   --cp-w-strong: var(--colors-foreground);
-  --cp-w-faint: color-mix(in srgb, var(--colors-foreground-muted) 70%, var(--colors-surface-sidebar));
+  /* Faint text at 3:1 reads washed out on a light page (and drops below that on a hovered tab), so light themes use the muted color. */
+  --cp-w-faint: var(--colors-foreground-muted);
   --cp-w-hair: var(--colors-border);
   --cp-w-edge: color-mix(in srgb, var(--colors-border) 88%, var(--colors-foreground));
 }
@@ -131,14 +145,19 @@ ${W} [data-testid="workspace-header-subtitle"] { color: var(--cp-w-faint) !impor
 ${W} ${TAB}[aria-selected="true"] { background-color: var(--colors-surface1) !important; }
 ${W} ${TAB_LABEL} { font-size: 13px !important; color: var(--cp-w-faint) !important; }
 ${W} ${TAB}[aria-selected="true"] > div > [dir] { color: var(--cp-w-strong) !important; }
+/* The fade under the active tab's close button is an SVG Paseo colors with its own active fill (surface2); match the raised tab. */
+${W} ${TAB}[aria-selected="true"] + div stop { stop-color: var(--colors-surface1); }
 
 /* Explorer: the sidebar's color and rules; no rules between the branch row, "All changes" and the tree (the one under the tabs and the
    one above Commits stay); a denser tree with indent guides, dimmer folders and status letters. */
 ${W} [data-testid="workspace-explorer-sidebar"] { --colors-border: var(--cp-w-hair); }
 ${W} :is([data-testid="changes-repository-header"], [data-testid="changes-header"], [data-testid="files-pane-header"]) { border-bottom-color: transparent !important; }
+${W} [data-testid="changes-repository-header"][data-cp-empty] { display: none !important; }
 ${W} [data-testid="workspace-explorer-sidebar"] ${TAB_LABEL} { font-size: 12.5px !important; }
 ${W} ${TREE_NAME} { font-size: 12.5px !important; }
 ${W} ${DIFF_FOLDER}[data-testid$="-name"] { color: var(--colors-foreground-muted) !important; }
+/* Paseo also fades folder names to 76%, which takes light themes' muted text under 4.5:1. */
+${W}${LIGHT} ${DIFF_FOLDER}[data-testid$="-name"] { opacity: 1 !important; }
 ${W} ${DIFF_FOLDER}[data-testid$="-stat"] > div { color: var(--cp-w-faint) !important; }
 ${W} :is(${ROW_HEIGHT}) { height: 26px !important; min-height: 0 !important; padding-top: 0 !important; padding-bottom: 0 !important; }
 ${W} ${DIFF_FILE}[data-testid$="-toggle"][aria-selected="true"] { background-color: var(--colors-surface-sidebar-selected) !important; border-radius: 6px; }

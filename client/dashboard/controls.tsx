@@ -4,6 +4,7 @@ import type { PluginScreenProps } from "@getpaseo/plugin/client";
 import { ScrollView } from "@getpaseo/plugin/client/react-native";
 import { useState, type ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from "react-native";
+import { onAccent } from "../../shared/theme";
 import { Icon } from "../icons";
 import { alpha, sunken, useReducedMotion, useStyles } from "../views";
 
@@ -13,7 +14,7 @@ export function Button({ theme, label, icon, primary, disabled, onPress }: { the
   const s = useStyles(theme);
   const reducedMotion = useReducedMotion();
   const c = theme.colors;
-  const fg = primary ? c.accentForeground : c.foreground;
+  const fg = primary ? onAccent(c.accent, c.accentForeground, c.foreground) : c.foreground;
   return (
     <Pressable
       accessibilityRole="button"

@@ -52,7 +52,7 @@ export default function contribute(client: PluginClientContext) {
   const unpaintSidebar = paintSidebar(() => {
     const theme = currentTheme();
     const active = readHostAppearance().pluginThemeId === THEME_CATALOG_ID;
-    return active && theme?.sidebar ? { sidebar: theme.sidebar } : undefined;
+    return active && theme ? { sidebar: theme.sidebar } : undefined;
   }, subscribeTheme);
 
   const unrestyle = restyleNative(() => currentPrefs().nativeStyle === "design", { render: (source) => client.rpc(renderDiagram, { source }), on: () => currentPrefs().diagrams === "pele" });
