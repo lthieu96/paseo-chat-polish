@@ -235,6 +235,9 @@ ${PERMISSION} > div:last-child, ${QUESTION} > div:last-child, ${PLAN} > div:last
 [data-cp-part="primary"] * { color: var(--cp-accent-fg) !important; font-weight: 600 !important; }
 [data-cp-part="primary"] svg { stroke: var(--cp-accent-fg) !important; }
 [data-cp-part="primary"][aria-disabled="true"] { opacity: 0.45 !important; }
+/* The fills above hide Paseo's hover, so the buttons get their own: the plain one takes the control color, the accent one a step toward the text. */
+[data-cp-part="secondary"]:not([aria-disabled="true"]):hover { background-color: var(--cp-control) !important; }
+[data-cp-part="primary"]:not([aria-disabled="true"]):hover { background-color: color-mix(in srgb, var(--cp-accent), var(--cp-fg) 12%) !important; border-color: transparent !important; }
 ${QUESTION} [role="radio"] { padding: 7px 10px !important; }
 ${QUESTION} [role="radio"][aria-checked="true"] { background-color: var(--cp-control) !important; }
 ${QUESTION} [role="radio"] > div > div:first-child { width: 14px !important; height: 14px !important; margin-top: 4px !important; }
@@ -299,11 +302,16 @@ ${USAGE} > div:nth-child(4) { margin-top: -6px !important; }
 `;
 
 export const NATIVE_CSS = `
+/* setNativeColors sets these inline from a sidebar item, which Settings doesn't mount: after a reload into Settings, menus drew with
+   unset colors (no fill at all). Paseo's own colors stand in until it runs. */
+:root { --cp-fg: var(--colors-foreground); --cp-muted: var(--colors-foreground-muted); --cp-accent: var(--colors-accent); --cp-accent-fg: var(--colors-accent-foreground); --cp-raised: var(--colors-surface1); --cp-control: var(--colors-surface2); --cp-sunken: var(--colors-surface0); --cp-rule: var(--colors-border); }
 /* Settings pages (tagged by tagSettings): surfaces 12, controls 8, and one text field, 32px in a sunken well that lights up on focus.
    Settings has its own sidebar, so a reload there can come before the --cp-* colors are set: Paseo's own colors stand in. */
 [data-cp-set="card"] { border-radius: 12px !important; }
 [data-cp-set="control"] { height: 32px !important; min-height: 32px !important; padding-top: 0 !important; padding-bottom: 0 !important; border-radius: 8px !important; }
 :is([data-cp-set="field"], [data-cp-set="area"]) { border: 1px solid var(--colors-border) !important; border-radius: 8px !important; background-color: var(--cp-sunken, color-mix(in srgb, var(--colors-surface0), #000 15%)) !important; transition: border-color 120ms ease-out, box-shadow 120ms ease-out; }
+/* The stand-in above is a mid grey on a light page. */
+:root:is(.light, .pluginLight) :is([data-cp-set="field"], [data-cp-set="area"]) { background-color: var(--cp-sunken, var(--colors-surface2)) !important; }
 [data-cp-set="field"] { height: 32px !important; min-height: 32px !important; padding: 0 10px !important; }
 :is([data-cp-set="field"], [data-cp-set="area"]):hover { border-color: color-mix(in srgb, var(--cp-muted, var(--colors-foreground-muted)) 55%, transparent) !important; }
 :is([data-cp-set="field"], [data-cp-set="area"]):focus-within { border-color: var(--cp-accent, var(--colors-accent)) !important; box-shadow: 0 0 0 3px color-mix(in srgb, var(--cp-accent, var(--colors-accent)) 25%, transparent) !important; }
@@ -518,6 +526,8 @@ ${THUMBS} > button div { width: 100% !important; height: 100% !important; backgr
 ${DOC_MD} > * { margin-bottom: calc(var(--cp-d-item) + 2 * var(--cp-d-pad)) !important; }
 ${DOC_MD} > :last-child, ${DOC_MD} :is(blockquote, .enrm-admonition, li) > p:last-child { margin-bottom: 0 !important; }
 ${DOC_MD} :is(p, li, blockquote) { line-height: 1.6 !important; }
+/* Paseo colors links with the accent, which a light theme tunes to 3:1 for fills; as text it needs 4.5:1, so it leans toward the text color. */
+:root:is(.light, .pluginLight) ${DOC_MD} a { color: color-mix(in srgb, var(--cp-accent) 70%, var(--cp-fg)) !important; }
 ${DOC_MD} code { border-radius: 4px !important; padding: 2px 5px !important; }
 ${DOC_MD} strong { font-weight: 600 !important; }
 ${DOC_MD} h1 { font-size: 24px !important; line-height: 1.3 !important; }

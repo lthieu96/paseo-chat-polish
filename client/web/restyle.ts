@@ -1,7 +1,8 @@
 // Turns the restyle of Paseo's own items on and off, and publishes the app theme's colors it draws with.
 import { Platform } from "react-native";
 import { guardPositional, POSITIONAL, splitTop } from "../css-guard";
-import { darker, hexAlpha } from "./color";
+import { onAccent } from "../../shared/theme";
+import { darker, hexAlpha, isDark, mix } from "./color";
 import { watchDom, type DomElement, type WebDocument } from "./dom";
 import { readHostAppearance } from "./host";
 import { dropGhost, ghostOutlinePreview, hoverCardsRemoved, notePointer, swapOutlinePreview, watchHoverCards } from "./hover-cards";
@@ -11,6 +12,7 @@ import { decoratePopovers, markLitRows, MODEL_SELECTOR_CSS, noteClick, noteThink
 import { runningRemoved, tagParts } from "./parts";
 import { NATIVE_CSS } from "./restyle-css";
 import { markBlocks, RICH_TEXT_CSS } from "./rich-text";
+import { tagWindow, WINDOW_CSS } from "./window";
 
 declare const document: WebDocument;
 
@@ -26,8 +28,10 @@ export function setNativeColors(c: { surface0: string; surface1: string; surface
     "--cp-accent": c.accent,
     "--cp-raised": c.surface1,
     "--cp-control": c.surface2,
-    "--cp-accent-fg": c.accentForeground,
-    "--cp-sunken": darker(c.surface0),
+    "--cp-accent-fg": onAccent(c.accent, c.accentForeground, c.foreground),
+    // Code wells sit below the page: 14% darker on dark themes; on a light page that is a mid grey, so a light theme's well is a
+    // small step toward the text color.
+    "--cp-sunken": isDark(c.surface0) ? darker(c.surface0) : mix(c.surface0, c.foreground, 0.04),
     "--cp-rule": hexAlpha(c.border, 0.6),
     "--cp-mono": a.monoFont ? `${a.monoFont}, ${MONO_FALLBACK}` : MONO_FALLBACK,
     "--cp-code": `${a.codeSize}px`,
@@ -94,7 +98,7 @@ export function restyleNative(enabled: () => boolean, pele?: PeleDiagrams) {
       if (!enabled()) return off();
       if (!style) {
         style = document.createElement("style");
-        style.textContent = NATIVE_CSS + RICH_TEXT_CSS + MODEL_SELECTOR_CSS + ICON_VARS.join("\n");
+        style.textContent = NATIVE_CSS + RICH_TEXT_CSS + MODEL_SELECTOR_CSS + WINDOW_CSS + ICON_VARS.join("\n");
         document.head.appendChild(style);
         const sheet = (style as unknown as { sheet?: { cssRules: ArrayLike<CssRuleLike> } }).sheet;
         if (sheet) guardRules(sheet.cssRules);
@@ -103,6 +107,7 @@ export function restyleNative(enabled: () => boolean, pele?: PeleDiagrams) {
         redrawDiagrams();
       }
       tagParts(roots);
+      tagWindow(roots);
       markBlocks(roots);
       decoratePopovers(roots);
       markLitRows(roots);

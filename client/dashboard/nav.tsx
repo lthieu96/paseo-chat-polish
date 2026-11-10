@@ -3,13 +3,14 @@ import type { PluginTheme } from "@getpaseo/plugin";
 import { useRpc } from "@getpaseo/plugin/client";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Image, Linking, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { onAccent } from "../../shared/theme";
 import type { Prefs } from "../../shared/timeline";
 import { applyUpdate, checkUpdate, type UpdateStatus } from "../../shared/update";
 import { Icon } from "../icons";
 import { APP_ICON } from "../mark";
 import { alpha, PMONO, useReducedMotion, useStyles } from "../views";
 import { canSetAppTheme } from "../web";
-import { SQUIRCLE_CARD, Switch } from "./controls";
+import { Segmented, SQUIRCLE_CARD, Switch } from "./controls";
 
 export type Page = "theme" | "messages" | "steps" | "rich" | "html";
 
@@ -35,6 +36,22 @@ export function RestyleCard({ theme, prefs, onChange }: { theme: PluginTheme; pr
         <Switch theme={theme} label="Restyle Paseo's items" value={prefs.nativeStyle === "design"} onChange={(on) => onChange({ ...prefs, nativeStyle: on ? "design" : "paseo" })} />
       </View>
       <Text style={[s.small, { fontSize: 12 }]}>Bubbles, tool groups and markdown. Rich text and loaders need it.</Text>
+      {/* The window chrome is part of the restyle, so its choice shows only while the restyle is on. */}
+      {prefs.nativeStyle === "design" ? (
+        <View style={{ gap: 6, marginTop: 4 }}>
+          <Text style={[s.small, { fontSize: 12 }]}>Window</Text>
+          <Segmented
+            theme={theme}
+            value={prefs.windowStyle}
+            onChange={(windowStyle) => onChange({ ...prefs, windowStyle })}
+            options={[
+              ["paseo", "", "Paseo", true],
+              ["flat", "", "Flat"],
+              ["floating", "", "Floating"],
+            ]}
+          />
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -108,7 +125,7 @@ function UpdateCardView({ theme, status, phase, error, onUpdate }: { theme: Plug
       {phase === "idle" ? (
         <View style={{ flexDirection: "row", gap: 6 }}>
           <Pressable accessibilityRole="button" onPress={onUpdate} style={(st) => [{ flex: 1, height: 28, borderRadius: 6, backgroundColor: c.accent, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }, press(st)]}>
-            <Text style={[s.verb, { fontSize: 12, fontWeight: "600", color: c.accentForeground }]}>{error ? "Try again" : "Update now"}</Text>
+            <Text style={[s.verb, { fontSize: 12, fontWeight: "600", color: onAccent(c.accent, c.accentForeground, c.foreground) }]}>{error ? "Try again" : "Update now"}</Text>
           </Pressable>
           {review ? (
             <Pressable accessibilityRole="link" accessibilityLabel="Review changes" onPress={() => void Linking.openURL(review)} style={(st) => [{ height: 28, paddingHorizontal: 10, borderRadius: 6, borderWidth: 1, borderColor: alpha(tone, 0.24), flexDirection: "row", alignItems: "center", gap: 4 }, press(st)]}>

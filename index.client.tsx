@@ -11,7 +11,7 @@ import { followAgent, isTodo, isTurnTrigger, onShownAgent, onStaleSteps, onUnpla
 import { renderDiagram } from "./shared/diagram";
 import { currentPrefs, savePrefs, setPrefs, subscribePrefs, usePrefsSaver } from "./client/prefs";
 import { bindThemeRegistry, currentTheme, registerTheme, subscribeTheme } from "./client/theme-registry";
-import { addIconSet, bindPromptKeys, centerControlText, clampUserMessages, iconTwins, jumpToPrompt, openAgentIds, paintSidebar, subagentPaneShown, redrawDiagrams, setCompactHandler, readHostAppearance, restyleNative, selectionCopyMenu, setNativeColors, stackImages, setRailProviders, setRichText, stylePluginViews, nativeIconSet, watchDom } from "./client/web";
+import { addIconSet, bindPromptKeys, centerControlText, clampUserMessages, iconTwins, jumpToPrompt, openAgentIds, paintSidebar, subagentPaneShown, tagWindow, redrawDiagrams, setCompactHandler, readHostAppearance, restyleNative, selectionCopyMenu, setNativeColors, stackImages, setRailProviders, setRichText, stylePluginViews, nativeIconSet, watchDom } from "./client/web";
 import { getTheme, THEME_CATALOG_ID, themeSchema } from "./shared/theme";
 import { getIconSet, getPrefs, type Prefs } from "./shared/timeline";
 import { HtmlItem, ImagesItem, NoticeItem, StackViewerHost, PlanItem, RecapItem, StepsItem, ThoughtItem, TodoItem, ToolItem } from "./client/views";
@@ -52,7 +52,7 @@ export default function contribute(client: PluginClientContext) {
   const unpaintSidebar = paintSidebar(() => {
     const theme = currentTheme();
     const active = readHostAppearance().pluginThemeId === THEME_CATALOG_ID;
-    return active && theme?.sidebar ? { sidebar: theme.sidebar } : undefined;
+    return active && theme ? { sidebar: theme.sidebar } : undefined;
   }, subscribeTheme);
 
   const unrestyle = restyleNative(() => currentPrefs().nativeStyle === "design", { render: (source) => client.rpc(renderDiagram, { source }), on: () => currentPrefs().diagrams === "pele" });
@@ -221,7 +221,8 @@ export default function contribute(client: PluginClientContext) {
     });
   });
   // Prefs Paseo's own rows follow too reach the restyle as <html> attributes.
-  const markRoot = (p: Prefs) => setRichText({ ...p.richText, images: p.images, stacks: p.nativeStyle === "design" ? p.imageStacks : "off", stackopen: p.imageStackOpen, steps: p.steps, density: p.density === "normal" ? "a" : p.density, "icon-steps": p.rowIcons.steps === "hide" ? "hide" : "a", "icon-tool": p.rowIcons.tool === "hide" ? "hide" : "a", loader: p.loader === "dots" ? "a" : p.loader, "loader-size": p.loaderSize === "s" ? "a" : p.loaderSize, icons: p.iconSet === "lucide" ? "a" : p.iconSet });
+  // A window style switch re-tags the window chrome (tagWindow skips it while the style is "paseo").
+  const markRoot = (p: Prefs) => (setRichText({ ...p.richText, images: p.images, stacks: p.nativeStyle === "design" ? p.imageStacks : "off", stackopen: p.imageStackOpen, steps: p.steps, density: p.density === "normal" ? "a" : p.density, window: p.windowStyle === "paseo" ? "a" : p.windowStyle, "icon-steps": p.rowIcons.steps === "hide" ? "hide" : "a", "icon-tool": p.rowIcons.tool === "hide" ? "hide" : "a", loader: p.loader === "dots" ? "a" : p.loader, "loader-size": p.loaderSize === "s" ? "a" : p.loaderSize, icons: p.iconSet === "lucide" ? "a" : p.iconSet }), tagWindow([]));
   markRoot(currentPrefs());
   // The chosen icon set comes from the daemon once, the first time it's picked.
   const requestedIcons = new Set<string>();

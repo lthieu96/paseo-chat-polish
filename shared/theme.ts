@@ -34,19 +34,40 @@ export const PRESETS: Preset[] = [
     syntax: "one-dark-darker-mariana",
   },
   {
-    id: "paper",
-    name: "Paper",
+    // Ink on ivory with one burnt-orange accent, after HEX's AgentMail work (hex.inc/work/agentmail); the accent is darkened from
+    // their #ff6600 to keep 3:1 on the background.
+    id: "ivory",
+    name: "Ivory",
     appearance: "light",
     colors: {
-      background: "#fafaf7",
-      foreground: "#1a1a1a",
-      raised: "#ffffff",
-      control: "#efefea",
-      border: "#e2e2dc",
-      accent: "#2f6feb",
-      mutedForeground: "#5f5f5a",
-      ring: "#8a8a85",
+      background: "#efeee9",
+      foreground: "#151314",
+      raised: "#f8f7f3",
+      control: "#e4e2db",
+      border: "#d6d3ca",
+      accent: "#e85d04",
+      mutedForeground: "#5c5850",
+      ring: "#8c887f",
     },
+    sidebar: "#e5e4de",
+    syntax: "github-light",
+  },
+  {
+    // Ivory a shade darker: cream paper and ink from HEX's AgentMail poster; the accent is darkened from #ff6600 to keep 3:1 on the background.
+    id: "parchment",
+    name: "Parchment",
+    appearance: "light",
+    colors: {
+      background: "#dedbd1",
+      foreground: "#141113",
+      raised: "#e8e6df",
+      control: "#d2cfc4",
+      border: "#c4c0b4",
+      accent: "#c84b00",
+      mutedForeground: "#524e47",
+      ring: "#77736a",
+    },
+    sidebar: "#d5d2c7",
     syntax: "github-light",
   },
   {
@@ -109,6 +130,13 @@ export const THEME_CATALOG_ID = `paseo-chat-polish/theme/${THEME_ID}`;
 export const toContribution = (t: ThemeDraft): PluginThemeContribution => ({ id: THEME_ID, name: t.name, appearance: t.appearance, colors: t.colors });
 
 export const isHex = (v: string) => hex.safeParse(v).success;
+
+/**
+ * Text color for an accent fill: Paseo uses the page color (`onPage`), which on a light theme's bright accent can sit near 3:1, so the
+ * theme's text color or white is taken when it reads better. Dark themes keep the page color.
+ */
+export const onAccent = (accent: string, onPage: string, text: string) =>
+  [text, "#ffffff"].reduce((best, c) => (contrast(c, accent) > contrast(best, accent) ? c : best), onPage);
 
 /** WCAG contrast ratio between two #rrggbb colors. */
 export function contrast(a: string, b: string) {

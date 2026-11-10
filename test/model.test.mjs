@@ -139,6 +139,16 @@ test("every highlight theme colors every token kind; presets point at real highl
   assert.equal(themeSchema.parse({}).syntax, "one-dark-darker-mariana");
 });
 
+test("accent text: dark presets keep Paseo's page color, light ones take whichever of text and white reads best", async () => {
+  const { PRESETS, onAccent, contrast } = await import("../shared/theme.ts");
+  for (const { id, appearance, colors: c } of PRESETS) {
+    const fg = onAccent(c.accent, c.background, c.foreground);
+    if (appearance === "dark") assert.equal(fg, c.background, id);
+    assert.ok(contrast(fg, c.accent) >= 4.5, `${id} ${fg} on ${c.accent}`);
+  }
+  assert.equal(onAccent("rgb(1, 2, 3)", "#000000", "#ffffff"), "#000000");
+});
+
 test("hideable kinds: only completed reads, searches, fetches and background tasks", async () => {
   const { prefsSchema } = await import("../shared/timeline.ts");
   assert.equal(hideableKind(tool({ type: "read", filePath: "a.ts" })), "read");
@@ -147,7 +157,7 @@ test("hideable kinds: only completed reads, searches, fetches and background tas
   assert.equal(hideableKind(tool({ type: "read", filePath: "a.ts" }, { status: "failed" })), undefined);
   assert.equal(hideableKind(tool({ type: "read", filePath: "a.ts" }, { status: "running" })), undefined);
   assert.equal(hideableKind(tool({ type: "shell", command: "ls" })), undefined);
-  assert.deepEqual(prefsSchema.parse({}), { reasoning: "paseo", toolDetails: "collapsed", commandColors: "expanded", diffWrap: "off", hidden: [], userMessages: "clamp", steps: "faded", selectionCopy: "on", density: "normal", rowIcons: { steps: "show", tool: "show", thought: "show" }, merge: "on", iconSet: "lucide", loader: "dots", loaderSize: "s", nativeStyle: "design", recap: "on", diagrams: "pele", html: "off", images: "small", imageStacks: "off", imageStackOpen: "hover", richText: { quote: "a", table: "a", code: "a", inline: "a", heading: "a", list: "a", callout: "a", rule: "a" } });
+  assert.deepEqual(prefsSchema.parse({}), { reasoning: "paseo", toolDetails: "collapsed", commandColors: "expanded", diffWrap: "off", hidden: [], userMessages: "clamp", steps: "faded", selectionCopy: "on", density: "normal", rowIcons: { steps: "show", tool: "show", thought: "show" }, merge: "on", iconSet: "lucide", loader: "dots", loaderSize: "s", nativeStyle: "design", windowStyle: "flat", recap: "on", diagrams: "pele", html: "off", images: "small", imageStacks: "off", imageStackOpen: "hover", richText: { quote: "a", table: "a", code: "a", inline: "a", heading: "a", list: "a", callout: "a", rule: "a" } });
   assert.equal(prefsSchema.parse({ diffWrap: "on" }).diffWrap, "on");
   assert.equal(prefsSchema.parse({ iconSet: "solar" }).iconSet, "lucide");
   // Image stack choices round-trip; a bad saved value falls back for that pref alone instead of failing the whole parse.
@@ -490,4 +500,26 @@ test("css: menu surfaces are never an ancestor by testID or role (every button i
     // `${SURFACE} {` styles the surface itself; anything else after the space is a descendant.
     assert.doesNotMatch(source, /\$\{SURFACE\} (?!\{)/, `${file}: use IN_SURFACE (tagged by tagParts) as the ancestor`);
   }
+});
+
+test("css: the window restyle applies only while <html> has data-cp-rt-window (windowStyle flat or floating)", async () => {
+  const { readFileSync } = await import("node:fs");
+  const ts = (await import("typescript")).default;
+  const { splitTop } = await import("../client/css-guard.ts");
+  const { prefsSchema } = await import("../shared/timeline.ts");
+  assert.equal(prefsSchema.parse({ windowStyle: "glass" }).windowStyle, "flat");
+  const source = ts.transpileModule(readFileSync(new URL("../client/web/window.ts", import.meta.url), "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+  const exports = {};
+  new Function("exports", "require", source)(exports, () => ({ within: () => [] }));
+  const css = exports.WINDOW_CSS.replace(/\/\*[\s\S]*?\*\//g, "");
+  // Rule preludes: the text before each "{" since the last brace; an at-rule's prelude (@media) holds rules, the rest declarations.
+  const selectors = [];
+  let start = 0;
+  for (let i = 0; i < css.length; i++) {
+    if (css[i] === "{") selectors.push(css.slice(start, i).trim());
+    if (css[i] === "{" || css[i] === "}") start = i + 1;
+  }
+  selectors.splice(0, selectors.length, ...selectors.filter((s) => s && !s.startsWith("@")));
+  assert.ok(selectors.length > 40);
+  for (const list of selectors) for (const selector of splitTop(list, (ch) => ch === ",")) assert.match(selector.trim(), /^:root\[data-cp-rt-window(="(flat|floating)")?\]/, selector);
 });

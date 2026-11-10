@@ -3,7 +3,7 @@ import type { PluginTheme } from "@getpaseo/plugin";
 import type { PluginScreenProps } from "@getpaseo/plugin/client";
 import { useMemo, useState, type ComponentProps, type ReactNode } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
-import { contrast, type ThemeDraft } from "../../shared/theme";
+import { onAccent, type ThemeDraft } from "../../shared/theme";
 import type { Prefs } from "../../shared/timeline";
 import { Icon } from "../icons";
 import { hideableKind, todoData, toolData } from "../model";
@@ -17,7 +17,6 @@ import type { Typography } from "./theme-editor";
 /** Plugin theme tokens for a draft, so the preview renders exactly what Apply would ship. */
 export function previewTheme(d: ThemeDraft, host: PluginTheme): PluginTheme {
   const c = d.colors;
-  const onAccent = contrast(c.accent, "#ffffff") >= contrast(c.accent, c.background) ? "#ffffff" : c.background;
   return {
     colors: {
       ...host.colors,
@@ -28,7 +27,7 @@ export function previewTheme(d: ThemeDraft, host: PluginTheme): PluginTheme {
       foreground: c.foreground,
       foregroundMuted: c.mutedForeground,
       accent: c.accent,
-      accentForeground: onAccent,
+      accentForeground: onAccent(c.accent, c.background, c.foreground),
     },
   };
 }

@@ -47,6 +47,9 @@ ${MODEL_POP} ${MODEL_ROW} > div > div:last-child > div:first-child { order: -1; 
 ${MODEL_POP} ${MODEL_ROW} svg { stroke: var(--cp-accent) !important; }
 
 [data-cp-rail] { grid-column: 1; grid-row: 2 / 4; display: flex; flex-direction: column; gap: 2px; padding: 6px; overflow-y: auto; background: rgba(0, 0, 0, 0.14); border-right: 1px solid var(--cp-rule); }
+/* A 14% black rail is a mid grey on a light popup; a faint tint of the text color keeps it a step down. */
+:root:is(.light, .pluginLight) [data-cp-rail] { background: color-mix(in srgb, var(--cp-fg) 5%, transparent); }
+:root:is(.light, .pluginLight) [data-cp-tip] { box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12); }
 [data-cp-rail] button { all: unset; box-sizing: border-box; position: relative; display: flex; align-items: center; gap: 8px; flex-shrink: 0; height: 28px; padding: 0 8px; border-radius: 6px; font-size: 13px; color: var(--cp-fg); cursor: pointer; }
 [data-cp-rail] button:hover { background: var(--cp-control); }
 [data-cp-rail] button[aria-current="true"] { background: var(--cp-control); font-weight: 500; }

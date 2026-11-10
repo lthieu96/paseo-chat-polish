@@ -128,6 +128,9 @@ function watchSlash(card: DomElement) {
 }
 
 const CLEAR = "rgba(0, 0, 0, 0)";
+const APP_ROOT = "#root";
+// Settings elements already looked at; a Settings pane's tree is read once, not on every DOM batch while it is open.
+const checked = new WeakSet<DomElement>();
 
 /**
  * Settings pages draw their cards, select triggers and text fields from generated styles, without testIDs. Tag each by what it draws,
@@ -140,9 +143,14 @@ function tagSettings(roots: DomElement[]) {
     if (root.closest(SETTINGS_PANE)) scopes.add(root);
     else for (const pane of within([root], SETTINGS_PANE)) scopes.add(pane);
   }
+  // A changed element (an attribute batch lists it as a root) is looked at again; its new descendants are new to `checked` anyway.
+  for (const root of roots) checked.delete(root);
+  // All styles and sizes are read before any tag is written, so the pass costs one style and layout update.
+  const tags: Array<[DomElement, string, string]> = [];
   for (const scope of scopes)
     for (const el of [scope, ...Array.from(scope.querySelectorAll("*"))]) {
-      if (el.hasAttribute("data-cp-set")) continue;
+      if (checked.has(el)) continue;
+      checked.add(el);
       if (el.matches("input, textarea")) {
         // The field is the nearest box that draws something: the input itself, or the wrapper around it and its icon.
         let box: DomElement | null = el;
@@ -151,8 +159,8 @@ function tagSettings(roots: DomElement[]) {
           if (parseFloat(s.borderTopWidth) > 0 || s.backgroundColor !== CLEAR) break;
           box = box.parentElement;
         }
-        if (box && !box.matches(SETTINGS_PANE)) box.setAttribute("data-cp-set", el.matches("textarea") ? "area" : "field");
-        el.setAttribute("data-cp-set-input", "");
+        if (box && !box.matches(SETTINGS_PANE)) tags.push([box, "data-cp-set", el.matches("textarea") ? "area" : "field"]);
+        tags.push([el, "data-cp-set-input", ""]);
         continue;
       }
       const s = getComputedStyle(el);
@@ -162,15 +170,20 @@ function tagSettings(roots: DomElement[]) {
       if (!radius || radius >= 999 || (!border && s.backgroundColor === CLEAR)) continue;
       const height = el.getBoundingClientRect().height;
       if (el.tagName === "BUTTON" || el.getAttribute("role") === "button") {
-        if (radius >= 10 && height >= 24 && height <= 48) el.setAttribute("data-cp-set", "control");
-      } else if (el.getAttribute("role") === "alert" || (border && radius >= 8 && height >= 44)) el.setAttribute("data-cp-set", "card");
+        if (radius >= 10 && height >= 24 && height <= 48) tags.push([el, "data-cp-set", "control"]);
+      } else if (el.getAttribute("role") === "alert" || (border && radius >= 8 && height >= 44)) tags.push([el, "data-cp-set", "card"]);
     }
+  for (const [el, name, value] of tags) if (!el.hasAttribute(name)) el.setAttribute(name, value);
 
-  // Portaled popovers may omit menu/listbox roles. Inspect changed subtrees and their ancestors, not the whole app.
+  // Portaled popovers may omit menu/listbox roles. Inspect overlays added outside the app's tree (portals under body): each changed
+  // subtree and its ancestors up to the portal.
   if (document.querySelector(SETTINGS_PANE))
     for (const el of new Set(roots.flatMap((root) => {
+      if (root.closest(SETTINGS_PANE)) return [];
       const ancestors: DomElement[] = [];
-      for (let parent = root.parentElement; parent && parent !== document.body; parent = parent.parentElement) ancestors.push(parent);
+      let portal = root;
+      for (let parent = root.parentElement; parent && parent !== document.body; parent = parent.parentElement) ancestors.push((portal = parent));
+      if (portal.matches(APP_ROOT)) return [];
       return [root, ...Array.from(root.querySelectorAll("*")), ...ancestors];
     }))) {
       if (el.hasAttribute("data-cp-setting-menu") || (el.hasAttribute("data-cp-part") && !el.matches(SURFACE)) || el.tagName === "BUTTON" || el.getAttribute("role") === "button") continue;
