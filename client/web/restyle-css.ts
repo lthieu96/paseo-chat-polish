@@ -302,6 +302,9 @@ ${USAGE} > div:nth-child(4) { margin-top: -6px !important; }
 `;
 
 export const NATIVE_CSS = `
+/* setNativeColors sets these inline from a sidebar item, which Settings doesn't mount: after a reload into Settings, menus drew with
+   unset colors (no fill at all). Paseo's own colors stand in until it runs. */
+:root { --cp-fg: var(--colors-foreground); --cp-muted: var(--colors-foreground-muted); --cp-accent: var(--colors-accent); --cp-accent-fg: var(--colors-accent-foreground); --cp-raised: var(--colors-surface1); --cp-control: var(--colors-surface2); --cp-sunken: var(--colors-surface0); --cp-rule: var(--colors-border); }
 /* Settings pages (tagged by tagSettings): surfaces 12, controls 8, and one text field, 32px in a sunken well that lights up on focus.
    Settings has its own sidebar, so a reload there can come before the --cp-* colors are set: Paseo's own colors stand in. */
 [data-cp-set="card"] { border-radius: 12px !important; }
