@@ -34,19 +34,22 @@ export const PRESETS: Preset[] = [
     syntax: "one-dark-darker-mariana",
   },
   {
-    id: "paper",
-    name: "Paper",
+    // Ink on ivory with one burnt-orange accent, after HEX's AgentMail work (hex.inc/work/agentmail); the accent is darkened from
+    // their #ff6600 to keep 3:1 on the background.
+    id: "ivory",
+    name: "Ivory",
     appearance: "light",
     colors: {
-      background: "#fafaf7",
-      foreground: "#1a1a1a",
-      raised: "#ffffff",
-      control: "#efefea",
-      border: "#e2e2dc",
-      accent: "#2f6feb",
-      mutedForeground: "#5f5f5a",
-      ring: "#8a8a85",
+      background: "#efeee9",
+      foreground: "#151314",
+      raised: "#f8f7f3",
+      control: "#e4e2db",
+      border: "#d6d3ca",
+      accent: "#e85d04",
+      mutedForeground: "#5c5850",
+      ring: "#8c887f",
     },
+    sidebar: "#e5e4de",
     syntax: "github-light",
   },
   {
