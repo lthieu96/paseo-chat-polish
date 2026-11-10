@@ -139,6 +139,16 @@ test("every highlight theme colors every token kind; presets point at real highl
   assert.equal(themeSchema.parse({}).syntax, "one-dark-darker-mariana");
 });
 
+test("accent text: dark presets keep Paseo's page color, light ones take whichever of text and white reads best", async () => {
+  const { PRESETS, onAccent, contrast } = await import("../shared/theme.ts");
+  for (const { id, appearance, colors: c } of PRESETS) {
+    const fg = onAccent(c.accent, c.background, c.foreground);
+    if (appearance === "dark") assert.equal(fg, c.background, id);
+    assert.ok(contrast(fg, c.accent) >= 4.5, `${id} ${fg} on ${c.accent}`);
+  }
+  assert.equal(onAccent("rgb(1, 2, 3)", "#000000", "#ffffff"), "#000000");
+});
+
 test("hideable kinds: only completed reads, searches, fetches and background tasks", async () => {
   const { prefsSchema } = await import("../shared/timeline.ts");
   assert.equal(hideableKind(tool({ type: "read", filePath: "a.ts" })), "read");

@@ -133,9 +133,10 @@ export const isHex = (v: string) => hex.safeParse(v).success;
 
 /**
  * Text color for an accent fill: Paseo uses the page color (`onPage`), which on a light theme's bright accent can sit near 3:1, so the
- * theme's text color is taken when it reads better. Dark themes keep the page color.
+ * theme's text color or white is taken when it reads better. Dark themes keep the page color.
  */
-export const onAccent = (accent: string, onPage: string, text: string) => (contrast(text, accent) > contrast(onPage, accent) ? text : onPage);
+export const onAccent = (accent: string, onPage: string, text: string) =>
+  [text, "#ffffff"].reduce((best, c) => (contrast(c, accent) > contrast(best, accent) ? c : best), onPage);
 
 /** WCAG contrast ratio between two #rrggbb colors. */
 export function contrast(a: string, b: string) {
