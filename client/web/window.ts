@@ -112,6 +112,10 @@ ${W}${LIGHT} {
 ${W} :is([${WIN}="left"], nav[data-testid="settings-sidebar"]) { --colors-border: var(--cp-w-hair); border-right-color: transparent !important; }
 ${FLAT}${LIGHT} :is([${WIN}="left"], nav[data-testid="settings-sidebar"]) { border-right-color: var(--colors-border) !important; }
 ${W} [${WIN}="nav"] [role="button"] > [dir] { font-size: 13px !important; }
+/* The rules under the nav and above the footer stop 10px short of both sides, so they don't run into the edge. */
+${W} :is([${WIN}="nav"], [data-testid="sidebar-footer"]) { border-color: transparent !important; background-image: linear-gradient(var(--cp-w-hair), var(--cp-w-hair)); background-size: calc(100% - 20px) 1px; background-repeat: no-repeat; }
+${W} [${WIN}="nav"] { background-position: center bottom; }
+${W} [data-testid="sidebar-footer"] { background-position: center top; }
 ${W} [${WIN}="ws-label"] { font-size: 11.5px !important; letter-spacing: 0.02em; }
 ${W} [${WIN}="ws-title"] { font-size: 13px !important; }
 ${W} [data-testid="sidebar-workspace-timestamp"] { font-size: 11.5px !important; }
@@ -155,7 +159,8 @@ ${FLAT}${LIGHT} ${EXPLORER_HANDLE} { background-color: var(--colors-border) !imp
 ${FLOAT}, ${FLOAT} body, ${FLOAT} #root, ${FLOAT} [data-testid="wide-shell"], ${FLOAT} [data-cp-win-bg] { background-color: var(--colors-surface-sidebar) !important; }
 ${FLOAT} [${WIN}="row"] { padding-right: 8px !important; background-color: var(--colors-surface-sidebar) !important; }
 ${FLOAT} [${WIN}="panel"] { margin: 8px 0 8px 8px !important; border: 1px solid var(--cp-w-edge); border-radius: 10px; overflow: hidden; }
-${FLOAT} [data-testid="workspace-explorer-sidebar"] { padding-left: 8px !important; }
+/* The tab row starts at the panel's top inset plus border, so the rule under it lines up with the one under the header. */
+${FLOAT} [data-testid="workspace-explorer-sidebar"] { padding-left: 8px !important; padding-top: 9px !important; }
 
 /* Resize handles keep their place and hit area (Paseo's spans the edge, or the gap when floating); a 2px accent line shows only on
    hover or while dragging. The Explorer's is Paseo's own highlight (3px, on hover and drag), thinned and moved into the gap. */
