@@ -76,7 +76,6 @@ const W = ":root[data-cp-rt-window]";
 const FLAT = ':root[data-cp-rt-window="flat"]';
 const FLOAT = ':root[data-cp-rt-window="floating"]';
 const LIGHT = ":is(.light, .pluginLight)";
-const DARK = ":not(.light, .pluginLight)";
 const TAB = 'button[data-testid^="workspace-tab-"]';
 const TAB_LABEL = `${TAB} > div > [dir]`;
 const DIFF_FILE = '[data-testid^="diff-tree-file-"]';
@@ -99,7 +98,7 @@ ${W} {
   --cp-w-strong: color-mix(in srgb, var(--colors-foreground) 50%, #fff);
   --cp-w-faint: color-mix(in srgb, var(--colors-foreground-muted) 58%, var(--colors-surface-sidebar));
   --cp-w-hair: color-mix(in srgb, var(--colors-border) 37%, var(--colors-surface-sidebar));
-  --cp-w-edge: color-mix(in srgb, var(--colors-border) 56%, var(--colors-surface-sidebar));
+  --cp-w-edge: var(--cp-w-hair);
 }
 ${W}${LIGHT} {
   --cp-w-strong: var(--colors-foreground);
@@ -156,7 +155,6 @@ ${FLAT}${LIGHT} ${EXPLORER_HANDLE} { background-color: var(--colors-border) !imp
 ${FLOAT}, ${FLOAT} body, ${FLOAT} #root, ${FLOAT} [data-testid="wide-shell"], ${FLOAT} [data-cp-win-bg] { background-color: var(--colors-surface-sidebar) !important; }
 ${FLOAT} [${WIN}="row"] { padding-right: 8px !important; background-color: var(--colors-surface-sidebar) !important; }
 ${FLOAT} [${WIN}="panel"] { margin: 8px 0 8px 8px !important; border: 1px solid var(--cp-w-edge); border-radius: 10px; overflow: hidden; }
-${FLOAT}${DARK} [${WIN}="panel"] { box-shadow: 0 1px 2px rgb(0 0 0 / 0.25), 0 6px 20px rgb(0 0 0 / 0.18); }
 ${FLOAT} [data-testid="workspace-explorer-sidebar"] { padding-left: 8px !important; }
 
 /* Resize handles keep their place and hit area (Paseo's spans the edge, or the gap when floating); a 2px accent line shows only on
