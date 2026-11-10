@@ -106,9 +106,20 @@ function makeStyles(c: Colors, a: HostAppearance) {
 /** Lets the dashboard preview fonts and sizes before they are applied to Paseo. */
 export const AppearanceOverride = createContext<Partial<HostAppearance> | undefined>(undefined);
 
+// One style sheet per theme colors object and appearance, shared by every component drawn with it.
+const styleCache = new WeakMap<Colors, { key: string; styles: ReturnType<typeof makeStyles> }>();
+
 export function useStyles(theme: PluginTheme) {
   const override = useContext(AppearanceOverride);
-  return useMemo(() => makeStyles(theme.colors, { ...readHostAppearance(), ...override }), [theme, override]);
+  return useMemo(() => {
+    const a = { ...readHostAppearance(), ...override };
+    const key = JSON.stringify(a);
+    const hit = styleCache.get(theme.colors);
+    if (hit?.key === key) return hit.styles;
+    const styles = makeStyles(theme.colors, a);
+    styleCache.set(theme.colors, { key, styles });
+    return styles;
+  }, [theme, override]);
 }
 
 const NATIVE_DRIVER = Platform.OS !== "web";

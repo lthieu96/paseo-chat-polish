@@ -96,7 +96,8 @@ export function selectionCopyMenu(enabled: () => boolean) {
   const onUp = (e: CopyEvent) => void (inMenu(e.target) || setTimeout(show, 0));
   const onDown = (e: CopyEvent) => void (inMenu(e.target) || hide());
   const onKey = (e: CopyEvent) => void (e.key === "Escape" ? hide() : e.shiftKey && setTimeout(show, 0));
-  const onSelection = () => void (selDoc.getSelection()?.isCollapsed && hide());
+  // Reading the selection forces a style and layout pass, so only while the menu is up.
+  const onSelection = () => void (menu && selDoc.getSelection()?.isCollapsed && hide());
   const events: Array<[string, (e: CopyEvent) => void, boolean]> = [["mouseup", onUp, false], ["mousedown", onDown, false], ["keyup", onKey, false], ["selectionchange", onSelection, false], ["scroll", place, true]];
   for (const [type, l, capture] of events) selDoc.addEventListener(type, l, capture);
   return () => {

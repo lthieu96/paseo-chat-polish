@@ -5,7 +5,7 @@ import { Text, View } from "react-native";
 import { themeSchema } from "../../shared/theme";
 import { prefsSettings, type Prefs } from "../../shared/timeline";
 import { Icon } from "../icons";
-import { setPrefs, usePrefs } from "../prefs";
+import { currentPrefs, setPrefs, usePrefs } from "../prefs";
 import { useCurrentTheme } from "../theme-registry";
 import { useStyles } from "../views";
 import { Button, Columns, TopBar } from "./controls";
@@ -59,7 +59,8 @@ export function usePrefsSettings() {
   const saved = settings.status === "ready" ? settings.values : undefined;
   // Settings may load after the entry's own fetch failed: trust the stored document.
   useEffect(() => {
-    if (saved) setPrefs(saved);
+    // Each change fans out to every restyle listener, so an unchanged load is skipped.
+    if (saved && JSON.stringify(saved) !== JSON.stringify(currentPrefs())) setPrefs(saved);
   }, [saved]);
   const change = (next: Prefs) => {
     setPrefs(next);
