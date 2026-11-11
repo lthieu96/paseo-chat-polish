@@ -3,7 +3,8 @@
  * the daemon reads it from the same settings document when it has to word an error itself.
  *
  * Keys are flat and dotted by area. A message is either a string with `{name}` placeholders or a
- * function for counts and other grammar that differs per language.
+ * function for counts and other grammar that differs per language. A language may leave keys out;
+ * `translate` falls back to English, so translations can lag behind new copy.
  */
 export const LANGUAGES = ["en", "zh"] as const;
 export type Language = (typeof LANGUAGES)[number];
@@ -547,7 +548,8 @@ const en = {
 
 export type MessageKey = keyof typeof en;
 
-const zh: Record<MessageKey, Message> = {
+/** Community-maintained: a key left out here falls back to English in `translate`. */
+const zh: Partial<Record<MessageKey, Message>> = {
   "common.defaults": "恢复默认",
   "common.loading": "加载中…",
 
@@ -1063,7 +1065,7 @@ const zh: Record<MessageKey, Message> = {
   "server.updateFailed": "更新失败",
 };
 
-const dictionaries: Record<Language, Record<MessageKey, Message>> = { en, zh };
+const dictionaries: Record<Language, Partial<Record<MessageKey, Message>>> = { en, zh };
 
 const interpolate = (text: string, vars?: MessageVars) =>
   vars ? text.replace(/\{(\w+)\}/g, (whole, key: string) => (vars[key] === undefined ? whole : String(vars[key]))) : text;

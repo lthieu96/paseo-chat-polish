@@ -14,8 +14,12 @@ test("DOM restyling, accordion transitions, and bottom following stay stable", {
   const temp = mkdtempSync(join(tmpdir(), "chat-polish-web-test-"));
   let server;
   try {
-    const names = ["css-guard", "provider-icons", "stack-viewer", "web", ...readdirSync(new URL("../client/web/", import.meta.url)).map((file) => `web/${file.replace(/\.ts$/, "")}`)];
+    const names = ["css-guard", "i18n", "provider-icons", "stack-viewer", "web", ...readdirSync(new URL("../client/web/", import.meta.url)).map((file) => `web/${file.replace(/\.ts$/, "")}`)];
     const sources = Object.fromEntries(names.map((name) => [name, ts.transpileModule(readFileSync(new URL(`../client/${name}.ts`, import.meta.url), "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText]));
+    // client/i18n reads saved prefs through Paseo's client runtime, which this harness doesn't load; the web
+    // modules only need `t`, so they get the default English prefs. shared/i18n has no imports.
+    sources.prefs = `"use strict";Object.defineProperty(exports,"__esModule",{value:true});exports.currentPrefs=()=>({language:"en"});`;
+    sources["shared/i18n"] = ts.transpileModule(readFileSync(new URL("../shared/i18n.ts", import.meta.url), "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
     // Paseo's bundle exports its mermaid document as a minified string literal, with JS-only escapes like \xHH.
     const bundle = String.raw`Object.defineProperty(a,"mermaidRuntimeHtml",{get:function(){return o}});const o='<!doctype html>\n<p class="x" title=\'y\'>\x3c!-- __PASEO_MERMAID_RUNTIME_RECEIVE__ \\x41 \u0041 \u{1F600} \v \/ --\x3e</p>';
 __d(function(g,r,i,a,m,e,d){"use strict";Object.defineProperty(e,'__esModule',{value:!0}),e.AttachmentLightbox=function(h){const u={a:{b:1}},x=[1,2];return null};var t=r(d[0])},4021,[1008,472]);`;
