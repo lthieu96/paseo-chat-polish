@@ -5,6 +5,7 @@ import { ScrollView } from "@getpaseo/plugin/client/react-native";
 import { useState, type ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from "react-native";
 import { onAccent } from "../../shared/theme";
+import { useT } from "../i18n";
 import { Icon } from "../icons";
 import { alpha, sunken, useReducedMotion, useStyles } from "../views";
 
@@ -175,10 +176,11 @@ export function Row({ theme, label, hint, stacked, first, children }: { theme: P
 /** "• Paseo's default", the key to the dot on Segmented options. */
 export function Legend({ theme }: { theme: PluginTheme }) {
   const s = useStyles(theme);
+  const t = useT();
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
       <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: theme.colors.foregroundMuted }} />
-      <Text style={[s.small, { fontSize: 12 }]}>Paseo's default</Text>
+      <Text style={[s.small, { fontSize: 12 }]}>{t("prefs.legend.paseoDefault")}</Text>
     </View>
   );
 }

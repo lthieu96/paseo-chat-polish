@@ -1,6 +1,7 @@
 import type { PluginClientContext } from "@getpaseo/plugin/client";
 import type { AgentTimelineItem } from "@getpaseo/protocol/agent-types";
 import { isHtmlTool } from "../shared/html.ts";
+import { translate, type Language } from "../shared/i18n.ts";
 import { imageData } from "./model.ts";
 
 // Merged steps: each run of consecutive thoughts and tool calls between replies folds into one row.
@@ -172,10 +173,9 @@ export function stepRuns(list: readonly Entry[], skip: (item: Item) => boolean, 
 }
 
 const PASEO_TOOL = /^(mcp__paseo(_[a-z0-9_]*)?__.|paseo(_[a-z0-9_]*)?\.|paseo_)/;
-const plural = (n: number, one: string, many: string) => (n === 1 ? one : many).replace("#", String(n));
 
 /** "Thought 2 times, edited 1 file and ran 3 commands": what a run did, in the words and order of Paseo's own groups. */
-export function stepSummary(items: readonly Item[], changesOf: (item: Item) => readonly TaskChange[] = (item) => todoChanges.get(stepKey(item)!) ?? []): string {
+export function stepSummary(items: readonly Item[], changesOf: (item: Item) => readonly TaskChange[] = (item) => todoChanges.get(stepKey(item)!) ?? [], lang: Language = "en"): string {
   const edited = new Set<string>();
   const read = new Set<string>();
   let thoughts = 0;
@@ -199,19 +199,23 @@ export function stepSummary(items: readonly Item[], changesOf: (item: Item) => r
     else other++;
   }
   const parts = [
-    thoughts && plural(thoughts, "thought # time", "thought # times"),
-    edited.size && plural(edited.size, "edited # file", "edited # files"),
-    commands && plural(commands, "ran # command", "ran # commands"),
-    read.size && plural(read.size, "read # file", "read # files"),
-    searches && plural(searches, "searched # time", "searched # times"),
-    other && plural(other, "used # other tool", "used # other tools"),
-    completed && plural(completed, "completed # task", "completed # tasks"),
-    paseo && plural(paseo, "called Paseo # time", "called Paseo # times"),
+    thoughts && translate(lang, "summary.thoughts", { n: thoughts }),
+    edited.size && translate(lang, "summary.editedFiles", { n: edited.size }),
+    commands && translate(lang, "summary.commands", { n: commands }),
+    read.size && translate(lang, "summary.readFiles", { n: read.size }),
+    searches && translate(lang, "summary.searches", { n: searches }),
+    other && translate(lang, "summary.otherTools", { n: other }),
+    completed && translate(lang, "summary.tasks", { n: completed }),
+    paseo && translate(lang, "summary.paseo", { n: paseo }),
   ].filter((p): p is string => !!p);
   // Replies only name a run that did nothing else, like Paseo's turn summary, which counts calls.
-  if (!parts.length && replies) parts.push(plural(replies, "wrote # message", "wrote # messages"));
-  const text = parts.length > 2 ? `${parts.slice(0, -1).join(", ")}, and ${parts.at(-1)}` : parts.join(" and ");
-  return text.charAt(0).toUpperCase() + text.slice(1);
+  if (!parts.length && replies) parts.push(translate(lang, "summary.messages", { n: replies }));
+  const text =
+    parts.length > 2
+      ? `${parts.slice(0, -1).join(translate(lang, "summary.comma"))}${translate(lang, "summary.andList")}${parts.at(-1)}`
+      : parts.join(translate(lang, "summary.and"));
+  // English sentences start with a capital; Chinese has no case.
+  return lang === "en" ? text.charAt(0).toUpperCase() + text.slice(1) : text;
 }
 
 // The live state: every open agent's list, and where each step sits.

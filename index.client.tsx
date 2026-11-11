@@ -9,9 +9,10 @@ import { sidebarIcon } from "./client/mark";
 import { agentEventData, hideableKind, imageData, turnMarkdown, imagesSchema, noticeData, noticeSchema, planSchema, stepsSchema, thoughtSchema, todoData, todoSchema, toolData, toolSchema } from "./client/model";
 import { followAgent, isTodo, isTurnTrigger, onShownAgent, onStaleSteps, onUnplacedStep, placeStep, resetMade, setReplyFolding, setStepSkip, stepKey, type Phase } from "./client/steps";
 import { renderDiagram } from "./shared/diagram";
+import { currentLanguage, t } from "./client/i18n";
 import { currentPrefs, savePrefs, setPrefs, subscribePrefs, usePrefsSaver } from "./client/prefs";
 import { bindThemeRegistry, currentTheme, registerTheme, subscribeTheme } from "./client/theme-registry";
-import { addIconSet, bindPromptKeys, centerControlText, clampUserMessages, iconTwins, jumpToPrompt, openAgentIds, paintSidebar, subagentPaneShown, tagWindow, redrawDiagrams, setCompactHandler, readHostAppearance, restyleNative, selectionCopyMenu, setNativeColors, stackImages, setRailProviders, setRichText, stylePluginViews, nativeIconSet, watchDom } from "./client/web";
+import { addIconSet, bindPromptKeys, centerControlText, clampUserMessages, iconTwins, jumpToPrompt, openAgentIds, paintSidebar, subagentPaneShown, tagWindow, redrawDiagrams, setCompactHandler, readHostAppearance, restyleNative, selectionCopyMenu, setLanguage, setNativeColors, stackImages, setRailProviders, setRichText, stylePluginViews, nativeIconSet, watchDom } from "./client/web";
 import { getTheme, THEME_CATALOG_ID, themeSchema } from "./shared/theme";
 import { getIconSet, getPrefs, type Prefs } from "./shared/timeline";
 import { HtmlItem, ImagesItem, NoticeItem, StackViewerHost, PlanItem, RecapItem, StepsItem, ThoughtItem, TodoItem, ToolItem } from "./client/views";
@@ -129,7 +130,7 @@ export default function contribute(client: PluginClientContext) {
         transform: ({ item, phase }) => {
           // Paseo turns an agent's message into a prompt and folds a turn only under a native host, so those stay Paseo's.
           if (isTurnTrigger(item)) {
-            const event = readHostAppearance().chatDisplay === "collapseTurns" && !merging() ? undefined : agentEventData(item);
+            const event = readHostAppearance().chatDisplay === "collapseTurns" && !merging() ? undefined : agentEventData(item, currentLanguage());
             return event ? one("tool", event) : undefined;
           }
           const page = htmlData(item);
@@ -142,7 +143,7 @@ export default function contribute(client: PluginClientContext) {
           const merged = stepRow(item, phase);
           if (merged) return merged;
           // Collapsed chat display: leave calls native so Paseo can group them ("Ran 4 commands"); a plugin row would split the group.
-          return detailed() ? one("tool", toolData(item)) : undefined;
+          return detailed() ? one("tool", toolData(item, currentLanguage())) : undefined;
         },
       }),
       client.addTimelineTransformer({
@@ -157,7 +158,7 @@ export default function contribute(client: PluginClientContext) {
         transform: ({ item, phase }) => {
           const merged = stepRow(item, phase);
           if (merged) return merged;
-          const data = currentPrefs().images === "native" ? undefined : imageData(item.text);
+          const data = currentPrefs().images === "native" ? undefined : imageData(item.text, currentLanguage());
           return data ? one("images", data) : undefined;
         },
       }),
@@ -170,14 +171,14 @@ export default function contribute(client: PluginClientContext) {
           return ownTodo(item);
         },
       }),
-      client.addTimelineTransformer({ id: `${KIND}-error`, query: { itemType: "error" }, transform: ({ item }) => one("notice", noticeData(item)) }),
-      client.addTimelineTransformer({ id: `${KIND}-compaction`, query: { itemType: "compaction" }, transform: ({ item }) => one("notice", noticeData(item)) }),
+      client.addTimelineTransformer({ id: `${KIND}-error`, query: { itemType: "error" }, transform: ({ item }) => one("notice", noticeData(item, currentLanguage())) }),
+      client.addTimelineTransformer({ id: `${KIND}-compaction`, query: { itemType: "compaction" }, transform: ({ item }) => one("notice", noticeData(item, currentLanguage())) }),
     ];
     return () => removers.forEach((r) => void r());
   };
   foldReplies();
   let removeTransformers = addTransformers();
-  const inputs = () => [currentPrefs().images, currentPrefs().hidden.join(), merging(), readHostAppearance().chatDisplay, readHostAppearance().autoExpandReasoning].join("|");
+  const inputs = () => [currentPrefs().images, currentPrefs().hidden.join(), merging(), readHostAppearance().chatDisplay, readHostAppearance().autoExpandReasoning, currentLanguage()].join("|");
   let transformedWith = inputs();
   const retransform = (force = false) => {
     if (!force && inputs() === transformedWith) return;
@@ -222,7 +223,7 @@ export default function contribute(client: PluginClientContext) {
   });
   // Prefs Paseo's own rows follow too reach the restyle as <html> attributes.
   // A window style switch re-tags the window chrome (tagWindow skips it while the style is "paseo").
-  const markRoot = (p: Prefs) => (setRichText({ ...p.richText, images: p.images, stacks: p.nativeStyle === "design" ? p.imageStacks : "off", stackopen: p.imageStackOpen, steps: p.steps, density: p.density === "normal" ? "a" : p.density, window: p.windowStyle === "paseo" ? "a" : p.windowStyle, "icon-steps": p.rowIcons.steps === "hide" ? "hide" : "a", "icon-tool": p.rowIcons.tool === "hide" ? "hide" : "a", loader: p.loader === "dots" ? "a" : p.loader, "loader-size": p.loaderSize === "s" ? "a" : p.loaderSize, icons: p.iconSet === "lucide" ? "a" : p.iconSet }), tagWindow([]));
+  const markRoot = (p: Prefs) => (setRichText({ ...p.richText, images: p.images, stacks: p.nativeStyle === "design" ? p.imageStacks : "off", stackopen: p.imageStackOpen, steps: p.steps, density: p.density === "normal" ? "a" : p.density, window: p.windowStyle === "paseo" ? "a" : p.windowStyle, "icon-steps": p.rowIcons.steps === "hide" ? "hide" : "a", "icon-tool": p.rowIcons.tool === "hide" ? "hide" : "a", loader: p.loader === "dots" ? "a" : p.loader, "loader-size": p.loaderSize === "s" ? "a" : p.loaderSize, icons: p.iconSet === "lucide" ? "a" : p.iconSet }), setLanguage(p.language), tagWindow([]));
   markRoot(currentPrefs());
   // The chosen icon set comes from the daemon once, the first time it's picked.
   const requestedIcons = new Set<string>();
@@ -278,51 +279,60 @@ export default function contribute(client: PluginClientContext) {
   client.addTimelineRenderer({ kind: `${KIND}-html`, version: 1, schema: htmlSchema, Component: HtmlItem });
 
   const unbindPromptKeys = bindPromptKeys();
-  for (const [id, title, direction] of [["previous-prompt", "Previous prompt", -1], ["next-prompt", "Next prompt", 1]] as const) {
-    client.addCommandCenterItem({ id, title, icon: direction < 0 ? "ArrowUpToLine" : "ArrowDownToLine", keywords: ["jump", "message", "chat polish"], context: "agent", onSelect: () => jumpToPrompt(direction) });
-  }
-  client.addCommandCenterItem({
-    id: "copy-turn",
-    title: "Copy last turn as Markdown",
-    icon: "ClipboardCopy",
-    keywords: ["markdown", "handoff", "pr", "chat polish"],
-    context: "agent",
-    async onSelect({ paseo, agent }) {
-      try {
-        const page = await paseo.agents.ref(agent.id).timeline.refetch({ direction: "tail", limit: 500, projection: "projected" });
-        const markdown = turnMarkdown(page.entries.map((e) => e.item), agent.cwd);
-        if (!markdown) return void toast?.show("There's no turn to copy yet.");
-        await copyText(markdown);
-        toast?.show("Copied the last turn as Markdown", { variant: "success" });
-      } catch (error) {
-        console.warn("[chat-polish] Copy last turn failed", error);
-        toast?.error("Couldn't copy the last turn.");
-      }
-    },
-  });
+  // Command Center titles follow the plugin's language, so they are registered again whenever prefs change.
+  let removeCommands: Array<() => void> = [];
+  const addCommands = () => {
+    removeCommands.forEach((r) => void r());
+    removeCommands = [
+      ...([["previous-prompt", t("command.previousPrompt"), -1], ["next-prompt", t("command.nextPrompt"), 1]] as const).map(([id, title, direction]) =>
+        client.addCommandCenterItem({ id, title, icon: direction < 0 ? "ArrowUpToLine" : "ArrowDownToLine", keywords: ["jump", "message", "chat polish"], context: "agent", onSelect: () => jumpToPrompt(direction) }),
+      ),
+      client.addCommandCenterItem({
+        id: "copy-turn",
+        title: t("command.copyTurn"),
+        icon: "ClipboardCopy",
+        keywords: ["markdown", "handoff", "pr", "chat polish"],
+        context: "agent",
+        async onSelect({ paseo, agent }) {
+          try {
+            const page = await paseo.agents.ref(agent.id).timeline.refetch({ direction: "tail", limit: 500, projection: "projected" });
+            const markdown = turnMarkdown(page.entries.map((e) => e.item), agent.cwd, currentLanguage());
+            if (!markdown) return void toast?.show(t("toast.noTurn"));
+            await copyText(markdown);
+            toast?.show(t("toast.copiedTurn"), { variant: "success" });
+          } catch (error) {
+            console.warn("[chat-polish] Copy last turn failed", error);
+            toast?.error(t("toast.copyTurnFailed"));
+          }
+        },
+      }),
+      client.addCommandCenterItem({ id: "open", title: t("command.open"), icon: "Sparkles", context: "global", onSelect: ({ openScreen }) => openScreen({ screenId: "dashboard" }) }),
+    ];
+  };
+  addCommands();
+  const unsubscribeCommands = subscribePrefs(addCommands);
   const unsetCompact = setCompactHandler((agentId) => client.paseo.agents.ref(agentId).send("/compact"));
-  client.addCommandCenterItem({ id: "open", title: "Open Chat Polish", icon: "Sparkles", context: "global", onSelect: ({ openScreen }) => openScreen({ screenId: "dashboard" }) });
   // Toggle titles name what selecting them does, so they are re-added whenever prefs change.
   const toggles = (p: Prefs): Array<[string, string, string, Partial<Prefs>]> => {
     const hidesReads = p.hidden.includes("read") && p.hidden.includes("search");
     const anyIcon = Object.values(p.rowIcons).includes("show");
     return [
-      ["merge", p.merge === "on" ? "Show each thought and tool call as its own row" : "Merge thoughts and tool calls between replies", "Layers", { merge: p.merge === "on" ? "off" : "on" }],
-      ["icons", anyIcon ? "Hide icons on thought and tool rows" : "Show icons on thought and tool rows", "Shapes", { rowIcons: anyIcon ? { steps: "hide", tool: "hide", thought: "hide" } : { steps: "show", tool: "show", thought: "show" } }],
-      ["steps", p.steps !== "full" ? "Show thought and tool rows at full strength" : "Fade thought and tool rows", "Blend", { steps: p.steps !== "full" ? "full" : "faded" }],
-      ["reads", hidesReads ? "Show finished reads and searches" : "Hide finished reads and searches", "EyeOff", { hidden: hidesReads ? p.hidden.filter((h) => h !== "read" && h !== "search") : [...new Set([...p.hidden, "read", "search"] as const)] }],
-      ["copy", p.selectionCopy === "on" ? "Turn off the copy popup on selected text" : "Turn on the copy popup on selected text", "ClipboardCopy", { selectionCopy: p.selectionCopy === "on" ? "off" : "on" }],
-      ["recap", p.recap === "on" ? "Turn off turn recaps" : "Turn on turn recaps", "FileDiff", { recap: p.recap === "on" ? "off" : "on" }],
-      ["html", p.html === "on" ? "Stop giving new agents the HTML page tool (experimental)" : "Give new agents the HTML page tool (experimental)", "AppWindow", { html: p.html === "on" ? "off" : "on" }],
-      ["diagrams", p.diagrams === "pele" ? "Draw diagrams with Paseo's mermaid" : "Draw diagrams with Pele", "Workflow", { diagrams: p.diagrams === "pele" ? "mermaid" : "pele" }],
-      ["native", p.nativeStyle === "design" ? "Leave Paseo's own items as Paseo draws them" : "Restyle Paseo's own items", "Paintbrush", { nativeStyle: p.nativeStyle === "design" ? "paseo" : "design" }],
+      ["merge", p.merge === "on" ? t("command.toggle.mergeOn") : t("command.toggle.mergeOff"), "Layers", { merge: p.merge === "on" ? "off" : "on" }],
+      ["icons", anyIcon ? t("command.toggle.iconsOn") : t("command.toggle.iconsOff"), "Shapes", { rowIcons: anyIcon ? { steps: "hide", tool: "hide", thought: "hide" } : { steps: "show", tool: "show", thought: "show" } }],
+      ["steps", p.steps !== "full" ? t("command.toggle.stepsOn") : t("command.toggle.stepsOff"), "Blend", { steps: p.steps !== "full" ? "full" : "faded" }],
+      ["reads", hidesReads ? t("command.toggle.readsOn") : t("command.toggle.readsOff"), "EyeOff", { hidden: hidesReads ? p.hidden.filter((h) => h !== "read" && h !== "search") : [...new Set([...p.hidden, "read", "search"] as const)] }],
+      ["copy", p.selectionCopy === "on" ? t("command.toggle.copyOn") : t("command.toggle.copyOff"), "ClipboardCopy", { selectionCopy: p.selectionCopy === "on" ? "off" : "on" }],
+      ["recap", p.recap === "on" ? t("command.toggle.recapOn") : t("command.toggle.recapOff"), "FileDiff", { recap: p.recap === "on" ? "off" : "on" }],
+      ["html", p.html === "on" ? t("command.toggle.htmlOn") : t("command.toggle.htmlOff"), "AppWindow", { html: p.html === "on" ? "off" : "on" }],
+      ["diagrams", p.diagrams === "pele" ? t("command.toggle.diagramsOn") : t("command.toggle.diagramsOff"), "Workflow", { diagrams: p.diagrams === "pele" ? "mermaid" : "pele" }],
+      ["native", p.nativeStyle === "design" ? t("command.toggle.nativeOn") : t("command.toggle.nativeOff"), "Paintbrush", { nativeStyle: p.nativeStyle === "design" ? "paseo" : "design" }],
     ];
   };
   let removeToggles: Array<() => void> = [];
   const addToggles = () => {
     removeToggles.forEach((r) => void r());
     removeToggles = toggles(currentPrefs()).map(([id, title, icon, change]) =>
-      client.addCommandCenterItem({ id: `toggle-${id}`, title: `Chat Polish: ${title}`, icon, keywords: ["chat polish", "toggle"], context: "global", onSelect: () => savePrefs({ ...currentPrefs(), ...change }) }),
+      client.addCommandCenterItem({ id: `toggle-${id}`, title: t("command.prefix", { action: title }), icon, keywords: ["chat polish", "toggle"], context: "global", onSelect: () => savePrefs({ ...currentPrefs(), ...change }) }),
     );
   };
   addToggles();
@@ -335,6 +345,8 @@ export default function contribute(client: PluginClientContext) {
     unsetCompact();
     unsubscribeToggles();
     removeToggles.forEach((r) => void r());
+    unsubscribeCommands();
+    removeCommands.forEach((r) => void r());
     unbindPromptKeys();
     unsubscribePrefs();
     unwatchHost();

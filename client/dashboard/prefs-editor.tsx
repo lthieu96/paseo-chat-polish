@@ -4,34 +4,37 @@ import { useRpc } from "@getpaseo/plugin/client";
 import { useEffect, useState, type CSSProperties } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { browserStatus, installBrowser, removeBrowser, type BrowserStatus } from "../../shared/html";
+import type { MessageKey } from "../../shared/i18n";
 import { HIDEABLE, ICON_KINDS, LOADERS, RICH_TEXT, type Hideable, type IconKind, type Loader, type Prefs, type RichText } from "../../shared/timeline";
+import { useT } from "../i18n";
 import { useReducedMotion, useStyles } from "../views";
 import { canSetAppTheme, readHostAppearance, readSyntaxTheme, updateAppSettings } from "../web";
 import { Button, Chip, Grid, Group, Legend, Notice, Row, Segmented, Switch } from "./controls";
 import { RICH_DRAWINGS } from "./drawings";
 import type { Page } from "./nav";
 
-const HIDEABLE_LABELS: Record<Hideable, string> = { read: "Reads", search: "Searches", fetch: "Fetches", task: "Tasks", todo: "Todo lists" };
+const HIDEABLE_LABELS: Record<Hideable, MessageKey> = { read: "prefs.hideable.read", search: "prefs.hideable.search", fetch: "prefs.hideable.fetch", task: "prefs.hideable.task", todo: "prefs.hideable.todo" };
 
-const ICON_LABELS: Record<IconKind, string> = { steps: "Merged", tool: "Tools", thought: "Thoughts" };
+const ICON_LABELS: Record<IconKind, MessageKey> = { steps: "prefs.iconKind.steps", tool: "prefs.iconKind.tool", thought: "prefs.iconKind.thought" };
 
 /** Titles and tile labels for each rich text variant, from the "Rich Text — Style Variants" design. */
-const RICH_TEXT_OPTIONS: Record<RichText, { title: string; options: string[] }> = {
-  quote: { title: "Blockquote", options: ["Accent bar", "Tinted card", "Italic indent"] },
-  table: { title: "Table", options: ["Bordered", "Striped", "Minimal", "Grid"] },
-  code: { title: "Code block", options: ["Header bar", "Bare", "Gutter"] },
-  inline: { title: "Inline code", options: ["Filled chip", "Tinted text", "Outlined"] },
-  heading: { title: "Headings", options: ["Size scale", "Compact + rule", "Accent marker"] },
-  list: { title: "Lists", options: ["Bullets + squares", "Dashes + circles", "Timeline rows"] },
-  callout: { title: "Callouts", options: ["Tinted card", "Side bar", "Inline row"] },
-  rule: { title: "Horizontal rule", options: ["Hairline", "Spaced dots", "Short inset"] },
+const RICH_TEXT_OPTIONS: Record<RichText, { title: MessageKey; options: MessageKey[] }> = {
+  quote: { title: "prefs.rich.quote", options: ["prefs.richQuote.a", "prefs.richQuote.b", "prefs.richQuote.c"] },
+  table: { title: "prefs.rich.table", options: ["prefs.richTable.a", "prefs.richTable.b", "prefs.richTable.c", "prefs.richTable.d"] },
+  code: { title: "prefs.rich.code", options: ["prefs.richCode.a", "prefs.richCode.b", "prefs.richCode.c"] },
+  inline: { title: "prefs.rich.inline", options: ["prefs.richInline.a", "prefs.richInline.b", "prefs.richInline.c"] },
+  heading: { title: "prefs.rich.heading", options: ["prefs.richHeading.a", "prefs.richHeading.b", "prefs.richHeading.c"] },
+  list: { title: "prefs.rich.list", options: ["prefs.richList.a", "prefs.richList.b", "prefs.richList.c"] },
+  callout: { title: "prefs.rich.callout", options: ["prefs.richCallout.a", "prefs.richCallout.b", "prefs.richCallout.c"] },
+  rule: { title: "prefs.rich.rule", options: ["prefs.richRule.a", "prefs.richRule.b", "prefs.richRule.c"] },
 };
 
-const LOADER_LABELS: Record<Loader, string> = { dots: "Dots", sparkle: "Sparkle", spokes: "Spokes", dotring: "Dot ring", orb: "Orb", matrix: "Matrix", snake: "Snake" };
+const LOADER_LABELS: Record<Loader, MessageKey> = { dots: "prefs.loader.dots", sparkle: "prefs.loader.sparkle", spokes: "prefs.loader.spokes", dotring: "prefs.loader.dotring", orb: "prefs.loader.orb", matrix: "prefs.loader.matrix", snake: "prefs.loader.snake" };
 
 /** One loader running for real: the timeline's overlay (css in web/restyle-css.ts) scoped to this tile instead of the whole page. */
 function LoaderTile({ theme, id, on, onPress }: { theme: PluginTheme; id: Loader; on: boolean; onPress(): void }) {
   const s = useStyles(theme);
+  const t = useT();
   const reducedMotion = useReducedMotion();
   const c = theme.colors;
   const vars = { "--cp-fg": c.foreground, "--cp-accent": c.accent, "--cp-mono": "ui-monospace, Menlo, monospace" } as CSSProperties;
@@ -40,7 +43,7 @@ function LoaderTile({ theme, id, on, onPress }: { theme: PluginTheme; id: Loader
   return (
     <Pressable
       accessibilityRole="radio"
-      accessibilityLabel={LOADER_LABELS[id]}
+      accessibilityLabel={t(LOADER_LABELS[id])}
       accessibilityState={{ checked: on }}
       onPress={onPress}
       style={({ pressed }) => ({ flex: 1, alignItems: "center", gap: 10, paddingTop: 16, paddingBottom: 9, borderRadius: 8, backgroundColor: c.surface0, borderWidth: on ? 1.5 : StyleSheet.hairlineWidth, borderColor: on ? c.accent : c.border, opacity: reducedMotion && pressed ? 0.8 : 1, transform: pressed && !reducedMotion ? [{ scale: 0.97 }] : undefined })}
@@ -62,17 +65,17 @@ function LoaderTile({ theme, id, on, onPress }: { theme: PluginTheme; id: Loader
           </div>
         </div>
       )}
-      <Text style={[s.small, { fontSize: 12, color: on ? c.foreground : c.foregroundMuted }]}>{LOADER_LABELS[id]}</Text>
+      <Text style={[s.small, { fontSize: 12, color: on ? c.foreground : c.foregroundMuted }]}>{t(LOADER_LABELS[id])}</Text>
     </Pressable>
   );
 }
 
 // What a user does with html_render pages, in the order they meet it.
-const HTML_GUIDE: Array<[string, string]> = [
-  ["Ask for a visual", "Ask the agent to draw, chart, visualize, simulate or mock up something, in any language. Other questions get a text answer, so pages are only made when you ask. Each page is laid out in a headless browser first and the agent fixes overlapping text, script errors or overflow before you see it."],
-  ["Diagrams come as mermaid", "Flowcharts and sequence diagrams are drawn by the chat from a mermaid block, which lays them out better and costs less than a page."],
-  ["Use the page", "Hover it for Full screen (Esc closes), Open in browser and Copy HTML. Links open in your browser and app shortcuts keep working. Its scripts run in a sandbox, away from Paseo and your files."],
-  ["Find it later", "Pages are kept with the chat and show again, in the current theme, when you reopen it. Desktop and web; phones show the page's title."],
+const HTML_GUIDE: Array<[MessageKey, MessageKey]> = [
+  ["prefs.guide.ask.title", "prefs.guide.ask.text"],
+  ["prefs.guide.mermaid.title", "prefs.guide.mermaid.text"],
+  ["prefs.guide.use.title", "prefs.guide.use.text"],
+  ["prefs.guide.later.title", "prefs.guide.later.text"],
 ];
 
 const mb = (bytes: number) => Math.round(bytes / 1e6);
@@ -84,6 +87,7 @@ const mb = (bytes: number) => Math.round(bytes / 1e6);
 function HtmlSwitch({ theme, prefs, onChange }: { theme: PluginTheme; prefs: Prefs; onChange(p: Prefs): void }) {
   const s = useStyles(theme);
   const c = theme.colors;
+  const t = useT();
   const read = useRpc(browserStatus);
   const install = useRpc(installBrowser);
   const remove = useRpc(removeBrowser);
@@ -104,35 +108,38 @@ function HtmlSwitch({ theme, prefs, onChange }: { theme: PluginTheme; prefs: Pre
   const browserHint = error
     ? error
     : !status
-      ? "Checking for the headless browser…"
+      ? t("prefs.browser.checking")
       : {
-          installed: `Chrome for Testing ${status.version}, about 210 MB. Agents can preview pages, and each page is checked for layout problems before it shows.`,
+          installed: t("prefs.browser.installed", { version: status.version ?? "" }),
           downloading:
             status.total && status.received === status.total
-              ? "Unpacking the headless browser…"
-              : `Downloading the headless browser: ${mb(status.received ?? 0)}${status.total ? ` of ${mb(status.total)}` : ""} MB.`,
-          missing: "Optional, about 100 MB. Checks each page for overlapping text, script errors and overflow before it shows, and lets agents preview pages.",
-          failed: `The download failed: ${status.error}`,
-          unsupported: "There's no headless browser for this computer, so pages show unchecked.",
+              ? t("prefs.browser.unpacking")
+              : t("prefs.browser.downloading", {
+                  received: mb(status.received ?? 0),
+                  total: status.total ? t("prefs.browser.downloadingTotal", { total: mb(status.total) }) : "",
+                }),
+          missing: t("prefs.browser.missing"),
+          failed: t("prefs.browser.failed", { error: status.error ?? "" }),
+          unsupported: t("prefs.browser.unsupported"),
         }[status.state];
   const percent = status?.total ? Math.floor(((status.received ?? 0) / status.total) * 100) : undefined;
   return (
     <>
-      <Row theme={theme} first label="HTML pages" hint="Gives agents created from now on the html_render tool, and html_preview while the headless browser is installed.">
-        <Switch theme={theme} label="HTML pages" value={prefs.html === "on"} onChange={(on) => onChange({ ...prefs, html: on ? "on" : "off" })} />
+      <Row theme={theme} first label={t("prefs.row.htmlPages")} hint={t("prefs.hint.htmlPages")}>
+        <Switch theme={theme} label={t("prefs.row.htmlPages")} value={prefs.html === "on"} onChange={(on) => onChange({ ...prefs, html: on ? "on" : "off" })} />
       </Row>
-      <Row theme={theme} label="Headless browser" hint={browserHint}>
+      <Row theme={theme} label={t("prefs.row.headlessBrowser")} hint={browserHint}>
         {error ? (
-          <Button theme={theme} icon="RotateCw" label="Refresh" onPress={() => void read({}).then(done, failed)} />
+          <Button theme={theme} icon="RotateCw" label={t("prefs.button.refresh")} onPress={() => void read({}).then(done, failed)} />
         ) : status?.state === "downloading" ? (
           <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
             <ActivityIndicator size="small" color={c.accent} />
             {percent !== undefined ? <Text style={[s.small, { fontSize: 12, fontVariant: ["tabular-nums"] }]}>{`${percent}%`}</Text> : null}
           </View>
         ) : status?.state === "installed" ? (
-          <Button theme={theme} icon="Trash2" label="Remove" onPress={() => void remove({}).then(done, failed)} />
+          <Button theme={theme} icon="Trash2" label={t("prefs.button.remove")} onPress={() => void remove({}).then(done, failed)} />
         ) : status?.state === "missing" || status?.state === "failed" ? (
-          <Button theme={theme} icon={status.state === "failed" ? "RotateCw" : "ArrowDownToLine"} label={status.state === "failed" ? "Retry" : "Download"} onPress={() => void install({}).then(done, failed)} />
+          <Button theme={theme} icon={status.state === "failed" ? "RotateCw" : "ArrowDownToLine"} label={status.state === "failed" ? t("prefs.button.retry") : t("prefs.button.download")} onPress={() => void install({}).then(done, failed)} />
         ) : null}
       </Row>
     </>
@@ -142,23 +149,24 @@ function HtmlSwitch({ theme, prefs, onChange }: { theme: PluginTheme; prefs: Pre
 /** The HTML pages page: the switch for the tools, then how to use them. */
 function HtmlGuide({ theme, prefs, onChange }: { theme: PluginTheme; prefs: Prefs; onChange(p: Prefs): void }) {
   const s = useStyles(theme);
+  const t = useT();
   return (
     <View style={{ gap: 24 }}>
-      <Group theme={theme} title="Tool">
+      <Group theme={theme} title={t("prefs.group.htmlTool")}>
         <HtmlSwitch theme={theme} prefs={prefs} onChange={onChange} />
       </Group>
-      <Group theme={theme} title="How to use">
+      <Group theme={theme} title={t("prefs.group.howToUse")}>
         {HTML_GUIDE.map(([title, text], i) => (
           <View key={title} style={{ flexDirection: "row", gap: 12, paddingHorizontal: 16, paddingVertical: 12, borderTopWidth: i ? StyleSheet.hairlineWidth : 0, borderTopColor: theme.colors.border }}>
             <Text style={[s.verb, { fontSize: 13, width: 14, color: theme.colors.foregroundMuted, fontVariant: ["tabular-nums"] }]}>{i + 1}</Text>
             <View style={{ flex: 1, gap: 2 }}>
-              <Text style={[s.verb, { fontSize: 13 }]}>{title}</Text>
-              <Text style={[s.small, { fontSize: 12, lineHeight: 17 }]}>{text}</Text>
+              <Text style={[s.verb, { fontSize: 13 }]}>{t(title)}</Text>
+              <Text style={[s.small, { fontSize: 12, lineHeight: 17 }]}>{t(text)}</Text>
             </View>
           </View>
         ))}
       </Group>
-      <Notice theme={theme}>Open in browser serves the page from the computer running Paseo's daemon (127.0.0.1), so it works when that is this computer.</Notice>
+      <Notice theme={theme}>{t("prefs.notice.openInBrowser")}</Notice>
     </View>
   );
 }
@@ -168,21 +176,42 @@ export function PrefsEditor({ theme, page, prefs, onChange }: { theme: PluginThe
   const set = <K extends keyof Prefs>(key: K) => (value: Prefs[K]) => onChange({ ...prefs, [key]: value });
   const s = useStyles(theme);
   const c = theme.colors;
+  const t = useT();
+  if (page === "general") {
+    return (
+      <View style={{ gap: 24 }}>
+        <Group theme={theme} title={t("general.group.language")}>
+          <Row theme={theme} first label={t("general.language.label")} hint={t("general.language.hint")}>
+            <Segmented
+              theme={theme}
+              value={prefs.language}
+              onChange={set("language")}
+              options={[
+                ["en", "", t("general.language.en")],
+                ["zh", "", t("general.language.zh")],
+              ]}
+            />
+          </Row>
+        </Group>
+        <Notice theme={theme}>{t("general.language.note")}</Notice>
+      </View>
+    );
+  }
   if (page === "html") return <HtmlGuide theme={theme} prefs={prefs} onChange={onChange} />;
   if (page === "messages") {
     const paseoSyntax = readSyntaxTheme();
     return (
       <View style={{ gap: 24 }}>
-        <Group theme={theme} title="Spacing">
-          <Row theme={theme} first label="Density" hint="Space between replies, prompts and step rows.">
+        <Group theme={theme} title={t("prefs.group.spacing")}>
+          <Row theme={theme} first label={t("prefs.row.density")} hint={t("prefs.hint.density")}>
             <Segmented
               theme={theme}
               value={prefs.density}
               onChange={set("density")}
               options={[
-                ["compact", "", "Compact"],
-                ["normal", "", "Normal"],
-                ["spacious", "", "Spacious"],
+                ["compact", "", t("prefs.density.compact")],
+                ["normal", "", t("prefs.density.normal")],
+                ["spacious", "", t("prefs.density.spacious")],
               ]}
             />
           </Row>
@@ -190,8 +219,8 @@ export function PrefsEditor({ theme, page, prefs, onChange }: { theme: PluginThe
         {/* These change Paseo's own icons, replies and bubbles, which native apps draw without a DOM to restyle. */}
         {canSetAppTheme ? (
           <>
-            <Group theme={theme} title="Icons">
-              <Row theme={theme} first stacked label="Icon set" hint="Paseo’s icons too; any without a twin stay Lucide. Desktop and web.">
+            <Group theme={theme} title={t("prefs.group.icons")}>
+              <Row theme={theme} first stacked label={t("prefs.row.iconSet")} hint={t("prefs.hint.iconSet")}>
                 <Segmented
                   theme={theme}
                   value={prefs.iconSet}
@@ -204,62 +233,62 @@ export function PrefsEditor({ theme, page, prefs, onChange }: { theme: PluginThe
                 />
               </Row>
             </Group>
-            <Group theme={theme} title="Replies">
-              <Row theme={theme} first label="Copy popup" hint="Selecting text offers Copy text or Markdown.">
-                <Switch theme={theme} label="Copy popup" value={prefs.selectionCopy === "on"} onChange={(on) => set("selectionCopy")(on ? "on" : "off")} />
+            <Group theme={theme} title={t("prefs.group.replies")}>
+              <Row theme={theme} first label={t("prefs.row.copyPopup")} hint={t("prefs.hint.copyPopup")}>
+                <Switch theme={theme} label={t("prefs.row.copyPopup")} value={prefs.selectionCopy === "on"} onChange={(on) => set("selectionCopy")(on ? "on" : "off")} />
               </Row>
             </Group>
-            <Group theme={theme} title="Your messages">
-              <Row theme={theme} first label="Long messages" hint="Over 8 lines; clamp shows six.">
+            <Group theme={theme} title={t("prefs.group.userMessages")}>
+              <Row theme={theme} first label={t("prefs.row.longMessages")} hint={t("prefs.hint.longMessages")}>
                 <Segmented
                   theme={theme}
                   value={prefs.userMessages}
                   onChange={set("userMessages")}
                   options={[
-                    ["clamp", "", "Clamp"],
-                    ["full", "", "Full", true],
+                    ["clamp", "", t("prefs.option.clamp")],
+                    ["full", "", t("prefs.option.full"), true],
                   ]}
                 />
               </Row>
             </Group>
           </>
         ) : null}
-        <Group theme={theme} title="Images">
-          <Row theme={theme} first label="Image-only replies" hint="Thumbnails open full size.">
+        <Group theme={theme} title={t("prefs.group.images")}>
+          <Row theme={theme} first label={t("prefs.row.imageOnly")} hint={t("prefs.hint.imageOnly")}>
             <Segmented
               theme={theme}
               value={prefs.images}
               onChange={set("images")}
               options={[
-                ["small", "", "Small"],
-                ["large", "", "Large"],
-                ["xlarge", "", "Extra large"],
-                ["native", "", "Inline", true],
+                ["small", "", t("prefs.option.small")],
+                ["large", "", t("prefs.option.large")],
+                ["xlarge", "", t("prefs.option.xlarge")],
+                ["native", "", t("prefs.option.inline"), true],
               ]}
             />
           </Row>
-          <Row theme={theme} label="Image stacks" hint="Images in a row show as one stack that spreads into a row; a click on an image there opens the viewer. In replies with text, only while Restyle Paseo's items is on.">
-            <Switch theme={theme} label="Image stacks" value={prefs.imageStacks === "on"} onChange={(on) => set("imageStacks")(on ? "on" : "off")} />
+          <Row theme={theme} label={t("prefs.row.imageStacks")} hint={t("prefs.hint.imageStacks")}>
+            <Switch theme={theme} label={t("prefs.row.imageStacks")} value={prefs.imageStacks === "on"} onChange={(on) => set("imageStacks")(on ? "on" : "off")} />
           </Row>
           {prefs.imageStacks === "on" ? (
-            <Row theme={theme} label="Spread on" hint="Point at a stack, or click it, to spread it. Moving away folds it, until you open an image; then its fold button does.">
+            <Row theme={theme} label={t("prefs.row.spreadOn")} hint={t("prefs.hint.spreadOn")}>
               <Segmented
                 theme={theme}
                 value={prefs.imageStackOpen}
                 onChange={set("imageStackOpen")}
                 options={[
-                  ["hover", "", "Hover"],
-                  ["click", "", "Click"],
+                  ["hover", "", t("prefs.option.hover")],
+                  ["click", "", t("prefs.option.click")],
                 ]}
               />
             </Row>
           ) : null}
         </Group>
         {canSetAppTheme ? (
-          <Group theme={theme} title="Working indicator">
-            <Row theme={theme} first stacked label="Loader" hint="Shown in the turn footer while the agent works.">
+          <Group theme={theme} title={t("prefs.group.working")}>
+            <Row theme={theme} first stacked label={t("prefs.row.loader")} hint={t("prefs.hint.loader")}>
               {prefs.nativeStyle === "paseo" ? (
-                <Notice theme={theme}>Loaders are drawn by the restyle. Turn on Restyle Paseo's items to pick one.</Notice>
+                <Notice theme={theme}>{t("prefs.notice.loaders")}</Notice>
               ) : (
                 <View style={{ width: "100%" }}>
                   <Grid n={4}>
@@ -270,7 +299,7 @@ export function PrefsEditor({ theme, page, prefs, onChange }: { theme: PluginThe
                 </View>
               )}
             </Row>
-            <Row theme={theme} label="Size" hint="Paseo draws it at 14.">
+            <Row theme={theme} label={t("prefs.row.size")} hint={t("prefs.hint.size")}>
               <Segmented
                 theme={theme}
                 value={prefs.loaderSize}
@@ -285,13 +314,11 @@ export function PrefsEditor({ theme, page, prefs, onChange }: { theme: PluginThe
           </Group>
         ) : null}
         {paseoSyntax ? (
-          <Notice theme={theme} action={paseoSyntax === "one" ? null : <Button theme={theme} label="Use One" icon="Code" onPress={() => updateAppSettings({ syntaxTheme: "one" })} />}>
-            {paseoSyntax === "one"
-              ? "Text and code follow Settings → Appearance. Code uses Paseo's One syntax theme."
-              : `Text and code follow Settings → Appearance. Code uses Paseo's ${paseoSyntax} syntax theme; One is the closest match to Mariana.`}
+          <Notice theme={theme} action={paseoSyntax === "one" ? null : <Button theme={theme} label={t("prefs.button.useOne")} icon="Code" onPress={() => updateAppSettings({ syntaxTheme: "one" })} />}>
+            {paseoSyntax === "one" ? t("prefs.notice.syntaxOne") : t("prefs.notice.syntaxOther", { name: paseoSyntax })}
           </Notice>
         ) : (
-          <Notice theme={theme}>Text, tables, code blocks and mermaid diagrams render natively.</Notice>
+          <Notice theme={theme}>{t("prefs.notice.nativeText")}</Notice>
         )}
         <Legend theme={theme} />
       </View>
@@ -303,17 +330,17 @@ export function PrefsEditor({ theme, page, prefs, onChange }: { theme: PluginThe
       <View style={{ gap: 24 }}>
         <Group
           theme={theme}
-          title="Layout"
+          title={t("prefs.group.layout")}
           top={
             readHostAppearance().chatDisplay === "collapseTurns" ? (
-              <Notice theme={theme}>Paseo's chat display collapses turns: merged, each turn's steps and the replies before its last one fold into one row here instead of Paseo's turn summary.</Notice>
+              <Notice theme={theme}>{t("prefs.notice.collapseTurns")}</Notice>
             ) : null
           }
         >
-          <Row theme={theme} first label="Merge into one row" hint="One row like “Thought 2 times, ran 3 commands”.">
-            <Switch theme={theme} label="Merge into one row" value={prefs.merge === "on"} onChange={(on) => set("merge")(on ? "on" : "off")} />
+          <Row theme={theme} first label={t("prefs.row.merge")} hint={t("prefs.hint.merge")}>
+            <Switch theme={theme} label={t("prefs.row.merge")} value={prefs.merge === "on"} onChange={(on) => set("merge")(on ? "on" : "off")} />
           </Row>
-          <Row theme={theme} label="Strength" hint="How faded rows sit until you hover them.">
+          <Row theme={theme} label={t("prefs.row.strength")} hint={t("prefs.hint.strength")}>
             <Segmented
               theme={theme}
               value={prefs.steps}
@@ -322,70 +349,70 @@ export function PrefsEditor({ theme, page, prefs, onChange }: { theme: PluginThe
                 ["dim", "", "30%"],
                 ["faded", "", "45%"],
                 ["soft", "", "65%"],
-                ["full", "", "Full", true],
+                ["full", "", t("prefs.strength.full"), true],
               ]}
             />
           </Row>
-          <Row theme={theme} stacked label="Row icons" hint="Without an icon a row starts with its verb.">
+          <Row theme={theme} stacked label={t("prefs.row.rowIcons")} hint={t("prefs.hint.rowIcons")}>
             {ICON_KINDS.map((k) => {
               const shown = prefs.rowIcons[k] === "show";
-              return <Chip key={k} theme={theme} on={shown} label={ICON_LABELS[k]} onPress={() => onChange({ ...prefs, rowIcons: { ...prefs.rowIcons, [k]: shown ? "hide" : "show" } })} />;
+              return <Chip key={k} theme={theme} on={shown} label={t(ICON_LABELS[k])} onPress={() => onChange({ ...prefs, rowIcons: { ...prefs.rowIcons, [k]: shown ? "hide" : "show" } })} />;
             })}
           </Row>
         </Group>
-        <Group theme={theme} title="Reasoning">
-          <Row theme={theme} first stacked label="Starts as" hint={`Paseo: Always expand reasoning (${paseo ? "on" : "off"}).`}>
+        <Group theme={theme} title={t("prefs.group.reasoning")}>
+          <Row theme={theme} first stacked label={t("prefs.row.startsAs")} hint={t("prefs.hint.startsAs", { state: paseo ? t("prefs.state.on") : t("prefs.state.off") })}>
             <Segmented
               theme={theme}
               value={prefs.reasoning}
               onChange={set("reasoning")}
               options={[
                 ["paseo", "", "Paseo", true],
-                ["collapsed", "", "Collapsed"],
-                ["expanded", "", "Expanded"],
+                ["collapsed", "", t("prefs.option.collapsed")],
+                ["expanded", "", t("prefs.option.expanded")],
               ]}
             />
           </Row>
         </Group>
         <Group
           theme={theme}
-          title="Tool calls"
+          title={t("prefs.group.toolCalls")}
           top={
             readHostAppearance().chatDisplay !== "full" ? (
-              <Notice theme={theme}>Paseo's chat display collapses tool calls, so they stay grouped ("Ran 4 commands"). Switch it to Full in Settings → Chat to get these rows.</Notice>
+              <Notice theme={theme}>{t("prefs.notice.collapsedTools")}</Notice>
             ) : null
           }
         >
-          <Row theme={theme} first label="Open details" hint="Which rows start open.">
+          <Row theme={theme} first label={t("prefs.row.openDetails")} hint={t("prefs.hint.openDetails")}>
             <Segmented
               theme={theme}
               value={prefs.toolDetails}
               onChange={set("toolDetails")}
               options={[
-                ["collapsed", "", "None", true],
-                ["failed", "", "Failures"],
-                ["expanded", "", "All"],
+                ["collapsed", "", t("prefs.option.none"), true],
+                ["failed", "", t("prefs.option.failures")],
+                ["expanded", "", t("prefs.option.all")],
               ]}
             />
           </Row>
-          <Row theme={theme} label="Command colors" hint="Colors from the Theme page.">
+          <Row theme={theme} label={t("prefs.row.commandColors")} hint={t("prefs.hint.commandColors")}>
             <Segmented
               theme={theme}
               value={prefs.commandColors}
               onChange={set("commandColors")}
               options={[
-                ["expanded", "", "When open", true],
-                ["always", "", "Always"],
+                ["expanded", "", t("prefs.option.whenOpen"), true],
+                ["always", "", t("prefs.option.always")],
               ]}
             />
           </Row>
-          <Row theme={theme} label="Wrap diff lines" hint="Off keeps long lines on one row.">
-            <Switch theme={theme} label="Wrap diff lines" value={prefs.diffWrap === "on"} onChange={(on) => set("diffWrap")(on ? "on" : "off")} />
+          <Row theme={theme} label={t("prefs.row.diffWrap")} hint={t("prefs.hint.diffWrap")}>
+            <Switch theme={theme} label={t("prefs.row.diffWrap")} value={prefs.diffWrap === "on"} onChange={(on) => set("diffWrap")(on ? "on" : "off")} />
           </Row>
-          <Row theme={theme} stacked label="Show in timeline" hint="Running and failed calls always show.">
+          <Row theme={theme} stacked label={t("prefs.row.showInTimeline")} hint={t("prefs.hint.showInTimeline")}>
             {HIDEABLE.map((k) => {
               const shown = !prefs.hidden.includes(k);
-              return <Chip key={k} theme={theme} on={shown} label={HIDEABLE_LABELS[k]} onPress={() => onChange({ ...prefs, hidden: shown ? [...prefs.hidden, k] : prefs.hidden.filter((h) => h !== k) })} />;
+              return <Chip key={k} theme={theme} on={shown} label={t(HIDEABLE_LABELS[k])} onPress={() => onChange({ ...prefs, hidden: shown ? [...prefs.hidden, k] : prefs.hidden.filter((h) => h !== k) })} />;
             })}
           </Row>
         </Group>
@@ -395,19 +422,20 @@ export function PrefsEditor({ theme, page, prefs, onChange }: { theme: PluginThe
   }
   return (
     <View style={{ gap: 20 }}>
-      {prefs.nativeStyle === "paseo" ? <Notice theme={theme}>Restyle Paseo's items is off, so these styles don't apply until you switch it back on.</Notice> : null}
+      {prefs.nativeStyle === "paseo" ? <Notice theme={theme}>{t("prefs.notice.restyleOff")}</Notice> : null}
       {RICH_TEXT.map((k) => (
         <View key={k} style={{ gap: 8 }}>
-          <Text style={[s.verb, { fontSize: 13 }]}>{RICH_TEXT_OPTIONS[k].title}</Text>
+          <Text style={[s.verb, { fontSize: 13 }]}>{t(RICH_TEXT_OPTIONS[k].title)}</Text>
           <Grid n={k === "table" ? 4 : 3}>
             {RICH_TEXT_OPTIONS[k].options.map((label, j) => {
               const id = (["a", "b", "c", "d"] as const)[j]!;
               const on = prefs.richText[k] === id;
+              const text = t(label);
               return (
-                <Pressable key={id} accessibilityRole="radio" accessibilityLabel={label} accessibilityState={{ checked: on }} onPress={() => onChange({ ...prefs, richText: { ...prefs.richText, [k]: id } })} style={{ flex: 1, gap: 6 }}>
+                <Pressable key={id} accessibilityRole="radio" accessibilityLabel={text} accessibilityState={{ checked: on }} onPress={() => onChange({ ...prefs, richText: { ...prefs.richText, [k]: id } })} style={{ flex: 1, gap: 6 }}>
                   <View style={{ height: 52, paddingHorizontal: 10, justifyContent: "center", alignItems: "flex-start", borderRadius: 8, backgroundColor: c.surface0, borderWidth: on ? 1.5 : StyleSheet.hairlineWidth, borderColor: on ? c.accent : c.border }}>{RICH_DRAWINGS[k][j]!(c)}</View>
                   <Text style={[s.small, { fontSize: 12, color: on ? c.foreground : c.foregroundMuted, fontWeight: on ? "500" : "400" }]} numberOfLines={1}>
-                    {label}
+                    {text}
                   </Text>
                 </Pressable>
               );
@@ -415,8 +443,8 @@ export function PrefsEditor({ theme, page, prefs, onChange }: { theme: PluginThe
           </Grid>
         </View>
       ))}
-      <Group theme={theme} title="Diagrams">
-        <Row theme={theme} first label="Renderer" hint="Pele draws the same mermaid source in its own layout and the theme's colors.">
+      <Group theme={theme} title={t("prefs.group.diagrams")}>
+        <Row theme={theme} first label={t("prefs.row.renderer")} hint={t("prefs.hint.renderer")}>
           <Segmented
             theme={theme}
             value={prefs.diagrams}

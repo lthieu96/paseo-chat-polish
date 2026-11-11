@@ -12,6 +12,8 @@ import type { IconKind } from "../shared/timeline";
 import { imageData, todoData, toolData, type imagesSchema, type noticeSchema, type planSchema, type stepsSchema, type thoughtSchema, type todoSchema, type ToolData, type Tone } from "./model";
 import { changesOfTodo, noteShownAgent, runOf, runVersion, stepKey, stepSummary, subscribeRun, type TaskChange } from "./steps";
 import { contrast, isHex } from "../shared/theme";
+import type { Translator } from "../shared/i18n";
+import { useLanguage, useT } from "./i18n";
 import { highlight, highlightShell, highlightShellBlock, SYNTAX_THEMES, type Span, type SyntaxColors } from "./highlight";
 import { Icon } from "./icons";
 import { usePrefs } from "./prefs";
@@ -421,6 +423,7 @@ function Scroll({ children, nowrap = false }: { children: ReactNode; nowrap?: bo
 function ToolDetail({ data, theme }: { data: NonNullable<ToolData["detail"]>; theme: PluginTheme }) {
   const s = useStyles(theme);
   const c = theme.colors;
+  const t = useT();
   const wrap = usePrefs().diffWrap === "on";
   switch (data.kind) {
     case "output":
@@ -477,7 +480,7 @@ function ToolDetail({ data, theme }: { data: NonNullable<ToolData["detail"]>; th
         <View style={s.block}>
           {(["input", "output"] as const).map((k, i) => (
             <View key={k} style={[s.blockBody, i === 0 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.border }]}>
-              <Text style={s.label}>{k.toUpperCase()}</Text>
+              <Text style={s.label}>{t(k === "input" ? "chat.input" : "chat.output")}</Text>
               <Scroll>
                 {data[k].split("\n").map((line, i) => (
                   <CodeLine key={i} text={line} theme={theme} style={s.code} />
@@ -596,19 +599,21 @@ export function MergedSteps(
 ) {
   const { item, theme, layout, steps, ms, growing, defaultOpen } = props;
   const [open, toggle] = useDisclosure(!!defaultOpen);
+  const t = useT();
+  const lang = useLanguage();
   const icons = !!useIndent("steps");
   const { density } = usePrefs();
   // Inside the open list steps sit flush; a run of one stands in the timeline like any row.
   const step = ({ item: step, phase }: (typeof steps)[number], nested = true) =>
     step.type === "tool_call" ? (
-      <ToolItem key={stepKey(step)} {...props} nested={nested} item={{ ...item, data: toolData(step) }} />
+      <ToolItem key={stepKey(step)} {...props} nested={nested} item={{ ...item, data: toolData(step, lang) }} />
     ) : step.type === "reasoning" ? (
       <ThoughtItem key={stepKey(step)} {...props} nested={nested} item={{ ...item, data: { text: step.text, phase } }} />
     ) : step.type === "todo" ? (
       <TodoSteps key={stepKey(step)} {...props} step={step} />
     ) : step.type === "assistant_message" ? (
-      imageData(step.text) ? (
-        <ImagesItem key={stepKey(step)} {...props} item={{ ...item, data: imageData(step.text)! }} />
+      imageData(step.text, lang) ? (
+        <ImagesItem key={stepKey(step)} {...props} item={{ ...item, data: imageData(step.text, lang)! }} />
       ) : (
         <ReplyStep key={stepKey(step)} theme={theme} text={step.text} />
       )
@@ -616,12 +621,12 @@ export function MergedSteps(
   // The step in progress, or between steps of a run the agent is still adding to, the one just done (not the summary, which would flash).
   const live = steps.findLast((s) => s.phase === "streaming" || (s.item.type === "tool_call" && s.item.status === "running")) ?? (growing ? steps.at(-1) : undefined);
   const change = live?.item.type === "todo" ? changesOfTodo(stepKey(live.item)!).at(-1) : undefined;
-  const words = change && changeWords(change);
+  const words = change && changeWords(change, t);
   const now: Pick<ToolData, "verb" | "target" | "mono" | "shell"> | undefined =
-    live?.item.type === "tool_call" ? toolData(live.item) : words ? { verb: words[0], target: words[1], mono: false } : undefined;
+    live?.item.type === "tool_call" ? toolData(live.item, lang) : words ? { verb: words[0], target: words[1], mono: false } : undefined;
   const fresh = live && (live.item.type !== "todo" || now)
-    ? { verb: now?.verb ?? (live.phase === "streaming" ? "Thinking" : "Thought"), target: now?.target, mono: now?.mono, shell: now?.shell }
-    : { verb: stepSummary(steps.map((s) => s.item)) };
+    ? { verb: now?.verb ?? (live.phase === "streaming" ? t("chat.thinking") : t("chat.thought")), target: now?.target, mono: now?.mono, shell: now?.shell }
+    : { verb: stepSummary(steps.map((s) => s.item), undefined, lang) };
   const holdLabel = !!live && !(live.item.type === "tool_call" && (live.item.status === "failed" || live.item.status === "canceled"));
   const label = useSteady(fresh, `${fresh.verb}\n${fresh.target ?? ""}`, 700, holdLabel);
   if (steps.length < 2) return steps[0] ? step(steps[0], false) : null;
@@ -639,7 +644,7 @@ export function MergedSteps(
         target={label.target}
         mono={label.mono}
         shell={label.shell}
-        meta={failed ? `${failed} failed` : live ? `${steps.length} steps` : ms ? duration(ms) : undefined}
+        meta={failed ? t("chat.failedCount", { n: failed }) : live ? t("chat.steps", { n: steps.length }) : ms ? duration(ms) : undefined}
         metaColor={failed ? c.statusDanger : undefined}
         pulsing={!!live}
         swap
@@ -695,6 +700,7 @@ export function ThoughtItem({ item, theme, layout, nested }: PluginTimelineItemP
   const s = useStyles(theme);
   // "paseo" follows Settings → Appearance → Always expand reasoning, which is off (collapsed) by default.
   const { reasoning, density } = usePrefs();
+  const t = useT();
   const [open, toggle] = useDisclosure(reasoning === "paseo" ? readHostAppearance().autoExpandReasoning : reasoning === "expanded");
   const streaming = item.data.phase === "streaming";
   const enter = useEnter(streaming);
@@ -707,7 +713,7 @@ export function ThoughtItem({ item, theme, layout, nested }: PluginTimelineItemP
         compact={layout.compact}
         kind="thought"
         icon="Brain"
-        verb={streaming ? "Thinking" : "Thought"}
+        verb={t(streaming ? "chat.thinking" : "chat.thought")}
         pulsing={streaming}
         open={open}
         onToggle={text.trim() ? toggle : undefined}
@@ -732,6 +738,7 @@ export function ThoughtItem({ item, theme, layout, nested }: PluginTimelineItemP
 
 export function PlanItem({ item, theme }: PluginTimelineItemProps<z.output<typeof planSchema>>) {
   const s = useStyles(theme);
+  const t = useT();
   const [open, toggle] = useDisclosure();
   const text = useRevealedText(item.data.text, item.data.phase).trim();
   const long = text.split("\n").length > 14 || text.length > 1200;
@@ -740,8 +747,8 @@ export function PlanItem({ item, theme }: PluginTimelineItemProps<z.output<typeo
     <View {...SQUIRCLE_CARD} style={s.card}>
       <View style={s.cardHead}>
         <Icon name="Map" size={15} color={theme.colors.accent} />
-        <Text style={s.title}>Plan</Text>
-        {steps ? <Text style={[s.meta, { marginLeft: 0 }]}>{steps} steps</Text> : null}
+        <Text style={s.title}>{t("chat.plan")}</Text>
+        {steps ? <Text style={[s.meta, { marginLeft: 0 }]}>{t("chat.planSteps", { n: steps })}</Text> : null}
       </View>
       <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: long ? 6 : 14, maxHeight: long && !open ? 320 : undefined, overflow: "hidden" }}>
         <Text style={[s.prose, { color: theme.colors.foreground, lineHeight: Math.round(s.prose.fontSize * 1.5) }]} selectable>
@@ -750,7 +757,7 @@ export function PlanItem({ item, theme }: PluginTimelineItemProps<z.output<typeo
       </View>
       {long ? (
         <Pressable accessibilityRole="button" onPress={toggle} style={s.more}>
-          <Text style={s.moreText}>{open ? "Show less" : "Show full plan"}</Text>
+          <Text style={s.moreText}>{open ? t("chat.showLess") : t("chat.showFullPlan")}</Text>
           <Icon name={open ? "ChevronUp" : "ChevronDown"} size={12} color={theme.colors.foregroundMuted} />
         </Pressable>
       ) : null}
@@ -758,8 +765,10 @@ export function PlanItem({ item, theme }: PluginTimelineItemProps<z.output<typeo
   );
 }
 
-const changeWords = (c: TaskChange): [string, string | undefined] =>
-  c.type === "created" ? [`Created ${c.count} ${c.count === 1 ? "task" : "tasks"}`, undefined] : [c.type.charAt(0).toUpperCase() + c.type.slice(1), c.text];
+const CHANGE_KEYS = { added: "chat.change.added", started: "chat.change.started", completed: "chat.change.completed" } as const;
+
+const changeWords = (c: TaskChange, t: Translator): [string, string | undefined] =>
+  c.type === "created" ? [t(c.count === 1 ? "chat.createdOneTask" : "chat.createdTasks", { n: c.count }), undefined] : [t(CHANGE_KEYS[c.type]), c.text];
 
 /** A todo update inside a merged run: one row per change ("Completed Inspect its source"); open, a row shows the list at that point. */
 function TodoSteps(props: PluginTimelineItemProps<unknown> & { step: Extract<AgentTimelineItem, { type: "todo" }> }) {
@@ -770,7 +779,8 @@ function TodoSteps(props: PluginTimelineItemProps<unknown> & { step: Extract<Age
 function TaskChangeRow({ theme, layout, step, change }: PluginTimelineItemProps<unknown> & { step: Extract<AgentTimelineItem, { type: "todo" }>; change: TaskChange }) {
   const [open, toggle] = useDisclosure();
   const indent = useIndent("tool");
-  const [verb, target] = changeWords(change);
+  const t = useT();
+  const [verb, target] = changeWords(change, t);
   const { items } = todoData(step);
   const done = items.filter((t) => t.status === "completed").length;
   return (
@@ -821,6 +831,7 @@ function TodoList({ theme, items }: { theme: PluginTheme; items: z.output<typeof
 export function TodoItem({ item, theme }: PluginTimelineItemProps<z.output<typeof todoSchema>>) {
   const s = useStyles(theme);
   const c = theme.colors;
+  const t = useT();
   const [open, toggle] = useDisclosure();
   const [hovered, setHovered] = useState(false);
   const { items, active } = item.data;
@@ -840,7 +851,7 @@ export function TodoItem({ item, theme }: PluginTimelineItemProps<z.output<typeo
         <View style={s.slot}>
           <Icon name="ListChecks" size={15} color={c.foregroundMuted} />
         </View>
-        <Text style={s.verb}>Tasks</Text>
+        <Text style={s.verb}>{t("chat.tasks")}</Text>
         <Text {...PMONO} style={[s.code, { color: c.foregroundMuted }]}>
           {done} / {items.length}
         </Text>
@@ -918,9 +929,10 @@ const THUMB = { small: { width: 200, height: 128 }, large: { width: 320, height:
 /** The thumbnail size for the Images choice (Inline uses Small where the plugin still draws one). */
 const thumbSize = (images: string) => THUMB[images === "large" || images === "xlarge" ? images : "small"];
 
-function Thumbnail({ alt, url, theme, onOpen, edge, focusable = true }: { alt: string; url: string; theme: PluginTheme; onOpen(): void; edge?: string; focusable?: boolean }) {
+function Thumbnail({ alt, label, url, theme, onOpen, edge, focusable = true }: { alt: string; label?: string; url: string; theme: PluginTheme; onOpen(): void; edge?: string; focusable?: boolean }) {
   const s = useStyles(theme);
   const c = theme.colors;
+  const t = useT();
   const { uri, failed } = useImage(url, "thumbnail");
   const size = thumbSize(usePrefs().images);
   const frame = [size, { borderRadius: 8, borderWidth: edge ? 1 : StyleSheet.hairlineWidth, borderColor: edge ?? c.border, backgroundColor: c.surface1, overflow: "hidden" as const }, ZOOM_CURSOR];
@@ -928,12 +940,12 @@ function Thumbnail({ alt, url, theme, onOpen, edge, focusable = true }: { alt: s
     return (
       <View style={[frame, { alignItems: "center", justifyContent: "center", gap: 6 }]}>
         <Icon name={failed ? "ImageOff" : "Image"} size={16} color={c.foregroundMuted} />
-        <Text style={s.small}>{failed ? "Image unavailable" : "Loading…"}</Text>
+        <Text style={s.small}>{failed ? t("chat.imageUnavailable") : t("chat.loadingImage")}</Text>
       </View>
     );
   }
   return (
-    <Pressable accessibilityRole="imagebutton" accessibilityLabel={`Open ${alt}`} onPress={onOpen} focusable={focusable} style={frame}>
+    <Pressable accessibilityRole="imagebutton" accessibilityLabel={label ?? t("chat.openImage", { alt })} onPress={onOpen} focusable={focusable} style={frame}>
       <Image source={{ uri }} style={size} resizeMode="cover" />
     </Pressable>
   );
@@ -979,6 +991,7 @@ function LightboxButton({ icon, label, onPress, size = 32 }: { icon: string; lab
  */
 function Lightbox({ images, index, onIndex, onClose }: { images: Array<{ alt: string; url: string }>; index: number; onIndex(i: number): void; onClose(): void }) {
   const image = images[index]!;
+  const t = useT();
   const { uri, failed, stale } = useSteadyImage(images, index);
   const win = useWindowDimensions();
   const [natural, setNatural] = useState<{ w: number; h: number }>();
@@ -1013,36 +1026,36 @@ function Lightbox({ images, index, onIndex, onClose }: { images: Array<{ alt: st
   return (
     <Modal transparent visible animationType="fade" onRequestClose={onClose}>
       <View style={[{ flex: 1, backgroundColor: "rgba(8,9,11,0.92)" }, Platform.OS === "web" ? ({ backdropFilter: "blur(12px)" } as object) : null]}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Close image" onPress={onClose} style={StyleSheet.absoluteFill} />
+        <Pressable accessibilityRole="button" accessibilityLabel={t("chat.close")} onPress={onClose} style={StyleSheet.absoluteFill} />
         <View pointerEvents="box-none" style={{ flexDirection: "row", alignItems: "center", gap: 12, height: 56, paddingHorizontal: 16 }}>
           <View pointerEvents="none" style={{ flex: 1, flexDirection: "row", alignItems: "baseline", gap: 10, minWidth: 0 }}>
             <Text style={[chrome, { fontWeight: "500", flexShrink: 1 }]} numberOfLines={1}>
-              {image.alt || "Image"}
+              {image.alt || t("chat.image")}
             </Text>
             {natural ? <Text style={[chrome, { fontSize: 12, opacity: 0.55, fontVariant: ["tabular-nums"] }]}>{`${natural.w} × ${natural.h}`}</Text> : null}
             {many ? <Text style={[chrome, { fontSize: 12, opacity: 0.55, fontVariant: ["tabular-nums"] }]}>{`${index + 1} / ${images.length}`}</Text> : null}
           </View>
           {natural && fit < 1 ? <Text style={[chrome, { fontSize: 12, opacity: 0.55, fontVariant: ["tabular-nums"] }]}>{`${Math.round(scale * 100)}%`}</Text> : null}
-          <LightboxButton icon={zoomed ? "ZoomOut" : "ZoomIn"} label={zoomed ? "Fit to window" : "Zoom in"} onPress={() => setZoomed((z) => !z)} />
-          <LightboxButton icon="X" label="Close" onPress={onClose} />
+          <LightboxButton icon={zoomed ? "ZoomOut" : "ZoomIn"} label={zoomed ? t("chat.fitToWindow") : t("chat.zoomIn")} onPress={() => setZoomed((z) => !z)} />
+          <LightboxButton icon="X" label={t("chat.close")} onPress={onClose} />
         </View>
         <ScrollView style={{ flex: 1 }} horizontal={false} contentContainerStyle={{ flexGrow: 1 }}>
           <ScrollView horizontal contentContainerStyle={{ flexGrow: 1 }}>
             {/* The scroll area covers the backdrop, so it closes on a press itself; the image's own press zooms instead. */}
             <Pressable
-              accessibilityLabel="Close image"
+              accessibilityLabel={t("chat.close")}
               onPress={onClose}
               style={{ flexGrow: 1, minWidth: win.width, minHeight: win.height - 56, alignItems: "center", justifyContent: "center", paddingHorizontal: many ? 80 : 32, paddingBottom: 56, cursor: "default" } as object}
             >
             {uri ? (
-              <Pressable accessibilityRole="imagebutton" accessibilityLabel={zoomed ? "Fit to window" : "Zoom in"} onPress={() => setZoomed((z) => !z)} style={{ cursor: zoomed ? "zoom-out" : "zoom-in" } as object}>
+              <Pressable accessibilityRole="imagebutton" accessibilityLabel={zoomed ? t("chat.fitToWindow") : t("chat.zoomIn")} onPress={() => setZoomed((z) => !z)} style={{ cursor: zoomed ? "zoom-out" : "zoom-in" } as object}>
                 {/* Dimmed while it's still the previous image and the next one loads. */}
                 <Image source={{ uri }} style={[shown, { borderRadius: 6, opacity: stale ? 0.45 : 1 }]} resizeMode="contain" />
               </Pressable>
             ) : (
               <View pointerEvents="none" style={[shown, { alignItems: "center", justifyContent: "center", gap: 8 }]}>
                 <Icon name={failed ? "ImageOff" : "Image"} size={20} color="rgba(255,255,255,0.5)" />
-                <Text style={[chrome, { opacity: 0.5 }]}>{failed ? "Image unavailable" : "Loading…"}</Text>
+                <Text style={[chrome, { opacity: 0.5 }]}>{failed ? t("chat.imageUnavailable") : t("chat.loadingImage")}</Text>
               </View>
             )}
             </Pressable>
@@ -1051,15 +1064,17 @@ function Lightbox({ images, index, onIndex, onClose }: { images: Array<{ alt: st
         {many ? (
           <>
             <View pointerEvents="box-none" style={{ position: "absolute", left: 20, top: 0, bottom: 0, justifyContent: "center" }}>
-              <LightboxButton icon="ChevronLeft" label="Previous image" onPress={() => go(-1)} size={40} />
+              <LightboxButton icon="ChevronLeft" label={t("chat.previousImage")} onPress={() => go(-1)} size={40} />
             </View>
             <View pointerEvents="box-none" style={{ position: "absolute", right: 20, top: 0, bottom: 0, justifyContent: "center" }}>
-              <LightboxButton icon="ChevronRight" label="Next image" onPress={() => go(1)} size={40} />
+              <LightboxButton icon="ChevronRight" label={t("chat.nextImage")} onPress={() => go(1)} size={40} />
             </View>
           </>
         ) : null}
         <Text pointerEvents="none" style={[chrome, { position: "absolute", bottom: 14, alignSelf: "center", fontSize: 12, color: "rgba(255,255,255,0.6)", backgroundColor: "rgba(8,9,11,0.7)", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, overflow: "hidden" }]}>
-          {Platform.OS === "web" ? `Click to ${zoomed ? "fit" : "zoom"} · ${many ? "← → to browse · " : ""}Esc to close` : "Tap to zoom"}
+          {Platform.OS === "web"
+            ? t("chat.lightboxHint", { action: t(zoomed ? "chat.lightboxFit" : "chat.lightboxZoom"), browse: many ? t("chat.lightboxBrowse") : "" })
+            : t("chat.lightboxHintTap")}
         </Text>
       </View>
     </Modal>
@@ -1144,6 +1159,7 @@ function StackBadge({ text, theme }: { text: string; theme: PluginTheme }) {
 function ImageStack({ images, theme, onOpen }: { images: Array<{ alt: string; url: string }>; theme: PluginTheme; onOpen(i: number): void }) {
   const c = theme.colors;
   const prefs = usePrefs();
+  const t = useT();
   const size = thumbSize(prefs.images);
   const byClick = prefs.imageStackOpen === "click";
   const [width, setWidth] = useState(0);
@@ -1266,7 +1282,8 @@ function ImageStack({ images, theme, onOpen }: { images: Array<{ alt: string; ur
                   }}
                 >
                   <Thumbnail
-                    alt={`${img.alt} (${i + 1} of ${images.length})`}
+                    alt={img.alt}
+                    label={t("chat.openStackImage", { alt: img.alt, index: i + 1, total: images.length })}
                     url={img.url}
                     theme={theme}
                     onOpen={() => {
@@ -1292,7 +1309,7 @@ function ImageStack({ images, theme, onOpen }: { images: Array<{ alt: string; ur
       {pinned || (byClick && phase === "open") ? (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Fold the images back into a stack"
+          accessibilityLabel={t("chat.foldStack")}
           onPress={() => {
             held.current = true;
             fold();
@@ -1344,8 +1361,6 @@ export function StackViewerHost() {
   return <ImageViewer Viewer={Viewer} images={shown.images} index={shown.index} onIndex={setStackViewerIndex} onClose={closeStackViewer} />;
 }
 
-const count = (n: number, one: string) => `${n} ${one}${n === 1 ? "" : "s"}`;
-
 /** GitHub-style diffstat: five squares split between added and removed, at least one for any removal. */
 export function Diffstat({ added, removed, theme }: { added: number; removed: number; theme: PluginTheme }) {
   const c = theme.colors;
@@ -1365,6 +1380,7 @@ export function Diffstat({ added, removed, theme }: { added: number; removed: nu
 export function RecapItem({ item, theme }: PluginTimelineItemProps<Recap>) {
   const s = useStyles(theme);
   const c = theme.colors;
+  const t = useT();
   const { files, commands, failed } = item.data;
   const [open, toggle] = useDisclosure(false);
   const [hovered, setHovered] = useState(false);
@@ -1377,18 +1393,18 @@ export function RecapItem({ item, theme }: PluginTimelineItemProps<Recap>) {
   if (files.length)
     parts.push(
       <View key="files" style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-        <Text style={[text, { color: c.foreground }]}>{count(files.length, "file")}</Text>
+        <Text style={[text, { color: c.foreground }]}>{t("chat.fileCount", { n: files.length })}</Text>
         {added ? <Text {...PMONO} style={[mono, { color: c.statusSuccess }]}>+{added}</Text> : null}
         {removed ? <Text {...PMONO} style={[mono, { color: c.statusDanger }]}>−{removed}</Text> : null}
         <Diffstat added={added} removed={removed} theme={theme} />
       </View>,
     );
-  if (commands) parts.push(<Text key="commands" style={text}>{count(commands, "command")}</Text>);
+  if (commands) parts.push(<Text key="commands" style={text}>{t("chat.commandCount", { n: commands })}</Text>);
   if (failed.length)
     parts.push(
       <View key="failed" style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
         {dot}
-        <Text style={[text, { color: c.statusDanger }]}>{failed.length} failed</Text>
+        <Text style={[text, { color: c.statusDanger }]}>{t("chat.failedCount", { n: failed.length })}</Text>
       </View>,
     );
   return (
@@ -1433,7 +1449,7 @@ export function RecapItem({ item, theme }: PluginTimelineItemProps<Recap>) {
                 <Text {...PMONO} numberOfLines={1} style={[mono, { flexShrink: 1 }]} selectable>
                   {f.command}
                 </Text>
-                {f.exit ? <Text {...PMONO} numberOfLines={1} style={[mono, { flexShrink: 0, color: c.statusDanger }]}>exit {f.exit}</Text> : null}
+                {f.exit ? <Text {...PMONO} numberOfLines={1} style={[mono, { flexShrink: 0, color: c.statusDanger }]}>{t("chat.exitCode", { code: f.exit })}</Text> : null}
               </View>
             ))}
           </View>
@@ -1445,14 +1461,14 @@ export function RecapItem({ item, theme }: PluginTimelineItemProps<Recap>) {
 
 /** A page an agent published with html_render. Native apps can't run its scripts in a frame, so they name it instead. */
 export function HtmlItem({ item, theme }: PluginTimelineItemProps<HtmlData>) {
+  const t = useT();
   if (Platform.OS === "web") return item.data.stored === undefined ? <HtmlPage {...item.data} theme={theme} /> : <StoredHtmlPage {...item.data} theme={theme} />;
-  return (
-    <Text style={{ color: theme.colors.foregroundMuted, fontSize: 13, paddingVertical: 4 }}>{`${item.data.title}: open this chat on desktop or the web to see the page.`}</Text>
-  );
+  return <Text style={{ color: theme.colors.foregroundMuted, fontSize: 13, paddingVertical: 4 }}>{t("chat.htmlNative", { title: item.data.title })}</Text>;
 }
 
 /** A page Paseo cut to fit the timeline, loaded whole from where html_render stored it. */
 function StoredHtmlPage({ stored, theme, ...data }: HtmlData & { theme: PluginTheme }) {
+  const t = useT();
   const load = useRpc(storedPage);
   const [html, setHtml] = useState<string | null>();
   useEffect(() => {
@@ -1468,7 +1484,7 @@ function StoredHtmlPage({ stored, theme, ...data }: HtmlData & { theme: PluginTh
   }, [stored, load]);
   if (html === undefined) return <View style={{ height: lastFrameHeight(data.html, data.heights) }} />;
   if (html === null) {
-    return <Text style={{ color: theme.colors.foregroundMuted, fontSize: 13, paddingVertical: 4 }}>{`${data.title}: the page is too long for the chat's history, and its saved copy is gone.`}</Text>;
+    return <Text style={{ color: theme.colors.foregroundMuted, fontSize: 13, paddingVertical: 4 }}>{t("chat.htmlGone", { title: data.title })}</Text>;
   }
   return <HtmlPage {...data} html={html} theme={theme} />;
 }
@@ -1496,6 +1512,7 @@ function useInlinedImages(html: string) {
 function HtmlPage({ html, title, heights, theme }: HtmlData & { theme: PluginTheme }) {
   const page = useInlinedImages(html);
   const c = theme.colors;
+  const t = useT();
   const css = useHtmlTheme(c);
   const save = useRpc(openHtml);
   const toast = useToast();
@@ -1519,9 +1536,9 @@ function HtmlPage({ html, title, heights, theme }: HtmlData & { theme: PluginThe
       .then(({ url }) => openExternalUrl(url))
       .catch((error: unknown) => {
         console.warn("[chat-polish] Opening the page in the browser failed", error);
-        toast.error("Couldn't open the page in the browser.");
+        toast.error(t("chat.toast.openBrowserFailed"));
       });
-  const copy = () => copyText(html).then(() => toast.show("Copied the page's HTML", { variant: "success" }), () => toast.error("Couldn't copy the HTML."));
+  const copy = () => copyText(html).then(() => toast.show(t("chat.toast.copiedHtml"), { variant: "success" }), () => toast.error(t("chat.toast.copyHtmlFailed")));
   const button = (icon: string, label: string, onPress: () => void) => (
     <Pressable
       key={icon}
@@ -1533,14 +1550,14 @@ function HtmlPage({ html, title, heights, theme }: HtmlData & { theme: PluginThe
       <Icon name={icon} size={14} color={c.foregroundMuted} />
     </Pressable>
   );
-  const shared = [button("ExternalLink", "Open in browser", () => void openInBrowser()), button("Copy", "Copy HTML", () => void copy())];
+  const shared = [button("ExternalLink", t("chat.openInBrowser"), () => void openInBrowser()), button("Copy", t("chat.copyHtml"), () => void copy())];
   return (
     <View ref={box}>
       {/* A stand-in at the frame's last size (or the daemon's measured height) while images load, so the chat doesn't move when the page arrives. */}
       {page === undefined ? <View style={{ height: lastFrameHeight(html, heights) }} /> : <HtmlFrame html={page} id={html} title={title} colors={c} heights={heights} />}
       {/* Hidden, not removed, off hover: the buttons stay where the pointer may land, so showing them never moves what is under it. */}
       <View pointerEvents="box-none" style={{ position: "absolute", top: 6, right: 6, flexDirection: "row", gap: 4, opacity: hovered ? 1 : 0 }}>
-        {[button("Maximize2", "Full screen", () => setFull(true)), ...shared]}
+        {[button("Maximize2", t("chat.fullScreen"), () => setFull(true)), ...shared]}
       </View>
       {full ? (
         <Modal transparent visible animationType="fade" onRequestClose={() => setFull(false)}>
@@ -1549,7 +1566,7 @@ function HtmlPage({ html, title, heights, theme }: HtmlData & { theme: PluginThe
               <Text style={{ flex: 1, color: c.foreground, fontSize: 13, fontWeight: "500" }} numberOfLines={1}>
                 {title}
               </Text>
-              {[...shared, button("X", "Close full screen", () => setFull(false))]}
+              {[...shared, button("X", t("chat.closeFullScreen"), () => setFull(false))]}
             </View>
             <View style={{ flex: 1, paddingVertical: 24, paddingHorizontal: 32 }}>
               <HtmlFrame html={page ?? html} title={title} colors={c} fill onEscape={() => setFull(false)} />

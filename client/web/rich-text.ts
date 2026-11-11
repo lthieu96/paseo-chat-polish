@@ -1,5 +1,6 @@
 // Rich text variants (Dashboard → Rich text): callouts, tasks and line numbers marked in replies, and each variant's CSS.
 import { Platform } from "react-native";
+import { t } from "../i18n";
 import { within, type DomElement, type WebDocument } from "./dom";
 import { icon } from "./icons";
 import { redrawDiagram } from "./mermaid";
@@ -55,11 +56,17 @@ export function markBlocks(roots: DomElement[]) {
     if (!box || box.querySelector(":scope > [data-cp-redraw]")) continue;
     const button = document.createElement("button");
     button.setAttribute("data-cp-redraw", "");
-    button.setAttribute("aria-label", "Redraw diagram");
-    button.setAttribute("title", "Redraw diagram");
+    button.setAttribute("aria-label", t("web.redrawDiagram"));
+    button.setAttribute("title", t("web.redrawDiagram"));
     button.addEventListener("click", () => redrawDiagram(box, button));
     box.appendChild(button);
   }
+}
+
+/** Sets the plugin's UI language on <html>, for the few strings the injected CSS has to word itself ("Copy", "Queued"). */
+export function setLanguage(language: string) {
+  if (Platform.OS !== "web" || typeof document === "undefined") return;
+  document.documentElement.setAttribute("data-cp-lang", language);
 }
 
 /** Shows the chosen variant of each markdown element, and the image size; "a" needs no attribute. */

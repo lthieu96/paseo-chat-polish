@@ -1,5 +1,6 @@
 // The composer's model and thinking pickers: a provider rail, model counts, default levels and descriptions.
 import { Platform } from "react-native";
+import { t } from "../i18n";
 import { BOT_ICON, PROVIDER_ICONS } from "../provider-icons";
 import { within, type ComputedStyle, type DomElement, type MutationObserverClass, type WebDocument } from "./dom";
 import { CTX, PERMISSION, PLAN, POP, QUESTION, SURFACE, IN_SURFACE, TAG } from "./selectors";
@@ -187,7 +188,7 @@ function decorateModels(pop: DomElement) {
   title = title?.previousElementSibling ?? null;
   title?.setAttribute("data-cp-part", "title");
   const count = pop.querySelectorAll(MODEL_ROW).length;
-  if (title && count && !(pop.querySelector("input") as { value?: string } | null)?.value) title.setAttribute("data-cp-count", `${count} model${count === 1 ? "" : "s"}`);
+  if (title && count && !(pop.querySelector("input") as { value?: string } | null)?.value) title.setAttribute("data-cp-count", count === 1 ? t("web.modelCountOne") : t("web.modelCount", { n: count }));
   // "Opus 5.5 · Latest release" under "Opus 5.5": the name is already on the row.
   for (const text of Array.from(pop.querySelectorAll(`${MODEL_ROW} > div > div:nth-child(2)`))) {
     const [name, description] = Array.from(text.children);
@@ -210,7 +211,7 @@ function decorateModels(pop: DomElement) {
     `<button type="button" data-cp-provider="${esc(id)}" aria-current="${id === (current ?? "profiles")}"${!canSwitch && id !== current ? ' aria-disabled="true"' : ""}><span data-cp-icon>${icon}</span><span data-cp-label title="${esc(label)}">${esc(label)}</span>${extra}</button>`;
   const status = (p: RailProvider) =>
     p.status === "loading" ? `<span data-cp-icon data-cp-status="loading">${LOADER}</span>` : p.status === "error" || p.status === "unavailable" ? `<span data-cp-icon data-cp-status="error">${ALERT}</span>` : "";
-  const html = [canSwitch ? `${item("profiles", "Profiles", BOOKMARK)}<hr>` : "", ...railProviders.map((p) => item(p.id, p.label, iconFor(p), status(p)))].join("");
+  const html = [canSwitch ? `${item("profiles", t("web.profiles"), BOOKMARK)}<hr>` : "", ...railProviders.map((p) => item(p.id, p.label, iconFor(p), status(p)))].join("");
   if (railHtml.get(rail) !== html) {
     rail.innerHTML = html;
     railHtml.set(rail, html);
@@ -245,7 +246,7 @@ function wireRail(pop: DomElement, rail: DomElement) {
     if (!item || item.getAttribute("aria-disabled") !== "true") return tip.style.setProperty("display", "none");
     const here = railProviders.find((p) => p.id === pop.querySelector('[data-cp-provider][aria-current="true"]')?.getAttribute("data-cp-provider"));
     const there = item.textContent ?? "";
-    tip.innerHTML = `<b>New chats only</b>This agent stays on ${esc(here?.label ?? "its provider")}. Start a new chat to use ${esc(there)}.`;
+    tip.innerHTML = `<b>${esc(t("web.newChatsOnly"))}</b>${esc(t("web.providerStays", { provider: here?.label ?? t("web.itsProvider"), name: there }))}`;
     const box = pop.getBoundingClientRect();
     const at = item.getBoundingClientRect();
     tip.style.setProperty("left", `${at.right - box.left - 24}px`);
@@ -299,7 +300,7 @@ function decorateThinking(pop: DomElement, chip: DomElement) {
   labels.forEach((el, i) => {
     const option = inOrder ? model.thinking[i] : model.thinking.find((t) => level(t.label) === level(el.firstElementChild?.textContent ?? ""));
     if (!option || el.querySelector("[data-cp-default], [data-cp-desc]")) return;
-    for (const [attr, value] of [["data-cp-default", option.isDefault ? "Default" : ""], ["data-cp-desc", option.description ?? ""]] as const) {
+    for (const [attr, value] of [["data-cp-default", option.isDefault ? t("web.default") : ""], ["data-cp-desc", option.description ?? ""]] as const) {
       if (!value) continue;
       const span = document.createElement("span");
       span.setAttribute(attr, "");
@@ -324,7 +325,7 @@ export function noteThinkingFallback() {
     composer.querySelector("[data-cp-hint]")?.remove();
     const hint = document.createElement("div");
     hint.setAttribute("data-cp-hint", "");
-    hint.textContent = `${before.thinking} isn't on ${now.model} · using its default, ${now.thinking}`;
+    hint.textContent = t("web.thinkingFallback", { before: before.thinking, model: now.model, now: now.thinking });
     composer.appendChild(hint);
     setTimeout(() => hint.remove(), 6000);
   }

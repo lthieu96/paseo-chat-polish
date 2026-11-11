@@ -1,4 +1,5 @@
 // Mermaid diagrams: Paseo's mermaid themed in the app's colors, Pele drawing in its place, and the redraw button.
+import { t } from "../i18n";
 import { findInAppScripts } from "./app-script";
 import { darker, isDark, mix } from "./color";
 import type { DomElement, KeyEvent, MessageListener, WebDocument } from "./dom";
@@ -368,7 +369,7 @@ export function redrawDiagram(box: DomElement, button: DomElement) {
   const source = (box.querySelector('[data-paseo-markdown-language="mermaid"] > div:first-child')?.textContent ?? "").replace(/\n$/, "");
   box.querySelector(":scope > [data-cp-redraw-card]")?.remove();
   button.setAttribute("data-cp-redraw", "");
-  button.setAttribute("title", "Redraw diagram");
+  button.setAttribute("title", t("web.redrawDiagram"));
   const viewport = box.nextElementSibling;
   const taken = viewport?.matches('[data-testid="mermaid-viewport"]') && claimDiagram ? claimDiagram(viewport, source) : Promise.resolve(false);
   // Once Paseo takes the drawing, it unmounts the source block.
@@ -378,7 +379,7 @@ export function redrawDiagram(box: DomElement, button: DomElement) {
 function drawCard(box: DomElement, button: DomElement, source: string) {
   const card = document.createElement("div");
   card.setAttribute("data-cp-redraw-card", "");
-  card.setAttribute("title", "Open full screen");
+  card.setAttribute("title", t("web.openFullScreen"));
   card.addEventListener("click", () => openDiagram(source));
   const frame = peleFrame();
   card.appendChild(frame);
@@ -388,7 +389,7 @@ function drawCard(box: DomElement, button: DomElement, source: string) {
     if (!size) {
       card.remove();
       button.setAttribute("data-cp-redraw", "failed");
-      button.setAttribute("title", "Pele couldn't draw this diagram");
+      button.setAttribute("title", t("web.peleFailed"));
       return;
     }
     frame.setAttribute("style", `height: auto; max-width: ${size.width}px; aspect-ratio: ${size.width} / ${size.height}`);

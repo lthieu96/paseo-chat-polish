@@ -3,8 +3,10 @@ import type { PluginTheme } from "@getpaseo/plugin";
 import { TextInput } from "@getpaseo/plugin/client/react-native";
 import { useEffect, useState, type ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { contrast, isHex, PRESETS, TOKEN_ROLES, TOKENS, type ThemeDraft, type Token } from "../../shared/theme";
+import type { MessageKey } from "../../shared/i18n";
+import { contrast, isHex, PRESETS, TOKENS, type ThemeDraft, type Token } from "../../shared/theme";
 import { PLAIN_SYNTAX, SYNTAX_THEMES } from "../highlight";
+import { useT } from "../i18n";
 import { Icon } from "../icons";
 import { alpha, PMONO, useStyles } from "../views";
 import { canSetAppTheme, DEFAULTS, PASEO_FONT_STACKS } from "../web";
@@ -62,8 +64,9 @@ const input = (s: ReturnType<typeof useStyles>, c: PluginTheme["colors"]) => ({ 
 function Stepper({ theme, value, label, onChange }: { theme: PluginTheme; value: number; label: string; onChange(v: number): void }) {
   const s = useStyles(theme);
   const c = theme.colors;
+  const t = useT();
   const step = (icon: string, by: number) => (
-    <Pressable accessibilityRole="button" accessibilityLabel={`${by < 0 ? "Decrease" : "Increase"} ${label}`} onPress={() => onChange(Math.min(32, Math.max(8, value + by)))} style={{ width: 28, height: FIELD - 2, alignItems: "center", justifyContent: "center" }}>
+    <Pressable accessibilityRole="button" accessibilityLabel={t(by < 0 ? "themeEditor.decrease" : "themeEditor.increase", { label })} onPress={() => onChange(Math.min(32, Math.max(8, value + by)))} style={{ width: 28, height: FIELD - 2, alignItems: "center", justifyContent: "center" }}>
       <Icon name={icon} size={13} color={c.foregroundMuted} />
     </Pressable>
   );
@@ -80,6 +83,7 @@ function Stepper({ theme, value, label, onChange }: { theme: PluginTheme; value:
 function TypographySection({ theme, typo, setTypo }: { theme: PluginTheme; typo: Typography; setTypo(t: Typography): void }) {
   const s = useStyles(theme);
   const c = theme.colors;
+  const t = useT();
   const field = (label: string, key: "uiFont" | "monoFont", mono: boolean) => (
     <View style={{ flex: 1, gap: 4 }}>
       <Text style={[s.small, { fontSize: 12 }]}>{label}</Text>
@@ -87,7 +91,7 @@ function TypographySection({ theme, typo, setTypo }: { theme: PluginTheme; typo:
         accessibilityLabel={label}
         value={typo[key]}
         onChangeText={(v) => setTypo({ ...typo, [key]: v })}
-        placeholder="System default"
+        placeholder={t("themeEditor.systemDefault")}
         placeholderTextColor={c.foregroundMuted}
         autoCapitalize="none"
         autoCorrect={false}
@@ -109,30 +113,42 @@ function TypographySection({ theme, typo, setTypo }: { theme: PluginTheme; typo:
   );
   return (
     <View style={{ gap: 10 }}>
-      <SectionHead theme={theme} title="Typography" hint="Settings → Appearance" />
+      <SectionHead theme={theme} title={t("themeEditor.section.typography")} hint={t("themeEditor.typographyHint")} />
       <View {...SQUIRCLE_CARD} style={{ borderRadius: 10, backgroundColor: c.surface1, borderWidth: StyleSheet.hairlineWidth, borderColor: c.border }}>
         <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 12, padding: 12 }}>
           {box(<Text style={[s.title, { fontSize: 15 }, { "--paseo-ui-font": typo.uiFont || PASEO_FONT_STACKS.ui } as object]}>Ag</Text>)}
-          {field("Interface font", "uiFont", false)}
-          {size("Content size", "contentSize")}
+          {field(t("themeEditor.interfaceFont"), "uiFont", false)}
+          {size(t("themeEditor.contentSize"), "contentSize")}
         </View>
         <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 12, padding: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border }}>
           {box(<Text {...PMONO} style={[s.code, { fontSize: 15, color: c.foreground }, { fontFamily: typo.monoFont || PASEO_FONT_STACKS.mono }]}>{"{}"}</Text>)}
-          {field("Code font", "monoFont", true)}
-          {size("Code size", "codeSize")}
+          {field(t("themeEditor.codeFont"), "monoFont", true)}
+          {size(t("themeEditor.codeSize"), "codeSize")}
         </View>
       </View>
       <View style={{ flexDirection: "row", gap: 8, alignItems: "flex-start" }}>
         <View style={{ height: 17, justifyContent: "center" }}>
           <Icon name="RotateCw" size={13} color={c.foregroundMuted} />
         </View>
-        <Text style={[s.small, { flex: 1, fontSize: 12, lineHeight: 17 }]}>Type any installed font, or leave empty for the system default. Paseo's sizes are {DEFAULTS.contentSize} and {DEFAULTS.codeSize}. Applies app-wide once you apply; Paseo reloads.</Text>
+        <Text style={[s.small, { flex: 1, fontSize: 12, lineHeight: 17 }]}>{t("themeEditor.typographyNote", { content: DEFAULTS.contentSize, code: DEFAULTS.codeSize })}</Text>
       </View>
     </View>
   );
 }
 
 const TOKEN_LABEL: Partial<Record<Token, string>> = { mutedForeground: "muted" };
+
+/** What Paseo paints with each color; `ring` is not a focus color: Paseo uses it for placeholders and extra-muted text. */
+const TOKEN_ROLE_KEYS: Record<Token, MessageKey> = {
+  background: "theme.role.background",
+  foreground: "theme.role.foreground",
+  raised: "theme.role.raised",
+  control: "theme.role.control",
+  border: "theme.role.border",
+  accent: "theme.role.accent",
+  mutedForeground: "theme.role.mutedForeground",
+  ring: "theme.role.ring",
+};
 
 const SURFACES: Token[] = ["background", "raised", "control", "border"];
 
@@ -142,6 +158,7 @@ const TEXTS: Token[] = ["foreground", "mutedForeground", "ring", "accent"];
 function ColorTile({ theme, token, draft, selected, onPress }: { theme: PluginTheme; token: Token; draft: ThemeDraft; selected: boolean; onPress?(): void }) {
   const s = useStyles(theme);
   const c = theme.colors;
+  const t = useT();
   const color = draft.colors[token];
   const text = TEXTS.includes(token);
   const ratio = contrast(color, draft.colors.background);
@@ -162,7 +179,7 @@ function ColorTile({ theme, token, draft, selected, onPress }: { theme: PluginTh
             <View style={{ flex: 1 }} />
             <View style={{ paddingHorizontal: 6, paddingVertical: 1, borderRadius: 999, backgroundColor: tone ? alpha(tone, 0.16) : alpha(c.foregroundMuted, 0.18) }}>
               <Text style={[s.small, { fontSize: 10, lineHeight: 14, color: tone ?? c.foregroundMuted }]}>
-                {ratio.toFixed(1)} {token === "ring" ? "faint" : ratio >= 4.5 ? "AA" : "low"}
+                {ratio.toFixed(1)} {token === "ring" ? t("themeEditor.contrast.faint") : ratio >= 4.5 ? t("themeEditor.contrast.aa") : t("themeEditor.contrast.low")}
               </Text>
             </View>
           </>
@@ -180,6 +197,7 @@ function ColorTile({ theme, token, draft, selected, onPress }: { theme: PluginTh
 function ColorRow({ theme, name, hint, color, text, bad, accent, onText }: { theme: PluginTheme; name: string; hint: string; color: string; text?: string; bad?: boolean; accent?: boolean; onText?(v: string): void }) {
   const s = useStyles(theme);
   const c = theme.colors;
+  const t = useT();
   return (
     <View {...SQUIRCLE_CARD} style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 10, borderRadius: 10, backgroundColor: c.surface1, borderWidth: StyleSheet.hairlineWidth, borderColor: c.border }}>
       <View style={{ width: 28, height: 28, borderRadius: 6, backgroundColor: color, borderWidth: StyleSheet.hairlineWidth, borderColor: c.border }} />
@@ -189,7 +207,7 @@ function ColorRow({ theme, name, hint, color, text, bad, accent, onText }: { the
       </View>
       {onText ? (
         <TextInput
-          accessibilityLabel={`${name} hex color`}
+          accessibilityLabel={t("themeEditor.hexLabel", { name })}
           value={text}
           autoCapitalize="none"
           autoCorrect={false}
@@ -224,6 +242,7 @@ interface EditorProps {
 export function Editor({ theme, draft, shown, view, appId, saved, typo, setDraft, setView, setTypo }: EditorProps) {
   const s = useStyles(theme);
   const c = theme.colors;
+  const t = useT();
   const locked = !!view;
   // Hex text being typed; only valid values reach the draft.
   const [typing, setTyping] = useState<Partial<Record<Token | "sidebar", string>>>({});
@@ -251,9 +270,9 @@ export function Editor({ theme, draft, shown, view, appId, saved, typo, setDraft
   return (
     <View style={{ gap: 28 }}>
       <View style={{ gap: 12 }}>
-        <SectionHead theme={theme} title="App theme" />
+        <SectionHead theme={theme} title={t("themeEditor.section.appTheme")} />
         <View style={{ gap: 8 }}>
-          {sub("Paseo", "built in · read only")}
+          {sub("Paseo", t("themeEditor.paseoHint"))}
           <Grid n={4}>
             {PASEO_THEMES.map((t) => {
               const half = (p: PaseoTheme): [string, string, string] => [p.colors.background, p.colors.foreground, p.colors.accent];
@@ -262,7 +281,7 @@ export function Editor({ theme, draft, shown, view, appId, saved, typo, setDraft
           </Grid>
         </View>
         <View style={{ gap: 8 }}>
-          {sub("Chat Polish", "editable")}
+          {sub("Chat Polish", t("themeEditor.chatPolishHint"))}
           <Grid n={4}>
             {[
               ...PRESETS.map((p) => (
@@ -282,29 +301,29 @@ export function Editor({ theme, draft, shown, view, appId, saved, typo, setDraft
               <Pressable
                 key="new"
                 accessibilityRole="button"
-                accessibilityLabel="New theme from current colors"
+                accessibilityLabel={t("themeEditor.newThemeLabel")}
                 onPress={() => {
                   setView(undefined);
-                  setDraft({ ...shown, name: "Custom theme" });
+                  setDraft({ ...shown, name: t("theme.customTheme") });
                 }}
                 style={{ flex: 1, minHeight: 72, borderRadius: 8, borderWidth: StyleSheet.hairlineWidth, borderColor: c.border, alignItems: "center", justifyContent: "center", gap: 4 }}
               >
                 <Icon name="Plus" size={15} color={c.foregroundMuted} />
-                <Text style={[s.small, { fontSize: 12 }]}>New theme</Text>
+                <Text style={[s.small, { fontSize: 12 }]}>{t("themeEditor.newTheme")}</Text>
               </Pressable>,
             ]}
           </Grid>
         </View>
         {locked ? null : (
           <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
-            <TextInput accessibilityLabel="Theme name" value={draft.name} onChangeText={(name) => setDraft({ ...draft, name: name || " " })} style={[input(s, c), { flex: 1, backgroundColor: c.surface1, fontSize: 14, color: c.foreground }]} />
+            <TextInput accessibilityLabel={t("themeEditor.themeName")} value={draft.name} onChangeText={(name) => setDraft({ ...draft, name: name || " " })} style={[input(s, c), { flex: 1, backgroundColor: c.surface1, fontSize: 14, color: c.foreground }]} />
             <Segmented
               theme={theme}
               value={draft.appearance}
               onChange={(appearance) => setDraft({ ...draft, appearance })}
               options={[
-                ["light", "Sun", "Light"],
-                ["dark", "Moon", "Dark"],
+                ["light", "Sun", t("themeEditor.light")],
+                ["dark", "Moon", t("themeEditor.dark")],
               ]}
             />
           </View>
@@ -315,26 +334,26 @@ export function Editor({ theme, draft, shown, view, appId, saved, typo, setDraft
 
       {locked ? (
         <Notice theme={theme} icon="Lock">
-          Built into Paseo, so these colors can't be edited. Customize a copy makes a Chat Polish theme from them.
+          {t("themeEditor.locked")}
         </Notice>
       ) : null}
 
       <View style={{ gap: 10 }}>
-        <SectionHead theme={theme} title="Surfaces" hint="back to front" />
+        <SectionHead theme={theme} title={t("themeEditor.section.surfaces")} hint={t("themeEditor.surfacesHint")} />
         {grid(SURFACES)}
       </View>
       <View style={{ gap: 10 }}>
-        <SectionHead theme={theme} title="Text and accent" hint="contrast on background" />
+        <SectionHead theme={theme} title={t("themeEditor.section.textAccent")} hint={t("themeEditor.textAccentHint")} />
         {grid(TEXTS)}
       </View>
 
       {canSetAppTheme ? (
         <View style={{ gap: 10 }}>
-          <SectionHead theme={theme} title="Sidebar" hint="desktop only" />
+          <SectionHead theme={theme} title={t("themeEditor.section.sidebar")} hint={t("themeEditor.sidebarHint")} />
           <ColorRow
             theme={theme}
             name="sidebar"
-            hint="Empty uses background"
+            hint={t("themeEditor.sidebarEmpty")}
             color={shown.sidebar || shown.colors.background}
             text={sidebarText}
             bad={sidebarBad}
@@ -355,7 +374,7 @@ export function Editor({ theme, draft, shown, view, appId, saved, typo, setDraft
         <ColorRow
           theme={theme}
           name={TOKEN_LABEL[token] ?? token}
-          hint={TOKEN_ROLES[token]}
+          hint={t(TOKEN_ROLE_KEYS[token])}
           color={draft.colors[token]}
           text={tokenText}
           bad={!isHex(normalize(tokenText))}
@@ -376,10 +395,11 @@ export function Editor({ theme, draft, shown, view, appId, saved, typo, setDraft
 function HighlightTheme({ theme, draft, shown, setDraft }: { theme: PluginTheme; draft: ThemeDraft; shown: ThemeDraft; setDraft(d: ThemeDraft): void }) {
   const s = useStyles(theme);
   const c = theme.colors;
-  const options = [...SYNTAX_THEMES, { id: PLAIN_SYNTAX, name: "Plain", appearance: shown.appearance, colors: undefined }];
+  const t = useT();
+  const options = [...SYNTAX_THEMES, { id: PLAIN_SYNTAX, name: t("themeEditor.plain"), appearance: shown.appearance, colors: undefined }];
   return (
     <View style={{ gap: 10 }}>
-      <SectionHead theme={theme} title="Highlight theme" hint="commands, diffs, JSON" />
+      <SectionHead theme={theme} title={t("themeEditor.section.highlight")} hint={t("themeEditor.highlightHint")} />
       <Grid n={4}>
         {options.map((t) => {
           const on = t.id === draft.syntax;

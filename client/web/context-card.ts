@@ -1,4 +1,5 @@
 // The context window card: its percent bar, the Compact row, and a remembered height so it doesn't jump.
+import { t } from "../i18n";
 import { activeAgentId, visible, type DomElement, type WebDocument } from "./dom";
 
 declare const document: WebDocument;
@@ -58,18 +59,18 @@ function markCompact(card: DomElement, pct: number) {
   if (!row) {
     row = document.createElement("div");
     row.setAttribute("data-cp-compact", "");
-    row.innerHTML = `<button type="button">${FOLD_ICON}<span>Compact conversation</span><span></span></button>`;
+    row.innerHTML = `<button type="button">${FOLD_ICON}<span>${t("web.compactConversation")}</span><span></span></button>`;
     const button = row.firstElementChild!;
     const label = button.children[1]!;
     button.addEventListener("click", () => {
       const id = activeAgentId();
       if (!id || !compactHandler || button.hasAttribute("disabled")) return;
       button.setAttribute("disabled", "");
-      label.textContent = "Compacting…";
+      label.textContent = t("web.compacting");
       compactHandler(id).catch((error: unknown) => {
         console.warn("[chat-polish] /compact failed", error);
         button.removeAttribute("disabled");
-        label.textContent = "Try again";
+        label.textContent = t("web.tryAgain");
       });
     });
     // Right under the usage figures and above Paseo's divider; the account section loads later and goes below.
@@ -79,7 +80,7 @@ function markCompact(card: DomElement, pct: number) {
   row.setAttribute("data-cp-level", low ? "high" : "normal");
   // Only write text that changed: every write is a DOM mutation that runs this pass again.
   const hint = row.firstElementChild!.lastElementChild!;
-  const text = low ? "running low" : "summarize so far";
+  const text = low ? t("web.runningLow") : t("web.summarizeSoFar");
   if (hint.textContent !== text) hint.textContent = text;
   const working = Array.from(document.querySelectorAll('button[aria-label="Stop agent"]')).some(visible);
   row.style.setProperty("display", working ? "none" : "flex");

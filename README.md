@@ -17,6 +17,7 @@ A [Paseo](https://paseo.sh) plugin that redraws the agent chat as one quiet colu
 - **Image stacks.** Two or more images in a row in a reply show as one stack. Hovering it (or clicking, if you prefer) deals them into a row that scrolls sideways; click an image to open the viewer, with ← → through that stack, and the row stays open until you fold it. Off by default: turn it on under **Messages → Images**, which also adds an Extra large thumbnail size.
 - **Working indicator.** Paseo's dots, or a sparkle, spokes, dot ring, orb, matrix or snake loader.
 - **Icon sets.** Paseo's Lucide icons, or Untitled UI or Hugeicons ones across the app (desktop and web). Icons without a twin stay Lucide.
+- **English and Chinese.** The dashboard and every row, menu and message the plugin draws in the chat follow the language picked under **General** in the dashboard (English by default). Agent replies and Paseo's own interface keep their own language.
 - **Extras.** Turn recaps, ⌥⌘↑/↓ to jump between your prompts, and Command Center (⌘K) toggles.
 
 ![The Paseo window in Mariana, floating, with the Explorer open on Changes](images/window.png)

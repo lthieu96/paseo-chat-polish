@@ -1,5 +1,6 @@
 // Stacks of images in replies Paseo draws itself (a reply with text and images; image-only replies are the plugin's ImagesItem).
 import { Platform } from "react-native";
+import { t } from "../i18n";
 import { openStackViewer, stackViewerHosted, type StackImage } from "../stack-viewer";
 import { watchDom, within, type DomElement, type KeyEvent, type MutationObserverClass, type WebDocument } from "./dom";
 import { imageRuns, type ImageNode } from "./image-runs";
@@ -227,7 +228,7 @@ export function stackImages() {
     const fold = document.createElement("button");
     fold.setAttribute(FOLD, "");
     fold.setAttribute("type", "button");
-    fold.setAttribute("aria-label", "Fold the images back into a stack");
+    fold.setAttribute("aria-label", t("web.foldStack"));
     stack.appendChild(fold);
     // mousemove, not mouseover: the card that ends up under a resting pointer as the row deals out lights up on its first move.
     (stack as Hoverable).addEventListener("mousemove", (e) => {
@@ -296,7 +297,7 @@ export function stackImages() {
       // Hidden cards of a closed stack are out of the tab order (invisible stops, with an invisible focus ring).
       const tab = i < 3 || stack.hasAttribute(OPEN) ? "0" : "-1";
       if (card.getAttribute("tabindex") !== tab) card.setAttribute("tabindex", tab);
-      card.setAttribute("aria-label", `Open ${img.getAttribute("alt") || "image"} (${i + 1} of ${run.length})`);
+      card.setAttribute("aria-label", t("web.openImage", { alt: img.getAttribute("alt") || t("web.image"), index: i + 1, total: run.length }));
       if (!img.hasAttribute(HIDDEN)) img.setAttribute(HIDDEN, "");
     });
     row.children[0]?.setAttribute(BADGE, `+${run.length - 1}`);
@@ -355,7 +356,7 @@ export function stackImages() {
     }
     // Opening an image from the row keeps it open for the next one; the fold button closes it.
     if (stack.hasAttribute(OPEN)) stack.setAttribute(PINNED, "");
-    const images: StackImage[] = run.map((img) => ({ alt: img.getAttribute("alt") || "Image", url: src(img) }));
+    const images: StackImage[] = run.map((img) => ({ alt: img.getAttribute("alt") || t("web.image"), url: src(img) }));
     openStackViewer(images, index);
     return true;
   };
