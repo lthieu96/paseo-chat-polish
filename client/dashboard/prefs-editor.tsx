@@ -389,6 +389,11 @@ export function PrefsEditor({ theme, page, prefs, onChange }: { theme: PluginThe
             })}
           </Row>
         </Group>
+        <Group theme={theme} title="Phones">
+          <Row theme={theme} first label="Chat Polish rows" hint="Off leaves phones and narrow windows to Paseo's own rows, which open long chats faster.">
+            <Switch theme={theme} label="Chat Polish rows on phones" value={prefs.phoneChat === "on"} onChange={(on) => set("phoneChat")(on ? "on" : "off")} />
+          </Row>
+        </Group>
         <Legend theme={theme} />
       </View>
     );
