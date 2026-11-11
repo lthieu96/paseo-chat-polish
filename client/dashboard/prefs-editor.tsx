@@ -177,26 +177,6 @@ export function PrefsEditor({ theme, page, prefs, onChange }: { theme: PluginThe
   const s = useStyles(theme);
   const c = theme.colors;
   const t = useT();
-  if (page === "general") {
-    return (
-      <View style={{ gap: 24 }}>
-        <Group theme={theme} title={t("general.group.language")}>
-          <Row theme={theme} first label={t("general.language.label")} hint={t("general.language.hint")}>
-            <Segmented
-              theme={theme}
-              value={prefs.language}
-              onChange={set("language")}
-              options={[
-                ["en", "", t("general.language.en")],
-                ["zh", "", t("general.language.zh")],
-              ]}
-            />
-          </Row>
-        </Group>
-        <Notice theme={theme}>{t("general.language.note")}</Notice>
-      </View>
-    );
-  }
   if (page === "html") return <HtmlGuide theme={theme} prefs={prefs} onChange={onChange} />;
   if (page === "messages") {
     const paseoSyntax = readSyntaxTheme();

@@ -10,7 +10,7 @@ import { sidebarIcon } from "./client/mark";
 import { agentEventData, hideableKind, imageData, turnMarkdown, imagesSchema, noticeData, noticeSchema, planSchema, stepsSchema, thoughtSchema, todoData, todoSchema, toolData, toolSchema } from "./client/model";
 import { followAgent, isTodo, isTurnTrigger, onShownAgent, onStaleSteps, onUnplacedStep, placeStep, resetMade, setReplyFolding, setStepSkip, stepKey, type Phase } from "./client/steps";
 import { renderDiagram } from "./shared/diagram";
-import { currentLanguage, t } from "./client/i18n";
+import { currentLanguage, followLocale, t } from "./client/i18n";
 import { isPhone, polishesChat, rememberedPhoneChat, rememberPhoneChat } from "./client/phone";
 import { currentPrefs, savePrefs, setPrefs, subscribePrefs, usePrefsSaver } from "./client/prefs";
 import { bindThemeRegistry, currentTheme, registerTheme, subscribeTheme } from "./client/theme-registry";
@@ -45,6 +45,13 @@ function DashboardItem({ currentScreen, openScreen, theme }: PluginSidebarItemPr
 }
 
 export default function contribute(client: PluginClientContext) {
+  // Rows, Command Center titles and injected strings follow Paseo's own language; React surfaces re-render through useT().
+  const unfollowLocale = followLocale(client.i18n, () => {
+    setLanguage(currentLanguage());
+    retransform();
+    addCommands();
+    addToggles();
+  });
   const unbindTheme = bindThemeRegistry(client);
   // Register the default right away, then swap in the theme saved from the dashboard.
   registerTheme(themeSchema.parse({}));
@@ -230,7 +237,7 @@ export default function contribute(client: PluginClientContext) {
   });
   // Prefs Paseo's own rows follow too reach the restyle as <html> attributes.
   // A window style switch re-tags the window chrome (tagWindow skips it while the style is "paseo").
-  const markRoot = (p: Prefs) => (setRichText({ ...p.richText, images: p.images, stacks: p.nativeStyle === "design" ? p.imageStacks : "off", stackopen: p.imageStackOpen, steps: p.steps, density: p.density === "normal" ? "a" : p.density, window: p.windowStyle === "paseo" ? "a" : p.windowStyle, "icon-steps": p.rowIcons.steps === "hide" ? "hide" : "a", "icon-tool": p.rowIcons.tool === "hide" ? "hide" : "a", loader: p.loader === "dots" ? "a" : p.loader, "loader-size": p.loaderSize === "s" ? "a" : p.loaderSize, icons: p.iconSet === "lucide" ? "a" : p.iconSet }), setLanguage(p.language), tagWindow([]));
+  const markRoot = (p: Prefs) => (setRichText({ ...p.richText, images: p.images, stacks: p.nativeStyle === "design" ? p.imageStacks : "off", stackopen: p.imageStackOpen, steps: p.steps, density: p.density === "normal" ? "a" : p.density, window: p.windowStyle === "paseo" ? "a" : p.windowStyle, "icon-steps": p.rowIcons.steps === "hide" ? "hide" : "a", "icon-tool": p.rowIcons.tool === "hide" ? "hide" : "a", loader: p.loader === "dots" ? "a" : p.loader, "loader-size": p.loaderSize === "s" ? "a" : p.loaderSize, icons: p.iconSet === "lucide" ? "a" : p.iconSet }), setLanguage(currentLanguage()), tagWindow([]));
   markRoot(currentPrefs());
   // The chosen icon set comes from the daemon once, the first time it's picked.
   const requestedIcons = new Set<string>();
@@ -293,7 +300,7 @@ export default function contribute(client: PluginClientContext) {
   client.addTimelineRenderer({ kind: `${KIND}-html`, version: 1, schema: htmlSchema, Component: HtmlItem });
 
   const unbindPromptKeys = bindPromptKeys();
-  // Command Center titles follow the plugin's language, so they are registered again whenever prefs change.
+  // Command Center titles follow Paseo's language, so they are registered again when it changes.
   let removeCommands: Array<() => void> = [];
   const addCommands = () => {
     removeCommands.forEach((r) => void r());
@@ -324,7 +331,6 @@ export default function contribute(client: PluginClientContext) {
     ];
   };
   addCommands();
-  const unsubscribeCommands = subscribePrefs(addCommands);
   const unsetCompact = setCompactHandler((agentId) => client.paseo.agents.ref(agentId).send("/compact"));
   // Toggle titles name what selecting them does, so they are re-added whenever prefs change.
   const toggles = (p: Prefs): Array<[string, string, string, Partial<Prefs>]> => {
@@ -360,7 +366,7 @@ export default function contribute(client: PluginClientContext) {
     unsetCompact();
     unsubscribeToggles();
     removeToggles.forEach((r) => void r());
-    unsubscribeCommands();
+    unfollowLocale();
     removeCommands.forEach((r) => void r());
     unbindPromptKeys();
     unsubscribePrefs();

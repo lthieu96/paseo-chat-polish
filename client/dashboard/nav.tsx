@@ -14,14 +14,13 @@ import { alpha, PMONO, useReducedMotion, useStyles } from "../views";
 import { canSetAppTheme } from "../web";
 import { Segmented, SQUIRCLE_CARD, Switch } from "./controls";
 
-export type Page = "general" | "theme" | "messages" | "steps" | "rich" | "html";
+export type Page = "theme" | "messages" | "steps" | "rich" | "html";
 
-type PageGroup = "GENERAL" | "APPEARANCE" | "CHAT";
-const GROUP_LABELS: Record<PageGroup, MessageKey> = { GENERAL: "nav.group.general", APPEARANCE: "nav.group.appearance", CHAT: "nav.group.chat" };
-const GROUPS: PageGroup[] = ["GENERAL", "APPEARANCE", "CHAT"];
+type PageGroup = "APPEARANCE" | "CHAT";
+const GROUP_LABELS: Record<PageGroup, MessageKey> = { APPEARANCE: "nav.group.appearance", CHAT: "nav.group.chat" };
+const GROUPS: PageGroup[] = ["APPEARANCE", "CHAT"];
 
 const ALL_PAGES: Array<{ id: Page; icon: string; label: MessageKey; group: PageGroup; badge?: MessageKey }> = [
-  { id: "general", icon: "Settings2", label: "nav.page.general", group: "GENERAL" },
   { id: "theme", icon: "Palette", label: "nav.page.theme", group: "APPEARANCE" },
   { id: "messages", icon: "MessageSquareText", label: "nav.page.messages", group: "CHAT" },
   { id: "steps", icon: "ListTree", label: "nav.page.steps", group: "CHAT" },

@@ -18,10 +18,8 @@ const en = {
   "common.loading": "Loading…",
 
   // Sidebar and dashboard chrome
-  "nav.group.general": "GENERAL",
   "nav.group.appearance": "APPEARANCE",
   "nav.group.chat": "CHAT",
-  "nav.page.general": "General",
   "nav.page.theme": "Theme",
   "nav.page.messages": "Messages",
   "nav.page.steps": "Steps",
@@ -48,14 +46,6 @@ const en = {
   "nav.update.review": "Review changes",
 
   // General page
-  "general.title": "General",
-  "general.subtitle": "The dashboard's own settings, starting with the language.",
-  "general.group.language": "Language",
-  "general.language.label": "Language",
-  "general.language.hint": "The dashboard and every row, menu and message the plugin draws in the chat.",
-  "general.language.en": "English",
-  "general.language.zh": "中文",
-  "general.language.note": "Changing the language updates the plugin right away. Agent replies and Paseo's own interface keep their own language.",
 
   // Settings pages
   "prefs.subtitle.messages": "Your messages, images in replies and the working indicator.",
@@ -559,10 +549,8 @@ const zh: Partial<Record<MessageKey, Message>> = {
   "common.defaults": "恢复默认",
   "common.loading": "加载中…",
 
-  "nav.group.general": "通用",
   "nav.group.appearance": "外观",
   "nav.group.chat": "聊天",
-  "nav.page.general": "通用",
   "nav.page.theme": "主题",
   "nav.page.messages": "消息",
   "nav.page.steps": "步骤",
@@ -588,14 +576,6 @@ const zh: Partial<Record<MessageKey, Message>> = {
   "nav.update.changes": "变更",
   "nav.update.review": "查看变更",
 
-  "general.title": "通用",
-  "general.subtitle": "面板自身的设置，先从语言开始。",
-  "general.group.language": "语言",
-  "general.language.label": "界面语言",
-  "general.language.hint": "面板，以及插件在聊天里绘制的所有行、菜单和提示。",
-  "general.language.en": "English",
-  "general.language.zh": "中文",
-  "general.language.note": "切换语言会立即更新插件界面。智能体的回复和 Paseo 自身界面仍使用各自的语言。",
 
   "prefs.subtitle.messages": "你的消息、回复中的图片，以及工作指示器。",
   "prefs.subtitle.steps": "两条回复之间的思考和工具调用。",

@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { toolData } from "../client/model.ts";
 import { stepSummary } from "../client/steps.ts";
+import { currentLanguage, followLocale, languageFor } from "../client/i18n.ts";
 import { translate, translator } from "../shared/i18n.ts";
-import { prefsSchema } from "../shared/timeline.ts";
 
 const tool = (detail, extra = {}) => ({ type: "tool_call", callId: "1", name: "Bash", status: "completed", error: null, detail, ...extra });
 
@@ -15,7 +15,7 @@ test("messages translate with placeholders in both languages", () => {
   // A bound translator words many strings in one language.
   const zh = translator("zh");
   assert.equal(zh("chat.tasks"), "任务");
-  assert.equal(zh("general.language.label"), "界面语言");
+  assert.equal(zh("tool.canceled"), "已取消");
 });
 
 test("counts follow each language's grammar", () => {
@@ -25,10 +25,25 @@ test("counts follow each language's grammar", () => {
   assert.equal(translate("zh", "web.modelCount", { n: 2 }), "2 个模型");
 });
 
-test("language pref: English by default, Chinese when saved, unknown falls back", () => {
-  assert.equal(prefsSchema.parse({}).language, "en");
-  assert.equal(prefsSchema.parse({ language: "zh" }).language, "zh");
-  assert.equal(prefsSchema.parse({ language: "fr" }).language, "en");
+test("the language follows Paseo's: Chinese for any zh locale, English otherwise and before plugin i18n", () => {
+  assert.equal(languageFor("zh-CN"), "zh");
+  assert.equal(languageFor("zh-Hant-TW"), "zh");
+  assert.equal(languageFor("ja"), "en");
+  assert.equal(languageFor(undefined), "en");
+  // Paseo's locale source notifies on change; the language is read live from it.
+  const listeners = [];
+  const source = { locale: "en", subscribe: (l) => (listeners.push(l), () => listeners.splice(listeners.indexOf(l), 1)) };
+  let changes = 0;
+  const stop = followLocale(source, () => changes++);
+  assert.equal(currentLanguage(), "en");
+  source.locale = "zh-CN";
+  listeners.forEach((l) => l());
+  assert.equal(currentLanguage(), "zh");
+  assert.equal(changes, 1);
+  stop();
+  assert.equal(listeners.length, 0);
+  followLocale(undefined, () => {});
+  assert.equal(currentLanguage(), "en");
 });
 
 test("tool rows and merged summaries follow the language", () => {

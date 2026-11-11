@@ -16,9 +16,7 @@ test("DOM restyling, accordion transitions, and bottom following stay stable", {
   try {
     const names = ["css-guard", "i18n", "provider-icons", "stack-viewer", "web", ...readdirSync(new URL("../client/web/", import.meta.url)).map((file) => `web/${file.replace(/\.ts$/, "")}`)];
     const sources = Object.fromEntries(names.map((name) => [name, ts.transpileModule(readFileSync(new URL(`../client/${name}.ts`, import.meta.url), "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText]));
-    // client/i18n reads saved prefs through Paseo's client runtime, which this harness doesn't load; the web
-    // modules only need `t`, so they get the default English prefs. shared/i18n has no imports.
-    sources.prefs = `"use strict";Object.defineProperty(exports,"__esModule",{value:true});exports.currentPrefs=()=>({language:"en"});`;
+    // client/i18n has no locale source here, so the web modules word their strings in English. shared/i18n has no imports.
     sources["shared/i18n"] = ts.transpileModule(readFileSync(new URL("../shared/i18n.ts", import.meta.url), "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
     // Paseo's bundle exports its mermaid document as a minified string literal, with JS-only escapes like \xHH.
     const bundle = String.raw`Object.defineProperty(a,"mermaidRuntimeHtml",{get:function(){return o}});const o='<!doctype html>\n<p class="x" title=\'y\'>\x3c!-- __PASEO_MERMAID_RUNTIME_RECEIVE__ \\x41 \u0041 \u{1F600} \v \/ --\x3e</p>';
@@ -57,7 +55,7 @@ __d(function(g,r,i,a,m,e,d){"use strict";Object.defineProperty(e,'__esModule',{v
           if (modules[name]) return modules[name];
           const exports = modules[name] = {};
           // "./dom" from "web/parts" is "web/dom"; "../css-guard" is "css-guard".
-          const resolve = (id) => id.split('/').reduce((path, part) => part === '..' ? path.slice(0, -1) : part === '.' ? path : [...path, part], name.split('/').slice(0, -1)).join('/');
+          const resolve = (id) => id.replace(/\\.ts$/, '').split('/').reduce((path, part) => part === '..' ? path.slice(0, -1) : part === '.' ? path : [...path, part], name.split('/').slice(0, -1)).join('/');
           new Function('exports', 'require', sources[name])(exports, (id) => id === 'react-native' ? { Platform: { OS: 'web' } } : id === 'react' ? { useSyncExternalStore() {} } : load(resolve(id)));
           return exports;
         }
