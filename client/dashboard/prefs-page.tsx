@@ -17,7 +17,6 @@ import { HtmlPreview, Preview } from "./preview";
 import { RichPreview } from "./rich-preview";
 
 const PAGE_SUBTITLES: Record<Exclude<Page, "theme">, MessageKey> = {
-  general: "general.subtitle",
   messages: "prefs.subtitle.messages",
   steps: "prefs.subtitle.steps",
   rich: "prefs.subtitle.rich",

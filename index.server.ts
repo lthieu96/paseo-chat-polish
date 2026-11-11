@@ -47,13 +47,8 @@ export default function contribute(server: PluginServerContext) {
     const providers = await paseo.config.get().then(({ config }) => config.providers, () => undefined);
     return { ...request, config: withHtmlTool(request.config, tool, baseProvider(request.config.provider, providers)) };
   });
-  // The dashboard words these errors, so they follow the plugin's language.
-  const language = async () => {
-    const current = await prefs.read();
-    return current.status === "ready" ? current.values.language : "en";
-  };
-  server.handle(checkUpdate, async () => checkForUpdate(await language()));
-  server.handle(applyUpdate, async () => installUpdate(await language()));
+  server.handle(checkUpdate, () => checkForUpdate());
+  server.handle(applyUpdate, () => installUpdate());
   server.on("agent.turn_ended", async (event, { paseo }) => {
     const current = await prefs.read();
     if (current.status === "ready" && current.values.recap === "off") return;
