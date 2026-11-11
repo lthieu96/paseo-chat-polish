@@ -1,6 +1,7 @@
 import type { AgentTimelineItem, ToolCallDetail } from "@getpaseo/protocol/agent-types";
 import { z } from "zod";
 import { diffLines } from "../shared/diff.ts";
+import { translate, type Language, type MessageKey } from "../shared/i18n.ts";
 import { recapData } from "../shared/recap.ts";
 import type { Hideable } from "../shared/timeline";
 
@@ -70,7 +71,6 @@ export function shortPath(path: string) {
 }
 
 const firstLine = (s: string) => s.trim().split("\n")[0] ?? "";
-const plural = (n: number, one: string, many = one + "s") => `${n} ${n === 1 ? one : many}`;
 const pascal = (s: string) => s.replace(/(^|[_-])(\w)/g, (_, __, c: string) => c.toUpperCase());
 const stringify = (v: unknown) => (typeof v === "string" ? v : JSON.stringify(v, null, 2) ?? "");
 
@@ -95,7 +95,7 @@ export function errorText(error: unknown) {
   return line.length > 300 ? line.slice(0, 299) + "…" : line || undefined;
 }
 
-const tense = (running: boolean, now: string, past: string) => (running ? now : past);
+const tense = (lang: Language, running: boolean, now: MessageKey, past: MessageKey) => translate(lang, running ? now : past);
 
 /** "AskUserQuestion", "create_agent" → "Ask user question", "Create agent". */
 export const readable = (name: string) => {
@@ -121,27 +121,27 @@ export function mcpTool(name: string) {
   return { server: undefined, tool: readable(m[2]!), icon: PASEO_ICONS.find(([re]) => re.test(leaf))?.[1] ?? "Blocks" };
 }
 // Built-in tools that reach the client without a typed detail: icon, verb while running, verb once done. Keyed by name without separators.
-const NAMED: Record<string, [string, string, string]> = {
-  askuserquestion: ["MessageCircleQuestion", "Asking", "Asked"],
-  question: ["MessageCircleQuestion", "Asking", "Asked"],
-  requestuserinput: ["MessageCircleQuestion", "Asking", "Asked"],
-  toolsearch: ["Search", "Finding tools", "Found tools"],
-  notebookedit: ["Pencil", "Editing notebook", "Edited notebook"],
-  bashoutput: ["SquareTerminal", "Reading output", "Read output"],
-  taskoutput: ["SquareTerminal", "Reading output", "Read output"],
-  killshell: ["Square", "Stopping", "Stopped"],
-  taskstop: ["Square", "Stopping", "Stopped"],
-  monitor: ["Activity", "Watching", "Watched"],
-  sendmessage: ["Send", "Sending message", "Sent message"],
-  lsp: ["Code", "Querying LSP", "Queried LSP"],
-  webfetch: ["Globe", "Fetching", "Fetched"],
-  list: ["FolderOpen", "Listing", "Listed"],
-  applypatch: ["Pencil", "Patching", "Patched"],
-  skill: ["Sparkles", "Using skill", "Used skill"],
-  task: ["Bot", "Starting agent", "Started agent"],
-  speak: ["MicVocal", "Speaking", "Spoke"],
-  terminal: ["SquareTerminal", "Running", "Ran"],
-  agentmessage: ["Bot", "Agent message", "Agent message"],
+const NAMED: Record<string, [string, MessageKey, MessageKey]> = {
+  askuserquestion: ["MessageCircleQuestion", "tool.ask.running", "tool.ask.done"],
+  question: ["MessageCircleQuestion", "tool.ask.running", "tool.ask.done"],
+  requestuserinput: ["MessageCircleQuestion", "tool.ask.running", "tool.ask.done"],
+  toolsearch: ["Search", "tool.findingTools.running", "tool.findingTools.done"],
+  notebookedit: ["Pencil", "tool.notebook.running", "tool.notebook.done"],
+  bashoutput: ["SquareTerminal", "tool.readingOutput.running", "tool.readingOutput.done"],
+  taskoutput: ["SquareTerminal", "tool.readingOutput.running", "tool.readingOutput.done"],
+  killshell: ["Square", "tool.stopping.running", "tool.stopping.done"],
+  taskstop: ["Square", "tool.stopping.running", "tool.stopping.done"],
+  monitor: ["Activity", "tool.watching.running", "tool.watching.done"],
+  sendmessage: ["Send", "tool.sendingMessage.running", "tool.sendingMessage.done"],
+  lsp: ["Code", "tool.queryingLsp.running", "tool.queryingLsp.done"],
+  webfetch: ["Globe", "tool.fetching", "tool.fetched"],
+  list: ["FolderOpen", "tool.listing.running", "tool.listing.done"],
+  applypatch: ["Pencil", "tool.patching.running", "tool.patching.done"],
+  skill: ["Sparkles", "tool.usingSkill.running", "tool.usingSkill.done"],
+  task: ["Bot", "tool.startingAgent.running", "tool.startingAgent.done"],
+  speak: ["MicVocal", "tool.speaking.running", "tool.speaking.done"],
+  terminal: ["SquareTerminal", "tool.running", "tool.ran"],
+  agentmessage: ["Bot", "tool.agentMessage", "tool.agentMessage"],
 };
 const named = (name: string) => NAMED[name.toLowerCase().replace(/[._\s-]+/g, "")];
 /** A short target from a tool's input: the string itself, or its description, query, command, URL or path. */
@@ -153,23 +153,24 @@ function inputTarget(input: unknown) {
   return typeof v === "string" ? firstLine(v) : undefined;
 }
 
-function describe(d: ToolCallDetail, name: string, running: boolean): Omit<ToolData, "status" | "error"> {
+function describe(d: ToolCallDetail, name: string, running: boolean, lang: Language): Omit<ToolData, "status" | "error"> {
+  const tr = (key: MessageKey) => translate(lang, key);
   switch (d.type) {
     case "shell":
       return {
         icon: "SquareTerminal",
-        verb: tense(running, "Running", "Ran"),
+        verb: tense(lang, running, "tool.running", "tool.ran"),
         target: firstLine(d.command),
         shell: true,
         mono: true,
-        meta: d.exitCode ? `exit ${d.exitCode}` : undefined,
+        meta: d.exitCode ? translate(lang, "chat.exitCode", { code: d.exitCode }) : undefined,
         metaTone: d.exitCode ? "danger" : undefined,
         detail: { kind: "output", command: d.command, cwd: d.cwd, text: clipLines(d.output ?? "") },
       };
     case "read":
       return {
         icon: "Eye",
-        verb: tense(running, "Reading", "Read"),
+        verb: tense(lang, running, "tool.reading", "tool.read"),
         target: shortPath(d.filePath),
         mono: true,
         meta: d.offset != null && d.limit != null ? `L${d.offset}–${d.offset + d.limit}` : undefined,
@@ -180,7 +181,7 @@ function describe(d: ToolCallDetail, name: string, running: boolean): Omit<ToolD
       const del = lines.filter((l) => l.sign === "-").length;
       return {
         icon: "Pencil",
-        verb: tense(running, "Editing", "Edited"),
+        verb: tense(lang, running, "tool.editing", "tool.edited"),
         target: shortPath(d.filePath),
         mono: true,
         meta: lines.length ? `+${add} −${del}` : undefined,
@@ -190,7 +191,7 @@ function describe(d: ToolCallDetail, name: string, running: boolean): Omit<ToolD
     case "write":
       return {
         icon: "FilePlus",
-        verb: tense(running, "Writing", "Wrote"),
+        verb: tense(lang, running, "tool.writing", "tool.wrote"),
         target: shortPath(d.filePath),
         mono: true,
         meta: d.content ? `+${d.content.split("\n").length}` : undefined,
@@ -202,13 +203,13 @@ function describe(d: ToolCallDetail, name: string, running: boolean): Omit<ToolD
         ? (d.webResults ?? []).map((r) => ({ text: `${r.title} — ${r.url.replace(/^https?:\/\//, "")}` }))
         : (d.filePaths ?? []).map((p) => ({ text: shortPath(p) }));
       const meta = web
-        ? d.webResults && plural(d.webResults.length, "result")
-        : [d.numMatches != null && plural(d.numMatches, "match", "matches"), d.numFiles != null && plural(d.numFiles, "file")]
+        ? d.webResults && translate(lang, "tool.resultCount", { n: d.webResults.length })
+        : [d.numMatches != null && translate(lang, "tool.matchCount", { n: d.numMatches }), d.numFiles != null && translate(lang, "tool.fileCount", { n: d.numFiles })]
             .filter(Boolean)
             .join(" · ") || undefined;
       return {
         icon: web ? "Globe" : "Search",
-        verb: tense(running, web ? "Searching web" : "Searching", web ? "Searched web" : "Searched"),
+        verb: tense(lang, running, web ? "tool.searchingWeb" : "tool.searching", web ? "tool.searchedWeb" : "tool.searched"),
         target: d.query,
         mono: !web,
         meta: meta || undefined,
@@ -222,7 +223,7 @@ function describe(d: ToolCallDetail, name: string, running: boolean): Omit<ToolD
     case "fetch":
       return {
         icon: "Globe",
-        verb: tense(running, "Fetching", "Fetched"),
+        verb: tense(lang, running, "tool.fetching", "tool.fetched"),
         target: d.url.replace(/^https?:\/\//, ""),
         mono: true,
         meta: [d.code, d.bytes != null && `${Math.max(1, Math.round(d.bytes / 1024))} KB`].filter(Boolean).join(" · ") || undefined,
@@ -232,7 +233,7 @@ function describe(d: ToolCallDetail, name: string, running: boolean): Omit<ToolD
       const done = d.commands.filter((c) => c.status === "completed").length;
       return {
         icon: "GitBranch",
-        verb: tense(running, "Setting up worktree", "Set up worktree"),
+        verb: tense(lang, running, "tool.settingUpWorktree", "tool.setUpWorktree"),
         target: d.branchName,
         mono: true,
         meta: `${done} / ${d.commands.length}`,
@@ -248,14 +249,14 @@ function describe(d: ToolCallDetail, name: string, running: boolean): Omit<ToolD
       };
     }
     case "sub_agent": {
-      const kind = d.subAgentType ? d.subAgentType[0]!.toUpperCase() + d.subAgentType.slice(1) : "Sub";
+      const kind = d.subAgentType ? d.subAgentType[0]!.toUpperCase() + d.subAgentType.slice(1) : undefined;
       const actions = d.actions ?? [];
       return {
         icon: "Bot",
-        verb: `${kind} agent`,
+        verb: kind ? translate(lang, "tool.agent", { kind }) : tr("tool.subAgent"),
         target: d.description,
         mono: false,
-        meta: actions.length ? plural(actions.length, "action") : undefined,
+        meta: actions.length ? translate(lang, "tool.actionCount", { n: actions.length }) : undefined,
         detail: actions.length
           ? { kind: "list", items: actions.slice(-20).map((a) => ({ text: a.summary ? `${a.toolName} ${a.summary}` : a.toolName })) }
           : d.log
@@ -270,7 +271,7 @@ function describe(d: ToolCallDetail, name: string, running: boolean): Omit<ToolD
       const target = d.label && d.label !== name ? firstLine(d.label) : known && d.text ? firstLine(d.text) : undefined;
       if (known) {
         const shell = /^terminal$/i.test(name);
-        return { icon: known[0], verb: tense(running, known[1], known[2]), target, shell, mono: shell, detail: text };
+        return { icon: known[0], verb: tense(lang, running, known[1], known[2]), target, shell, mono: shell, detail: text };
       }
       return { icon: d.icon ? pascal(d.icon) : "Wrench", verb: readable(name), target, mono: false, detail: text };
     }
@@ -285,29 +286,29 @@ function describe(d: ToolCallDetail, name: string, running: boolean): Omit<ToolD
       if (known) {
         // speak's input is the spoken text itself; its output is empty.
         const speech = known[0] === "MicVocal";
-        return { icon: known[0], verb: tense(running, known[1], known[2]), target: inputTarget(input), mono: false, detail: speech ? undefined : io };
+        return { icon: known[0], verb: tense(lang, running, known[1], known[2]), target: inputTarget(input), mono: false, detail: speech ? undefined : io };
       }
       const mcp = mcpTool(name);
-      if (mcp) return { icon: mcp.icon, verb: tense(running, "Calling", "Called"), target: mcp.server ? `${mcp.server} › ${mcp.tool}` : mcp.tool, mono: false, detail: io };
-      return { icon: "Wrench", verb: tense(running, "Calling", "Called"), target: readable(name), mono: false, detail: io };
+      if (mcp) return { icon: mcp.icon, verb: tense(lang, running, "tool.calling", "tool.called"), target: mcp.server ? `${mcp.server} › ${mcp.tool}` : mcp.tool, mono: false, detail: io };
+      return { icon: "Wrench", verb: tense(lang, running, "tool.calling", "tool.called"), target: readable(name), mono: false, detail: io };
     }
   }
 }
 
 // The daemon's notice to a parent agent opens with this line ("Agent <id> (<title>) finished."); clients get the notice as plain text.
 const AGENT_STATUS = /^Agent (\S+) \((.*)\) (finished|errored|needs permission|is unavailable|was closed|was canceled)\.$/;
-const AGENT_VERBS: Record<string, [icon: string, verb: string]> = {
-  finished: ["Bot", "Agent finished"],
-  errored: ["CircleAlert", "Agent errored"],
-  "needs permission": ["ShieldAlert", "Agent needs permission"],
-  "is unavailable": ["BotOff", "Agent unavailable"],
-  "was closed": ["BotOff", "Agent closed"],
-  "was canceled": ["CircleSlash", "Agent canceled"],
+const AGENT_VERBS: Record<string, [icon: string, verb: MessageKey]> = {
+  finished: ["Bot", "agentStatus.finished"],
+  errored: ["CircleAlert", "agentStatus.errored"],
+  "needs permission": ["ShieldAlert", "agentStatus.permission"],
+  "is unavailable": ["BotOff", "agentStatus.unavailable"],
+  "was closed": ["BotOff", "agentStatus.closed"],
+  "was canceled": ["CircleSlash", "agentStatus.canceled"],
 };
 
 /** Paseo's notice about another agent (finished, errored, needs permission…): its title is the target and its last reply the detail,
  * without the status and server lines written for the receiving agent. Undefined for anything else, a message from an agent included. */
-export function agentEventData(item: Item<"tool_call">): ToolData | undefined {
+export function agentEventData(item: Item<"tool_call">, lang: Language = "en"): ToolData | undefined {
   const body = item.detail.type === "plain_text" ? (item.detail.text ?? "") : "";
   const [first = "", ...rest] = body.split("\n\n");
   const status = AGENT_STATUS.exec(first.trim());
@@ -318,29 +319,29 @@ export function agentEventData(item: Item<"tool_call">): ToolData | undefined {
   return {
     status: status[3] === "errored" ? "failed" : "completed",
     icon,
-    verb,
+    verb: translate(lang, verb),
     target: status[2] || status[1],
     mono: false,
     detail: text ? { kind: "prose", text: clipLines(text) } : undefined,
   };
 }
 
-export function toolData(item: Item<"tool_call">): ToolData {
+export function toolData(item: Item<"tool_call">, lang: Language = "en"): ToolData {
   // Claude background-task completions: the label is the task summary, the text is raw XML.
   const base =
     item.name === "task_notification" && item.detail.type === "plain_text"
-      ? { icon: "Bell", verb: "Background task", target: item.detail.label, mono: false }
-      : describe(item.detail, item.name, item.status === "running");
-  if (item.status === "canceled") return { ...base, status: "canceled", icon: "CircleSlash", verb: "Canceled", meta: undefined };
+      ? { icon: "Bell", verb: translate(lang, "tool.backgroundTask"), target: item.detail.label, mono: false }
+      : describe(item.detail, item.name, item.status === "running", lang);
+  if (item.status === "canceled") return { ...base, status: "canceled", icon: "CircleSlash", verb: translate(lang, "tool.canceled"), meta: undefined };
   if (item.status === "failed") {
     const body = errorBody(item.error) ?? "";
     // Claude reports shell failures as "Exit code N" followed by the output: show it as exit N + output.
     const exit = item.detail.type === "shell" ? /^Exit code (\d+)\s*([\s\S]*)$/.exec(body.trim()) : null;
     if (exit && base.detail?.kind === "output") {
       const detail = base.detail.text ? base.detail : { ...base.detail, text: clipLines(exit[2] ?? "") };
-      return { ...base, status: "failed", meta: `exit ${exit[1]}`, metaTone: "danger", detail };
+      return { ...base, status: "failed", meta: translate(lang, "chat.exitCode", { code: exit[1]! }), metaTone: "danger", detail };
     }
-    return { ...base, status: "failed", meta: base.meta ?? "failed", metaTone: "danger", error: errorText(item.error) };
+    return { ...base, status: "failed", meta: base.meta ?? translate(lang, "tool.failed"), metaTone: "danger", error: errorText(item.error) };
   }
   return { ...base, status: item.status };
 }
@@ -361,12 +362,12 @@ export function todoData(item: Item<"todo">) {
   return { items, active: items.find((t) => t.status === "in_progress")?.text };
 }
 
-export function noticeData(item: Item<"error"> | Item<"compaction">) {
+export function noticeData(item: Item<"error"> | Item<"compaction">, lang: Language = "en") {
   if (item.type === "error") return { variant: "inline", tone: "danger", icon: "CircleAlert", text: item.message, pulsing: false } as const;
-  if (item.status === "loading") return { variant: "divider", tone: "muted", icon: "Minimize2", text: "Compacting context…", pulsing: true } as const;
-  const how = item.trigger === "manual" ? "manually" : "automatically";
-  const tokens = item.preTokens ? ` · ${Math.round(item.preTokens / 1000)}K tokens` : "";
-  return { variant: "divider", tone: "muted", icon: "Minimize2", text: `Context ${how} compacted${tokens}`, pulsing: false } as const;
+  if (item.status === "loading") return { variant: "divider", tone: "muted", icon: "Minimize2", text: translate(lang, "notice.compacting"), pulsing: true } as const;
+  const tokens = item.preTokens ? translate(lang, "notice.tokens", { n: Math.round(item.preTokens / 1000) }) : "";
+  const key = item.trigger === "manual" ? "notice.compactedManually" : "notice.compactedAutomatically";
+  return { variant: "divider", tone: "muted", icon: "Minimize2", text: translate(lang, key, { tokens }), pulsing: false } as const;
 }
 
 export type { Phase };
@@ -376,14 +377,14 @@ const IMAGE_MD = /!\[([^\]]*)\]\(([^)\s]+)\)/g;
 export const imagesSchema = z.object({ images: z.array(z.object({ alt: z.string(), url: z.string() })) });
 
 /** Images of an assistant message that is nothing but image markdown; mixed messages stay native. */
-export function imageData(text: string) {
+export function imageData(text: string, lang: Language = "en") {
   if (text.replace(IMAGE_MD, "").trim()) return undefined;
-  const images = [...text.matchAll(IMAGE_MD)].map((m) => ({ alt: m[1] || "Image", url: m[2]! }));
+  const images = [...text.matchAll(IMAGE_MD)].map((m) => ({ alt: m[1] || translate(lang, "chat.image"), url: m[2]! }));
   return images.length ? { images } : undefined;
 }
 
 /** The latest turn as Markdown for a PR or handoff: your prompt quoted, the reply, then the files changed and failed commands. */
-export function turnMarkdown(timeline: readonly AgentTimelineItem[], cwd: string): string | undefined {
+export function turnMarkdown(timeline: readonly AgentTimelineItem[], cwd: string, lang: Language = "en"): string | undefined {
   const start = timeline.findLastIndex((item) => item.type === "user_message");
   if (start < 0) return undefined;
   const prompt = (timeline[start] as Item<"user_message">).text.trim();
@@ -396,12 +397,16 @@ export function turnMarkdown(timeline: readonly AgentTimelineItem[], cwd: string
   if (recap) {
     const added = recap.files.reduce((n, f) => n + f.added, 0);
     const removed = recap.files.reduce((n, f) => n + f.removed, 0);
-    const head = [recap.files.length && `${plural(recap.files.length, "file")} +${added} −${removed}`, recap.commands && plural(recap.commands, "command"), recap.failed.length && `${recap.failed.length} failed`];
+    const head = [
+      recap.files.length && `${translate(lang, "chat.fileCount", { n: recap.files.length })} +${added} −${removed}`,
+      recap.commands && translate(lang, "chat.commandCount", { n: recap.commands }),
+      recap.failed.length && translate(lang, "markdown.failed", { n: recap.failed.length }),
+    ];
     parts.push(
       [
-        `**Changes** · ${head.filter(Boolean).join(" · ")}`,
+        `**${translate(lang, "markdown.changes")}** · ${head.filter(Boolean).join(" · ")}`,
         ...recap.files.map((f) => `- \`${f.path}\` +${f.added} −${f.removed}`),
-        ...recap.failed.map((f) => `- ✗ \`${f.command}\`${f.exit ? ` (exit ${f.exit})` : ""}`),
+        ...recap.failed.map((f) => `- ✗ \`${f.command}\`${f.exit ? translate(lang, "markdown.exit", { code: f.exit }) : ""}`),
       ].join("\n"),
     );
   }

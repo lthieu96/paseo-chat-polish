@@ -2,8 +2,10 @@
 import { useSettings, type PluginScreenProps } from "@getpaseo/plugin/client";
 import { useEffect } from "react";
 import { Text, View } from "react-native";
+import type { MessageKey } from "../../shared/i18n";
 import { themeSchema } from "../../shared/theme";
 import { prefsSettings, type Prefs } from "../../shared/timeline";
+import { useT } from "../i18n";
 import { Icon } from "../icons";
 import { currentPrefs, setPrefs, usePrefs } from "../prefs";
 import { useCurrentTheme } from "../theme-registry";
@@ -14,11 +16,12 @@ import { PrefsEditor } from "./prefs-editor";
 import { HtmlPreview, Preview } from "./preview";
 import { RichPreview } from "./rich-preview";
 
-const PAGE_SUBTITLES: Record<Exclude<Page, "theme">, string> = {
-  messages: "Your messages, images in replies and the working indicator.",
-  steps: "The thoughts and tool calls between two replies.",
-  rich: "One style per markdown element in replies. Click a tile to switch.",
-  html: "Charts, tables, simulations and mockups agents draw in the chat when you ask.",
+const PAGE_SUBTITLES: Record<Exclude<Page, "theme">, MessageKey> = {
+  general: "general.subtitle",
+  messages: "prefs.subtitle.messages",
+  steps: "prefs.subtitle.steps",
+  rich: "prefs.subtitle.rich",
+  html: "prefs.subtitle.html",
 };
 
 /** Timeline prefs save as you pick; open chats pick them up for new rows. */
@@ -29,19 +32,21 @@ export function PrefsPage({ theme, layout, page, settings, change }: Pick<Plugin
   const isDefault = JSON.stringify(prefs) === JSON.stringify(defaults);
   const c = theme.colors;
   const s = useStyles(theme);
+  const t = useT();
   const failed = !!settings.saveError;
-  const status = failed ? `Save failed: ${String(settings.saveError)}` : settings.saving ? "Saving…" : "Saved automatically";
+  const status = failed ? t("prefs.status.failed", { error: String(settings.saveError) }) : settings.saving ? t("prefs.status.saving") : t("prefs.status.saved");
   const PagePreview = page === "rich" ? RichPreview : page === "html" ? HtmlPreview : Preview;
+  const current = PAGES.find((p) => p.id === page)!;
   return (
     <>
-      <TopBar theme={theme} layout={layout} title={PAGES.find((p) => p.id === page)!.label} badge={PAGES.find((p) => p.id === page)!.badge} subtitle={PAGE_SUBTITLES[page]}>
+      <TopBar theme={theme} layout={layout} title={t(current.label)} badge={current.badge ? t(current.badge) : undefined} subtitle={t(PAGE_SUBTITLES[page])}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flexShrink: 1 }}>
           <Icon name={failed ? "TriangleAlert" : "Check"} size={13} color={failed ? c.statusDanger : c.statusSuccess} />
           <Text style={[s.small, { fontSize: 12, color: failed ? c.statusDanger : c.foregroundMuted }]} numberOfLines={1}>
             {status}
           </Text>
         </View>
-        <Button theme={theme} label="Defaults" icon="RotateCcw" disabled={isDefault} onPress={() => change(defaults)} />
+        <Button theme={theme} label={t("prefs.defaults")} icon="RotateCcw" disabled={isDefault} onPress={() => change(defaults)} />
       </TopBar>
       <Columns
         theme={theme}

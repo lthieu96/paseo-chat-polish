@@ -3,6 +3,7 @@ import { useSettings, type PluginScreenProps } from "@getpaseo/plugin/client";
 import { useEffect, useState, type ReactNode } from "react";
 import { Text, View } from "react-native";
 import { THEME_CATALOG_ID, themeSettings, type ThemeDraft } from "../../shared/theme";
+import { useT } from "../i18n";
 import { Icon } from "../icons";
 import { usePrefs } from "../prefs";
 import { registerTheme } from "../theme-registry";
@@ -17,6 +18,7 @@ export function ThemePage({ theme, layout }: Pick<PluginScreenProps, "theme" | "
   const s = useStyles(theme);
   const c = theme.colors;
   const prefs = usePrefs();
+  const t = useT();
   const settings = useSettings(themeSettings);
   const saved = settings.status === "ready" ? settings.values : undefined;
   const host = readHostAppearance();
@@ -58,12 +60,12 @@ export function ThemePage({ theme, layout }: Pick<PluginScreenProps, "theme" | "
   if (settings.status === "invalid" || settings.status === "error") {
     body = (
       <View style={{ padding: 28, gap: 12 }}>
-        <Text style={[s.verb, { color: c.statusDanger }]}>Couldn't load the saved theme.</Text>
-        <Button theme={theme} label="Restore default theme" icon="RotateCcw" onPress={() => void settings.reset()} />
+        <Text style={[s.verb, { color: c.statusDanger }]}>{t("theme.error.load")}</Text>
+        <Button theme={theme} label={t("theme.restore")} icon="RotateCcw" onPress={() => void settings.reset()} />
       </View>
     );
   } else if (!draft || !shown) {
-    body = <Text style={[s.small, { padding: 28 }]}>Loading theme…</Text>;
+    body = <Text style={[s.small, { padding: 28 }]}>{t("theme.loading")}</Text>;
   } else {
     body = (
       <Columns
@@ -76,46 +78,46 @@ export function ThemePage({ theme, layout }: Pick<PluginScreenProps, "theme" | "
   }
 
   const subtitle = paseo
-    ? `${paseo.name} is a Paseo theme. Its colors are fixed; customize a copy to change them.`
+    ? t("theme.subtitle.paseo", { name: paseo.name })
     : active
-      ? "This is your Paseo theme. Apply pushes edits to the app."
+      ? t("theme.subtitle.active")
       : canSetAppTheme
-        ? "Use as app theme saves your edits and reloads Paseo with this theme."
-        : `Apply saves your edits. To use it app-wide, pick “${saved?.name ?? "it"}” in Settings → Appearance.`;
+        ? t("theme.subtitle.useAsApp")
+        : t("theme.subtitle.pickInSettings", { name: saved?.name ?? t("theme.customTheme") });
   return (
     <>
-      <TopBar theme={theme} layout={layout} title="Theme" subtitle={subtitle + (settings.saveError ? ` Save failed: ${String(settings.saveError)}` : "")}>
+      <TopBar theme={theme} layout={layout} title={t("theme.title")} subtitle={subtitle + (settings.saveError ? t("theme.saveFailed", { error: String(settings.saveError) }) : "")}>
         {paseo && shown ? (
           <>
-            {dirty ? <Button theme={theme} label="Reset" icon="RotateCcw" onPress={reset} /> : null}
-            {dirty && appId === paseo.id ? <Button theme={theme} label={settings.saving ? "Applying…" : "Apply"} icon="Check" primary disabled={settings.saving} onPress={() => void apply()} /> : null}
+            {dirty ? <Button theme={theme} label={t("theme.reset")} icon="RotateCcw" onPress={reset} /> : null}
+            {dirty && appId === paseo.id ? <Button theme={theme} label={settings.saving ? t("theme.applying") : t("theme.apply")} icon="Check" primary disabled={settings.saving} onPress={() => void apply()} /> : null}
             {appId === paseo.id ? (
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                 <Icon name="Check" size={14} color={c.foregroundMuted} />
-                <Text style={[s.small, { fontSize: 13 }]}>In use</Text>
+                <Text style={[s.small, { fontSize: 13 }]}>{t("theme.inUse")}</Text>
               </View>
             ) : !canSetAppTheme ? null : (
-              <Button theme={theme} label={`Use ${paseo.name}`} icon="Paintbrush" primary onPress={() => updateAppSettings({ theme: paseo.id, ...(typoDirty ? fonts : null) })} />
+              <Button theme={theme} label={t("theme.use", { name: paseo.name })} icon="Paintbrush" primary onPress={() => updateAppSettings({ theme: paseo.id, ...(typoDirty ? fonts : null) })} />
             )}
             <Button
               theme={theme}
-              label="Customize a copy"
+              label={t("theme.customizeCopy")}
               icon="Copy"
               primary={appId === paseo.id && !dirty}
               disabled={!draft}
               onPress={() => {
-                setDraft({ ...shown, name: `${paseo.name} copy` });
+                setDraft({ ...shown, name: t("theme.copySuffix", { name: paseo.name }) });
                 setView(undefined);
               }}
             />
           </>
         ) : (
           <>
-            <Button theme={theme} label="Reset" icon="RotateCcw" disabled={!dirty} onPress={reset} />
+            <Button theme={theme} label={t("theme.reset")} icon="RotateCcw" disabled={!dirty} onPress={reset} />
             {active || !canSetAppTheme ? (
-              <Button theme={theme} label={settings.saving ? "Applying…" : "Apply theme"} icon="Check" primary disabled={!dirty || settings.saving} onPress={() => void apply()} />
+              <Button theme={theme} label={settings.saving ? t("theme.applying") : t("theme.applyTheme")} icon="Check" primary disabled={!dirty || settings.saving} onPress={() => void apply()} />
             ) : (
-              <Button theme={theme} label="Use as app theme" icon="Paintbrush" primary disabled={settings.saving || !draft} onPress={() => void apply(true)} />
+              <Button theme={theme} label={t("theme.useAsAppTheme")} icon="Paintbrush" primary disabled={settings.saving || !draft} onPress={() => void apply(true)} />
             )}
           </>
         )}

@@ -3,23 +3,30 @@ import type { PluginTheme } from "@getpaseo/plugin";
 import { useRpc } from "@getpaseo/plugin/client";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Image, Linking, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import type { MessageKey } from "../../shared/i18n";
 import { onAccent } from "../../shared/theme";
 import type { Prefs } from "../../shared/timeline";
 import { applyUpdate, checkUpdate, type UpdateStatus } from "../../shared/update";
+import { useT } from "../i18n";
 import { Icon } from "../icons";
 import { APP_ICON } from "../mark";
 import { alpha, PMONO, useReducedMotion, useStyles } from "../views";
 import { canSetAppTheme } from "../web";
 import { Segmented, SQUIRCLE_CARD, Switch } from "./controls";
 
-export type Page = "theme" | "messages" | "steps" | "rich" | "html";
+export type Page = "general" | "theme" | "messages" | "steps" | "rich" | "html";
 
-const ALL_PAGES: Array<{ id: Page; icon: string; label: string; group: string; badge?: string }> = [
-  { id: "theme", icon: "Palette", label: "Theme", group: "APPEARANCE" },
-  { id: "messages", icon: "MessageSquareText", label: "Messages", group: "CHAT" },
-  { id: "steps", icon: "ListTree", label: "Steps", group: "CHAT" },
-  { id: "rich", icon: "Type", label: "Rich text", group: "CHAT" },
-  { id: "html", icon: "AppWindow", label: "HTML pages", group: "CHAT", badge: "Experimental" },
+type PageGroup = "GENERAL" | "APPEARANCE" | "CHAT";
+const GROUP_LABELS: Record<PageGroup, MessageKey> = { GENERAL: "nav.group.general", APPEARANCE: "nav.group.appearance", CHAT: "nav.group.chat" };
+const GROUPS: PageGroup[] = ["GENERAL", "APPEARANCE", "CHAT"];
+
+const ALL_PAGES: Array<{ id: Page; icon: string; label: MessageKey; group: PageGroup; badge?: MessageKey }> = [
+  { id: "general", icon: "Settings2", label: "nav.page.general", group: "GENERAL" },
+  { id: "theme", icon: "Palette", label: "nav.page.theme", group: "APPEARANCE" },
+  { id: "messages", icon: "MessageSquareText", label: "nav.page.messages", group: "CHAT" },
+  { id: "steps", icon: "ListTree", label: "nav.page.steps", group: "CHAT" },
+  { id: "rich", icon: "Type", label: "nav.page.rich", group: "CHAT" },
+  { id: "html", icon: "AppWindow", label: "nav.page.html", group: "CHAT", badge: "nav.badge.experimental" },
 ];
 // Rich text only styles Paseo's own markdown, which native apps draw without a DOM to restyle.
 export const PAGES = ALL_PAGES.filter((p) => canSetAppTheme || p.id !== "rich");
@@ -28,26 +35,27 @@ export const PAGES = ALL_PAGES.filter((p) => canSetAppTheme || p.id !== "rich");
 export function RestyleCard({ theme, prefs, onChange }: { theme: PluginTheme; prefs: Prefs; onChange(p: Prefs): void }) {
   const s = useStyles(theme);
   const c = theme.colors;
+  const t = useT();
   return (
     <View {...SQUIRCLE_CARD} style={{ gap: 6, padding: 10, borderRadius: 10, backgroundColor: c.surface1, borderWidth: StyleSheet.hairlineWidth, borderColor: c.border }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
         <Icon name="Paintbrush" size={14} color={c.foregroundMuted} />
-        <Text style={[s.verb, { flex: 1, fontSize: 13 }]}>Restyle Paseo's items</Text>
-        <Switch theme={theme} label="Restyle Paseo's items" value={prefs.nativeStyle === "design"} onChange={(on) => onChange({ ...prefs, nativeStyle: on ? "design" : "paseo" })} />
+        <Text style={[s.verb, { flex: 1, fontSize: 13 }]}>{t("nav.restyle.title")}</Text>
+        <Switch theme={theme} label={t("nav.restyle.title")} value={prefs.nativeStyle === "design"} onChange={(on) => onChange({ ...prefs, nativeStyle: on ? "design" : "paseo" })} />
       </View>
-      <Text style={[s.small, { fontSize: 12 }]}>Bubbles, tool groups and markdown. Rich text and loaders need it.</Text>
+      <Text style={[s.small, { fontSize: 12 }]}>{t("nav.restyle.hint")}</Text>
       {/* The window chrome is part of the restyle, so its choice shows only while the restyle is on. */}
       {prefs.nativeStyle === "design" ? (
         <View style={{ gap: 6, marginTop: 4 }}>
-          <Text style={[s.small, { fontSize: 12 }]}>Window</Text>
+          <Text style={[s.small, { fontSize: 12 }]}>{t("nav.restyle.window")}</Text>
           <Segmented
             theme={theme}
             value={prefs.windowStyle}
             onChange={(windowStyle) => onChange({ ...prefs, windowStyle })}
             options={[
-              ["paseo", "", "Paseo", true],
-              ["flat", "", "Flat"],
-              ["floating", "", "Floating"],
+              ["paseo", "", t("nav.restyle.window.paseo"), true],
+              ["flat", "", t("nav.restyle.window.flat")],
+              ["floating", "", t("nav.restyle.window.floating")],
             ]}
           />
         </View>
@@ -90,9 +98,10 @@ function UpdateCard({ theme }: { theme: PluginTheme }) {
 function UpdateCardView({ theme, status, phase, error, onUpdate }: { theme: PluginTheme; status: UpdateStatus; phase: "idle" | "updating" | "restarting"; error?: string; onUpdate(): void }) {
   const s = useStyles(theme);
   const c = theme.colors;
+  const t = useT();
   const reducedMotion = useReducedMotion();
   const tone = phase === "restarting" ? c.statusSuccess : error ? c.statusDanger : c.accent;
-  const title = phase === "restarting" ? "Updated" : phase === "updating" ? "Updating…" : error ? "Update failed" : "Update available";
+  const title = phase === "restarting" ? t("nav.update.updated") : phase === "updating" ? t("nav.update.updating") : error ? t("nav.update.failed") : t("nav.update.available");
   const mono = [s.small, { fontSize: 11, lineHeight: 15 }];
   const review = status.links[0];
   const press = ({ pressed }: { pressed: boolean }) => ({ opacity: reducedMotion && pressed ? 0.8 : 1, transform: pressed && !reducedMotion ? [{ scale: 0.97 }] : undefined });
@@ -112,7 +121,7 @@ function UpdateCardView({ theme, status, phase, error, onUpdate }: { theme: Plug
             </Text>
           ) : (
             <Text style={[s.small, { fontSize: 12 }]} numberOfLines={1}>
-              {phase === "updating" ? `Installing ${status.target}` : "Restarting Chat Polish…"}
+              {phase === "updating" ? t("nav.update.installing", { target: status.target ?? "" }) : t("nav.update.restarting")}
             </Text>
           )}
         </View>
@@ -125,11 +134,11 @@ function UpdateCardView({ theme, status, phase, error, onUpdate }: { theme: Plug
       {phase === "idle" ? (
         <View style={{ flexDirection: "row", gap: 6 }}>
           <Pressable accessibilityRole="button" onPress={onUpdate} style={(st) => [{ flex: 1, height: 28, borderRadius: 6, backgroundColor: c.accent, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }, press(st)]}>
-            <Text style={[s.verb, { fontSize: 12, fontWeight: "600", color: onAccent(c.accent, c.accentForeground, c.foreground) }]}>{error ? "Try again" : "Update now"}</Text>
+            <Text style={[s.verb, { fontSize: 12, fontWeight: "600", color: onAccent(c.accent, c.accentForeground, c.foreground) }]}>{error ? t("nav.update.retry") : t("nav.update.now")}</Text>
           </Pressable>
           {review ? (
-            <Pressable accessibilityRole="link" accessibilityLabel="Review changes" onPress={() => void Linking.openURL(review)} style={(st) => [{ height: 28, paddingHorizontal: 10, borderRadius: 6, borderWidth: 1, borderColor: alpha(tone, 0.24), flexDirection: "row", alignItems: "center", gap: 4 }, press(st)]}>
-              <Text style={[s.verb, { fontSize: 12, color: c.foreground }]}>Changes</Text>
+            <Pressable accessibilityRole="link" accessibilityLabel={t("nav.update.review")} onPress={() => void Linking.openURL(review)} style={(st) => [{ height: 28, paddingHorizontal: 10, borderRadius: 6, borderWidth: 1, borderColor: alpha(tone, 0.24), flexDirection: "row", alignItems: "center", gap: 4 }, press(st)]}>
+              <Text style={[s.verb, { fontSize: 12, color: c.foreground }]}>{t("nav.update.changes")}</Text>
               <Icon name="ArrowUpRight" size={12} color={c.foregroundMuted} />
             </Pressable>
           ) : null}
@@ -142,6 +151,7 @@ function UpdateCardView({ theme, status, phase, error, onUpdate }: { theme: Plug
 export function InnerNav({ theme, host, page, prefs, onSelect, onPrefs }: { theme: PluginTheme; host: string; page: Page; prefs: Prefs; onSelect(p: Page): void; onPrefs(p: Prefs): void }) {
   const s = useStyles(theme);
   const c = theme.colors;
+  const t = useT();
   const item = ({ id, icon, label, badge }: (typeof PAGES)[number]) => {
     const active = id === page;
     return (
@@ -161,7 +171,7 @@ export function InnerNav({ theme, host, page, prefs, onSelect, onPrefs }: { them
         })}
       >
         <Icon name={icon} size={16} color={active ? c.foreground : c.foregroundMuted} />
-        <Text style={[s.target, { color: active ? c.foreground : c.foregroundMuted, flex: 1 }]}>{label}</Text>
+        <Text style={[s.target, { color: active ? c.foreground : c.foregroundMuted, flex: 1 }]}>{t(label)}</Text>
         {/* The full tag would wrap the label in this column; the page's own header spells it out. */}
         {badge ? <Icon name="FlaskConical" size={14} color={c.statusWarning} /> : null}
       </Pressable>
@@ -179,12 +189,12 @@ export function InnerNav({ theme, host, page, prefs, onSelect, onPrefs }: { them
         )}
         <View>
           <Text style={[s.title, { fontSize: 14 }]}>Chat Polish</Text>
-          <Text style={[s.small, { fontSize: 11 }]}>Paseo plugin</Text>
+          <Text style={[s.small, { fontSize: 11 }]}>{t("nav.plugin.label")}</Text>
         </View>
       </View>
-      {["APPEARANCE", "CHAT"].map((group) => (
+      {GROUPS.map((group) => (
         <View key={group} style={{ gap: 2 }}>
-          <Text style={[s.label, { paddingHorizontal: 8, marginBottom: 2 }]}>{group}</Text>
+          <Text style={[s.label, { paddingHorizontal: 8, marginBottom: 2 }]}>{t(GROUP_LABELS[group])}</Text>
           {PAGES.filter((p) => p.group === group).map(item)}
         </View>
       ))}
@@ -194,7 +204,7 @@ export function InnerNav({ theme, host, page, prefs, onSelect, onPrefs }: { them
       <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 8 }}>
         <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: c.statusSuccess }} />
         <Text style={[s.small, { fontSize: 11 }]} numberOfLines={1}>
-          Plugin active · {host}
+          {t("nav.plugin.active", { host })}
         </Text>
       </View>
     </View>

@@ -54,7 +54,7 @@ function loadEntry({ os, width }) {
   const web = stub({ readHostAppearance: () => ({ chatDisplay: "full", autoExpandReasoning: false }), openAgentIds: () => ["open-tab"], subagentPaneShown: () => false, iconTwins: () => undefined });
   const real = {};
   // Inside client/, the schema is "../shared/timeline".
-  const loadReal = (name, file) => (real[name] ??= run(transpile(file), (id) => (id === "react-native" ? reactNative : id === "../shared/timeline" ? loadReal("timeline", "../shared/timeline.ts") : require(id))));
+  const loadReal = (name, file) => (real[name] ??= run(transpile(file), (id) => (id === "react-native" ? reactNative : id === "../shared/timeline" ? loadReal("timeline", "../shared/timeline.ts") : id === "./i18n.ts" ? loadReal("i18n", "../shared/i18n.ts") : require(id))));
   const entry = run(transpile("../index.client.tsx"), (id) => {
     if (id === "react-native") return reactNative;
     if (id === "./client/phone") return loadReal("phone", "../client/phone.ts");

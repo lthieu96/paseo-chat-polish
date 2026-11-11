@@ -12,7 +12,7 @@ export { stylePluginViews } from "./web/plugin-views";
 export { bindPromptKeys, followExpansionAtBottom, jumpToPrompt } from "./web/prompts";
 export { restyleNative, setNativeColors } from "./web/restyle";
 export { tagWindow } from "./web/window";
-export { setRichText } from "./web/rich-text";
+export { setLanguage, setRichText } from "./web/rich-text";
 export { selectionCopyMenu } from "./web/selection-copy";
 export { stackImages } from "./web/image-stacks";
 export { paintSidebar } from "./web/sidebar";

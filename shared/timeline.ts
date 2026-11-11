@@ -1,5 +1,6 @@
 import { defineRpc, defineSettings } from "@getpaseo/plugin";
 import { z } from "zod";
+import { LANGUAGES } from "./i18n.ts";
 
 /** Completed tool calls (and todo-list updates) the dashboard can leave out of the timeline. */
 export const HIDEABLE = ["read", "search", "fetch", "task", "todo"] as const;
@@ -25,6 +26,8 @@ export type IconKind = (typeof ICON_KINDS)[number];
 const tableVariant = z.enum(["a", "b", "c", "d"]).default("a");
 
 export const prefsSchema = z.object({
+  /** The language of the dashboard and every row, menu and message the plugin draws in the chat. An unknown saved value falls back to English. */
+  language: z.enum(LANGUAGES).catch("en"),
   /** Initial state of reasoning rows; "paseo" follows Settings → Appearance → Always expand reasoning. */
   reasoning: z.enum(["paseo", "collapsed", "expanded"]).default("paseo"),
   /** Which tool rows start with their details open. */

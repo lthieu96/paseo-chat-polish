@@ -14,6 +14,8 @@ const CLAMP_CSS = `
 [${CLAMP}="closed"] > :last-child { max-height: var(--chat-polish-max); -webkit-mask-image: linear-gradient(#000 55%, transparent); mask-image: linear-gradient(#000 55%, transparent); }
 [${CLAMP}]::after { content: "Show full message"; margin-top: 8px; font-size: 12px; font-weight: 500; color: var(--chat-polish-muted); opacity: 0.75; }
 [${CLAMP}="open"]::after { content: "Show less"; }
+:root[data-cp-lang="zh"] [${CLAMP}]::after { content: "显示完整消息"; }
+:root[data-cp-lang="zh"] [${CLAMP}="open"]::after { content: "收起"; }
 `;
 
 /**

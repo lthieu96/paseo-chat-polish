@@ -1,4 +1,5 @@
 import { Platform } from "react-native";
+import { t } from "../i18n";
 import type { ComputedStyle, DomElement, WebDocument } from "./dom";
 
 declare const document: WebDocument;
@@ -75,17 +76,17 @@ export function selectionCopyMenu(enabled: () => boolean) {
     // Pressing a button would otherwise clear the selection before it copies.
     (m as unknown as { addEventListener(type: "mousedown", l: (e: CopyEvent) => void): void }).addEventListener("mousedown", (e) => e.preventDefault());
     const lead = document.createElement("span");
-    lead.textContent = "Copy";
+    lead.textContent = t("web.copy");
     m.appendChild(lead);
     for (const [label, copy] of [
-      ["Text", () => copyPlain(sel.toString())],
-      ["Markdown", () => selDoc.execCommand("copy")],
+      [t("web.text"), () => copyPlain(sel.toString())],
+      [t("web.markdown"), () => selDoc.execCommand("copy")],
     ] as const) {
       const button = document.createElement("button");
       button.textContent = label;
       button.addEventListener("click", () => {
         copy();
-        lead.textContent = "Copied";
+        lead.textContent = t("web.copied");
         setTimeout(() => menu === m && hide(), 700);
       });
       m.appendChild(button);

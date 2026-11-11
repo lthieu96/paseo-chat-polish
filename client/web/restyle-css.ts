@@ -78,6 +78,7 @@ ${LOADERS}
 [data-cp-part="queued"] { min-height: 36px !important; padding: 0 6px 0 12px !important; gap: 8px !important; align-items: center !important; box-sizing: border-box !important; border: 1px dashed var(--cp-rule) !important; border-radius: 12px !important; background-color: transparent !important; }
 [data-cp-part="queued"]::before { content: ""; order: -2; flex-shrink: 0; width: 13px; height: 13px; background-color: var(--cp-muted); -webkit-mask: ${CLOCK_MASK} center / contain no-repeat; mask: ${CLOCK_MASK} center / contain no-repeat; }
 [data-cp-part="queued"]::after { content: "Queued"; order: -1; flex-shrink: 0; font-size: 11px; color: var(--cp-muted); }
+:root[data-cp-lang="zh"] [data-cp-part="queued"]::after { content: "已排队"; }
 [data-cp-part="queued"] > div:first-child { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 13px !important; color: var(--cp-fg) !important; }
 [data-cp-part="queued"] > div:last-child { gap: 0 !important; align-items: center !important; }
 /* The actions are matched by position (edit, then send-now): Paseo builds differ in their tags and labels. */
@@ -274,6 +275,7 @@ ${CTX_HEAD} > :nth-child(2) { grid-column: 1; grid-row: 2; }
 ${CTX_HEAD} > [data-cp-pct] { font-size: 0 !important; }
 ${CTX_HEAD} > [data-cp-pct]::before { content: attr(data-cp-pct) "%"; margin-right: 6px; font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--cp-fg); }
 ${CTX_HEAD} > [data-cp-pct]::after { content: "used"; font-size: 12px; color: var(--cp-muted); }
+:root[data-cp-lang="zh"] ${CTX_HEAD} > [data-cp-pct]::after { content: "已用"; }
 ${CTX_HEAD} > :nth-child(3) { grid-column: 2; grid-row: 2; justify-self: end; font-family: var(--cp-mono) !important; font-size: 12px !important; }
 ${CTX_HEAD}[data-cp-level]::after { content: ""; grid-column: 1 / -1; grid-row: 3; height: 4px; margin-top: 2px; border-radius: 999px; background: linear-gradient(to right, var(--cp-accent) var(--cp-pct), var(--cp-control) 0); }
 ${CTX_HEAD}[data-cp-level="high"]::after { background: linear-gradient(to right, var(--cp-warn) var(--cp-pct), var(--cp-control) 0); }

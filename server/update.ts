@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { translate, type Language } from "../shared/i18n";
 import type { UpdateStatus } from "../shared/update";
 
 // Paseo hands plugin processes its CLI's path; a daemon started from the CLI has it on PATH.
@@ -48,10 +49,10 @@ async function ownId() {
 const short = (r: Revision | undefined) => (r?.kind === "git" ? r.commit.slice(0, 7) : r?.version);
 const shortRevision = (rev: string | undefined) => (rev && /^[0-9a-f]{40}$/.test(rev) ? rev.slice(0, 7) : rev);
 
-export async function checkForUpdate(): Promise<UpdateStatus> {
+export async function checkForUpdate(lang: Language = "en"): Promise<UpdateStatus> {
   try {
     const [item] = (await plugin(["update", await ownId(), "--check"])) as Preview[];
-    if (!item) return { state: "error", links: [], error: "No result from paseo" };
+    if (!item) return { state: "error", links: [], error: translate(lang, "server.noResult") };
     const state = item.outcome === "installed-newer" ? "current" : item.outcome;
     return { state, current: shortRevision(item.current?.currentRevision), target: short(item.target), links: item.links ?? [], error: item.error };
   } catch (error) {
@@ -59,10 +60,10 @@ export async function checkForUpdate(): Promise<UpdateStatus> {
   }
 }
 
-export async function installUpdate(): Promise<{ error?: string }> {
+export async function installUpdate(lang: Language = "en"): Promise<{ error?: string }> {
   try {
     const [result] = (await plugin(["update", await ownId(), "--yes"])) as Array<{ outcome: string; error?: string }>;
-    return result?.outcome === "error" ? { error: result.error ?? "Update failed" } : {};
+    return result?.outcome === "error" ? { error: result.error ?? translate(lang, "server.updateFailed") } : {};
   } catch (error) {
     return { error: error instanceof Error ? error.message : String(error) };
   }

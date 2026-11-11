@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { Platform, Text, View } from "react-native";
 import type { ThemeDraft } from "../../shared/theme";
 import type { Prefs } from "../../shared/timeline";
+import { useT } from "../i18n";
 import { Icon } from "../icons";
 import { alpha, PMONO, sunken, useStyles } from "../views";
 import { diagramDoc, drawDiagram, loadMermaidDoc } from "../web";
@@ -15,6 +16,7 @@ import { SAMPLE_CODE, SAMPLE_DIAGRAM, SAMPLE_TABLE } from "./samples";
 function DiagramSample({ theme, pele }: { theme: PluginTheme; pele: boolean }) {
   const s = useStyles(theme);
   const c = theme.colors;
+  const t = useT();
   const [frame, setFrame] = useState<unknown>(null);
   const [size, setSize] = useState<{ width: number; height: number } | null>(null);
   const [failed, setFailed] = useState(false);
@@ -37,7 +39,7 @@ function DiagramSample({ theme, pele }: { theme: PluginTheme; pele: boolean }) {
   }, [key]);
   // A failed drawing unmounts the frame, which leaves it failed rather than drawing again.
   useEffect(() => (frame ? drawDiagram(frame, SAMPLE_DIAGRAM, (drawn) => (drawn ? setSize(drawn) : setFailed(true))) : undefined), [frame]);
-  const note = failed ? "Couldn't draw the diagram." : doc ? null : mermaid === null ? "Couldn't find Paseo's mermaid in this version of Paseo." : "Loading Paseo's mermaid…";
+  const note = failed ? t("richPreview.error.draw") : doc ? null : mermaid === null ? t("richPreview.error.mermaidMissing") : t("richPreview.loadingMermaid");
   return (
     <View style={{ padding: 12, borderRadius: 8, backgroundColor: sunken(c.surface0), borderWidth: 1, borderColor: alpha(c.border, 0.6), alignItems: "center" }}>
       {note ? (
@@ -46,7 +48,7 @@ function DiagramSample({ theme, pele }: { theme: PluginTheme; pele: boolean }) {
         <iframe
           key={key}
           ref={setFrame}
-          title="Diagram preview"
+          title={t("richPreview.diagramTitle")}
           sandbox="allow-scripts"
           srcDoc={doc}
           style={{ display: "block", border: 0, width: "100%", pointerEvents: "none", background: "transparent", ...(size ? { maxWidth: size.width, aspectRatio: `${size.width} / ${size.height}` } : { height: 120, opacity: 0 }) }}
@@ -59,6 +61,7 @@ function DiagramSample({ theme, pele }: { theme: PluginTheme; pele: boolean }) {
 function RichSample({ theme, rt, pele }: { theme: PluginTheme; rt: Prefs["richText"]; pele?: boolean }) {
   const s = useStyles(theme);
   const c = theme.colors;
+  const t = useT();
   const rule = alpha(c.border, 0.6);
   const prose = [s.prose, { color: c.foreground }];
   const muted = [s.prose, { color: c.foregroundMuted }];
@@ -173,7 +176,7 @@ function RichSample({ theme, rt, pele }: { theme: PluginTheme; rt: Prefs["richTe
   const table = (
     <View style={bordered ? { borderRadius: 8, borderWidth: 1, borderColor: rule, overflow: "hidden" } : { gap: rt.table === "b" ? 2 : 0 }}>
       <View style={{ flexDirection: "row", ...rowPad, backgroundColor: bordered ? c.surface1 : undefined, borderBottomWidth: rt.table === "b" ? 0 : 1, borderBottomColor: rule }}>
-        {["File", "Change", "+", "-"].map((t, i) => cell(t, i, true))}
+        {[t("richPreview.table.file"), t("richPreview.table.change"), t("richPreview.table.added"), t("richPreview.table.removed")].map((head, i) => cell(head, i, true))}
       </View>
       {SAMPLE_TABLE.map((row, r) => (
         <View

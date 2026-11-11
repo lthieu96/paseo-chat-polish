@@ -5,6 +5,7 @@ import { useMemo, useState, type ComponentProps, type ReactNode } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { onAccent, type ThemeDraft } from "../../shared/theme";
 import type { Prefs } from "../../shared/timeline";
+import { useLanguage, useT } from "../i18n";
 import { Icon } from "../icons";
 import { hideableKind, todoData, toolData } from "../model";
 import { PrefsOverride } from "../prefs";
@@ -36,10 +37,11 @@ export function previewTheme(d: ThemeDraft, host: PluginTheme): PluginTheme {
 export function HtmlPreview({ theme, draft, layout }: { theme: PluginTheme; draft: ThemeDraft; prefs: Prefs; layout: PluginScreenProps["layout"] }) {
   const pt = previewTheme(draft, theme);
   const s = useStyles(pt);
+  const t = useT();
   return (
     <View style={{ gap: 12, padding: 24, borderRadius: 12, backgroundColor: pt.colors.surface0 }}>
-      <Text style={[s.small, { fontSize: 12 }]}>“Chart our API latency for the last day”</Text>
-      <HtmlItem agentId="preview" timestamp={new Date(0)} theme={pt} host={{ id: "preview", label: "Preview" }} layout={layout} item={{ type: "plugin", kind: "preview", version: 1, data: { title: "API latency", html: SAMPLE_PAGE } }} />
+      <Text style={[s.small, { fontSize: 12 }]}>{t("preview.html.prompt")}</Text>
+      <HtmlItem agentId="preview" timestamp={new Date(0)} theme={pt} host={{ id: "preview", label: t("preview.head") }} layout={layout} item={{ type: "plugin", kind: "preview", version: 1, data: { title: t("preview.html.title"), html: SAMPLE_PAGE } }} />
     </View>
   );
 }
@@ -48,6 +50,7 @@ export function HtmlPreview({ theme, draft, layout }: { theme: PluginTheme; draf
 function PreviewBubble({ theme, clamp }: { theme: PluginTheme; clamp: boolean }) {
   const s = useStyles(theme);
   const c = theme.colors;
+  const t = useT();
   const [open, setOpen] = useState(false);
   const clamped = clamp && !open;
   return (
@@ -63,7 +66,7 @@ function PreviewBubble({ theme, clamp }: { theme: PluginTheme; clamp: boolean })
         <Text style={[s.prose, { color: c.foreground }]} numberOfLines={clamped ? 3 : undefined}>
           {LONG_MESSAGE}
         </Text>
-        {clamp ? <Text style={[s.small, { fontSize: 12 }]}>{open ? "Show less" : "Show full message"}</Text> : null}
+        {clamp ? <Text style={[s.small, { fontSize: 12 }]}>{open ? t("preview.showLess") : t("preview.showFullMessage")}</Text> : null}
       </Pressable>
     </View>
   );
@@ -93,14 +96,15 @@ export type Viewport = "desktop" | "phone";
 
 type PreviewMode = "chat" | "code";
 
-export function PreviewHead({ theme, layout, viewport, setViewport, hint = "Updates as you change settings", mode }: { theme: PluginTheme; layout: PluginScreenProps["layout"]; viewport: Viewport; setViewport(v: Viewport): void; hint?: string; mode?: { value: PreviewMode; set(m: PreviewMode): void } }) {
+export function PreviewHead({ theme, layout, viewport, setViewport, hint, mode }: { theme: PluginTheme; layout: PluginScreenProps["layout"]; viewport: Viewport; setViewport(v: Viewport): void; hint?: string; mode?: { value: PreviewMode; set(m: PreviewMode): void } }) {
   const s = useStyles(theme);
+  const t = useT();
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-      <Text style={[s.title, { fontSize: 13 }]}>Preview</Text>
-      <Badge theme={theme} label="Live" tone={theme.colors.statusSuccess} />
+      <Text style={[s.title, { fontSize: 13 }]}>{t("preview.head")}</Text>
+      <Badge theme={theme} label={t("preview.live")} tone={theme.colors.statusSuccess} />
       <Text style={[s.small, { flex: 1, fontSize: 12 }]} numberOfLines={1}>
-        {hint}
+        {hint ?? t("preview.hint.settings")}
       </Text>
       {mode ? (
         <Segmented<PreviewMode>
@@ -108,8 +112,8 @@ export function PreviewHead({ theme, layout, viewport, setViewport, hint = "Upda
           value={mode.value}
           onChange={mode.set}
           options={[
-            ["chat", "MessageSquare", "Chat"],
-            ["code", "Code", "Code"],
+            ["chat", "MessageSquare", t("preview.mode.chat")],
+            ["code", "Code", t("preview.mode.code")],
           ]}
         />
       ) : null}
@@ -119,8 +123,8 @@ export function PreviewHead({ theme, layout, viewport, setViewport, hint = "Upda
           value={viewport}
           onChange={setViewport}
           options={[
-            ["desktop", "Monitor", "Desktop"],
-            ["phone", "Smartphone", "Phone"],
+            ["desktop", "Monitor", t("preview.viewport.desktop")],
+            ["phone", "Smartphone", t("preview.viewport.phone")],
           ]}
         />
       )}
@@ -132,6 +136,7 @@ export function PreviewHead({ theme, layout, viewport, setViewport, hint = "Upda
 export function MockChat({ theme, layout, viewport, children }: { theme: PluginTheme; layout: PluginScreenProps["layout"]; viewport: Viewport; children: ReactNode }) {
   const s = useStyles(theme);
   const c = theme.colors;
+  const t = useT();
   const chip = (icon: string, label?: string) => (
     <View key={icon} style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: label ? 6 : 0, height: 26 }}>
       <Icon name={icon} size={14} color={c.foregroundMuted} />
@@ -143,7 +148,7 @@ export function MockChat({ theme, layout, viewport, children }: { theme: PluginT
   return (
     <View {...SQUIRCLE_CARD} style={{ width: viewport === "phone" ? 390 : "100%", alignSelf: "center", borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, borderColor: c.border, backgroundColor: c.surface0, overflow: "hidden" }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 20, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: alpha(c.border, 0.6) }}>
-        <Text style={[s.target, { color: c.foreground, fontSize: 13, fontWeight: "500" }]}>Refactor auth middleware</Text>
+        <Text style={[s.target, { color: c.foreground, fontSize: 13, fontWeight: "500" }]}>{t("preview.mock.title")}</Text>
         <Text style={[s.target, { fontSize: 12 }]} numberOfLines={1}>
           paseo-api
         </Text>
@@ -151,7 +156,7 @@ export function MockChat({ theme, layout, viewport, children }: { theme: PluginT
       <View style={{ paddingHorizontal: narrow ? 16 : 40, paddingVertical: 24, gap: 16 }}>{children}</View>
       <View {...SQUIRCLE_CARD} style={{ margin: 20, marginTop: 4, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 10, gap: 14, borderRadius: 14, borderWidth: StyleSheet.hairlineWidth, borderColor: c.border, backgroundColor: c.surface1 }}>
         <Text style={[s.prose, { fontSize: 14 }]} numberOfLines={1}>
-          Message the agent, tag @files, or use /commands
+          {t("preview.mock.placeholder")}
         </Text>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
           {chip("Plus")}
@@ -173,10 +178,11 @@ export function MockChat({ theme, layout, viewport, children }: { theme: PluginT
 function CodeView({ theme, layout, viewport, props }: { theme: PluginTheme; layout: PluginScreenProps["layout"]; viewport: Viewport; props: ComponentProps<typeof MergedSteps> }) {
   const s = useStyles(theme);
   const c = theme.colors;
+  const t = useT();
   return (
     <View {...SQUIRCLE_CARD} style={{ width: viewport === "phone" ? 390 : "100%", alignSelf: "center", gap: 16, padding: layout.compact || viewport === "phone" ? 12 : 20, borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, borderColor: c.border, backgroundColor: c.surface0 }}>
       <MergedSteps {...props} defaultOpen />
-      <Text style={[s.prose, { color: c.foreground }]}>I wrote auth.ts and changed its 401 to 403. The final file:</Text>
+      <Text style={[s.prose, { color: c.foreground }]}>{t("preview.code.reply")}</Text>
       <View style={s.block}>
         <View style={[s.blockHead, { alignItems: "center", justifyContent: "space-between" }]}>
           <Text {...PMONO} style={[s.code, { color: c.foregroundMuted }]}>ts</Text>
@@ -196,17 +202,19 @@ function CodeView({ theme, layout, viewport, props }: { theme: PluginTheme; layo
 export function Preview({ theme, draft, prefs, layout, theming }: { theme: PluginTheme; draft: ThemeDraft; prefs: Prefs; layout: PluginScreenProps["layout"]; theming?: Typography }) {
   const [viewport, setViewport] = useState<Viewport>("desktop");
   const [mode, setMode] = useState<PreviewMode>("chat");
+  const t = useT();
+  const lang = useLanguage();
   const pt = previewTheme(draft, theme);
   const ps = useStyles(pt);
   const pc = pt.colors;
-  const host = { id: "preview", label: "Preview" };
+  const host = { id: "preview", label: t("preview.head") };
   const props = { agentId: "preview", timestamp: new Date(0), theme: pt, host, layout };
   const item = <T,>(data: T) => ({ type: "plugin" as const, kind: "preview", version: 1, data });
   // Rows read their open state once; remount them when a pref that sets it changes.
   const remount = `${prefs.reasoning}-${prefs.toolDetails}`;
   const calls = PREVIEW_CALLS.filter((t) => !prefs.hidden.includes(hideableKind(t)!));
   const todos = prefs.hidden.includes("todo") ? [] : [PREVIEW_TODO];
-  const tools = calls.map(toolData);
+  const tools = calls.map((call) => toolData(call, lang));
   const thought = "Handlers in routes/ each call verifyToken(); one middleware removes the duplicates.";
   const { uiFont, monoFont, contentSize, codeSize } = theming ?? {};
   const fonts = useMemo(() => (theming ? { uiFont: uiFont || undefined, monoFont: monoFont || undefined, contentSize, codeSize } : undefined), [!!theming, uiFont, monoFont, contentSize, codeSize]);
@@ -215,7 +223,7 @@ export function Preview({ theme, draft, prefs, layout, theming }: { theme: Plugi
     <PrefsOverride.Provider value={prefs}>
       <SyntaxOverride.Provider value={draft.syntax}>
         <View style={{ gap: 14 }}>
-          <PreviewHead theme={theme} layout={layout} viewport={viewport} setViewport={setViewport} hint={theming ? "Updates as you edit colors and fonts" : undefined} mode={theming ? { value: mode, set: setMode } : undefined} />
+          <PreviewHead theme={theme} layout={layout} viewport={viewport} setViewport={setViewport} hint={theming ? t("preview.hint.theme") : undefined} mode={theming ? { value: mode, set: setMode } : undefined} />
           <AppearanceOverride.Provider value={fonts}>
             {/* Paseo sets its UI font from this variable on #root; set here, only the preview picks the font up. */}
             <View style={theming ? ({ "--paseo-ui-font": theming.uiFont || PASEO_FONT_STACKS.ui } as object) : null}>
@@ -257,7 +265,7 @@ export function Preview({ theme, draft, prefs, layout, theming }: { theme: Plugi
                   {prefs.images === "native" ? (
                     <Image source={{ uri: PREVIEW_IMAGE }} style={{ width: "100%", aspectRatio: 16 / 10, borderRadius: 8 }} resizeMode="cover" />
                   ) : (
-                    <ImagesItem {...props} item={item({ images: [{ alt: "Login screen", url: PREVIEW_IMAGE }, { alt: "Settings screen", url: PREVIEW_IMAGE }] })} />
+                    <ImagesItem {...props} item={item({ images: [{ alt: t("preview.image.login"), url: PREVIEW_IMAGE }, { alt: t("preview.image.settings"), url: PREVIEW_IMAGE }] })} />
                   )}
                 </MockChat>
               )}
