@@ -18,6 +18,7 @@ A [Paseo](https://paseo.sh) plugin that redraws the agent chat as one quiet colu
 - **Working indicator.** Paseo's dots, or a sparkle, spokes, dot ring, orb, matrix or snake loader.
 - **Icon sets.** Paseo's Lucide icons, or Untitled UI or Hugeicons ones across the app (desktop and web). Icons without a twin stay Lucide.
 - **English and Chinese.** The dashboard and every row, menu and message the plugin draws in the chat follow the language picked under **General** in the dashboard (English by default). The Chinese translation is community-maintained; strings without a translation show in English. Agent replies and Paseo's own interface keep their own language.
+- **Phones.** Turn off **Steps → Phones → Chat Polish rows** to leave the chat to Paseo on the iOS and Android apps and in windows under 720pt. Long chats open faster there; themes and fonts still apply.
 - **Extras.** Turn recaps, ⌥⌘↑/↓ to jump between your prompts, and Command Center (⌘K) toggles.
 
 ![The Paseo window in Mariana, floating, with the Explorer open on Changes](images/window.png)
@@ -108,6 +109,7 @@ To update the Paseo Registry listing, submit the new GitHub tag as a revision th
 
 - Restyling Paseo's own items, the font settings and the app theme picker work on desktop and web only. On the iOS and Android apps the dashboard hides those options; to use a Chat Polish theme there, pick it in Paseo's Settings → Appearance.
 - On the mobile apps, merged steps show one by one for a moment when a chat opens, then fold into one row once its timeline loads.
+- With Chat Polish rows off on phones, the iOS and Android apps learn the choice from the daemon a moment after launch; a chat opened before then is drawn by Chat Polish once, then handed back to Paseo. Browsers remember the choice and skip the rows from the start.
 - Fonts, theme picks and the restyle write Paseo's own settings and DOM, which aren't a public API and may change.
 - The window restyle finds Paseo's sidebars, header, tabs and Explorer through its DOM internals (test IDs, nesting and a few computed styles); a Paseo update can make parts of it stop applying until the plugin is updated. Pick **Paseo** under Window to turn it off.
 - Previews of Paseo's built-in themes and font stacks are copied from Paseo 0.11.2 and can drift in later versions.

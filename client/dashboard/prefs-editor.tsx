@@ -416,6 +416,11 @@ export function PrefsEditor({ theme, page, prefs, onChange }: { theme: PluginThe
             })}
           </Row>
         </Group>
+        <Group theme={theme} title={t("prefs.group.phones")}>
+          <Row theme={theme} first label={t("prefs.row.phoneChat")} hint={t("prefs.hint.phoneChat")}>
+            <Switch theme={theme} label={t("prefs.switch.phoneChat")} value={prefs.phoneChat === "on"} onChange={(on) => set("phoneChat")(on ? "on" : "off")} />
+          </Row>
+        </Group>
         <Legend theme={theme} />
       </View>
     );
