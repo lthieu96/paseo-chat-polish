@@ -136,7 +136,7 @@ const INDENTED = `${DIFF_FILE}[data-testid$="-toggle"][style*="padding-left"], $
 const each = (pre: string, list: string[], post = "") => list.map((s) => `${pre} ${s}${post}`).join(", ");
 const LEFT_EDGE = [`[${WIN}="left"]`, 'nav[data-testid="settings-sidebar"]'];
 const TREE_NAMES = ['[data-testid^="diff-tree-file-"][data-testid$="-name"]', '[data-testid^="diff-folder-"][data-testid$="-name"]', '[data-testid^="file-explorer-row-"][data-testid$="-name"]'];
-const ROW_HEIGHTS = ['[data-testid^="diff-tree-file-"][data-testid$="-toggle"]', '[data-testid^="diff-folder-"][data-testid$="-toggle"]', '[data-testid^="file-explorer-row-"][tabindex]'];
+const ROW_HEIGHTS = ['[data-testid^="diff-tree-file-"][data-testid$="-toggle"]', '[data-testid^="diff-folder-"][data-testid$="-toggle"]', '[data-testid^="file-explorer-row-"][tabindex]:not([data-menu-surface])'];
 const LEFT_HANDLE = '[data-testid="left-sidebar-resize-handle"]';
 const EXPLORER_HANDLE = '[data-testid="workspace-explorer-sidebar-resize-handle"]';
 const EXPLORER_HIT = `${EXPLORER_HANDLE} > [role="separator"]`;

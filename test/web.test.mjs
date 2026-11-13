@@ -154,6 +154,14 @@ __d(function(g,r,i,a,m,e,d){"use strict";Object.defineProperty(e,'__esModule',{v
           checks.calloutUpdated = document.getElementById('marker').parentElement.dataset.cpCallout === 'note';
           checks.noGlobalScans = fullScans === 0 && markdownScans === 0;
           checks.observerSettles &&= !capped;
+          const fileFixture = document.createElement('div');
+          fileFixture.innerHTML = '<div data-testid="file-explorer-row-5" tabindex="0" style="height:40px">context</div><div data-menu-surface="true" data-testid="file-explorer-row-5-context-menu" tabindex="-1" style="overflow:hidden"><div style="height:26px">New file</div><div style="height:26px">New folder</div></div>';
+          document.body.appendChild(fileFixture);
+          document.documentElement.setAttribute('data-cp-rt-window', 'flat'); await wait();
+          // The menu surface shares the row's testID prefix and also has a tabindex.
+          checks.fileRowsStayCompact = fileFixture.firstElementChild.getBoundingClientRect().height === 26;
+          checks.fileContextMenuKeepsHeight = fileFixture.lastElementChild.getBoundingClientRect().height === 52;
+          fileFixture.remove(); document.documentElement.removeAttribute('data-cp-rt-window'); await wait();
           clamp(); restyle();
           const unstyle = web.stylePluginViews();
           checks.accordionCloses = true; checks.accordionReverses = true;
@@ -286,7 +294,7 @@ __d(function(g,r,i,a,m,e,d){"use strict";Object.defineProperty(e,'__esModule',{v
     assert.equal(report.error, undefined, report.error);
     assert.deepEqual(report.errors, []);
     for (const [check, passed] of Object.entries(report.checks)) assert.equal(passed, true, check);
-    assert.equal(Object.keys(report.checks).length, 32);
+    assert.equal(Object.keys(report.checks).length, 34);
   } finally {
     server?.closeAllConnections(); server?.close();
     rmSync(temp, { recursive: true, force: true });
