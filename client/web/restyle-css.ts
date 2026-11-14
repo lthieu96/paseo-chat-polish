@@ -424,7 +424,9 @@ ${BUBBLE} { padding: 10px 14px !important; border-radius: 16px !important; }
 [data-testid="user-message"] > div > button svg { width: 13px !important; height: 13px !important; }
 ${BUBBLE} > button { margin-top: 8px !important; }
 ${BUBBLE} > button > [dir] { font-size: 12px !important; font-weight: 500 !important; color: var(--cp-muted, var(--colors-foreground-muted)) !important; }
-[data-cp-attach] > button { align-self: flex-end !important; margin-top: 2px !important; }
+/* Paseo's preview measures rows and text together, so beside attachments its cap, fade and Show more go; the plugin clamps the text alone. */
+[data-cp-attach-clip] { max-height: none !important; }
+[data-cp-attach-body] + div, [data-cp-attach] > button { display: none !important; }
 /* Prompts take at most 60% of the chat (never under 360px, so they stay readable in a narrow pane). */
 [data-testid="user-message"] > div { max-width: max(60%, min(100%, 360px)) !important; }
 /* Attachments leave the bubble: thumbnails and file cards stack above it, right-aligned, and the bubble wraps only the text.

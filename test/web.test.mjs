@@ -77,6 +77,16 @@ __d(function(g,r,i,a,m,e,d){"use strict";Object.defineProperty(e,'__esModule',{v
           const row14 = document.getElementById('a14row');
           checks.previewAttachmentsTagged = bubbleOf('a14').hasAttribute('data-cp-attach') && row14.dataset.cpPart === 'att-files' && row14.parentElement.hasAttribute('data-cp-attach-body') && !row14.nextElementSibling.hasAttribute('data-cp-part');
           shapes.remove(); await wait();
+          // Beside an attachment Paseo's 240px cap counted the image too and cut the text bubble flat; the plugin clamps the text alone.
+          const tall = document.createElement('section');
+          tall.innerHTML = '<div data-testid="user-message" id="t14"><div><div><div id="t14clip" style="max-height:240px;overflow:hidden"><div><div style="height:160px"><div role="button"></div></div><div data-message-text="true" style="line-height:20px;font-size:14px;white-space:pre">' + Array(15).fill('long prompt').join('\\n') + '</div></div><div id="t14fade"></div></div><button>Show more</button></div></div></div>'
+            + '<div data-testid="user-message" id="s14short"><div><div><div style="max-height:240px;overflow:hidden"><div><div style="height:160px"><div role="button"></div></div><div data-message-text="true" style="line-height:20px">short</div></div></div></div></div></div>';
+          document.body.appendChild(tall); await wait();
+          const tallText = document.querySelector('#t14 [data-message-text]');
+          checks.attachmentPromptClampsText = getComputedStyle(document.getElementById('t14clip')).maxHeight === 'none' && getComputedStyle(document.getElementById('t14fade')).display === 'none'
+            && getComputedStyle(document.querySelector('#t14 button')).display === 'none' && bubbleOf('t14').getAttribute('data-chat-polish-clamp') === 'closed'
+            && tallText.getBoundingClientRect().height < 200 && !bubbleOf('s14short').hasAttribute('data-chat-polish-clamp');
+          tall.remove(); await wait(); checks.attachmentPromptReleased = released === 1; released = 0;
           // A prompt another agent sent leads with a "Sent by" button; the bubble after it keeps the plugin's shape and attachment layout.
           const sent = document.createElement('section');
           sent.innerHTML = '<div data-testid="user-message" id="s14"><div><button><div dir="auto">Sent by planner</div></button><div><div><div><div data-message-text="true">hello</div></div></div></div></div></div>'
@@ -295,7 +305,7 @@ __d(function(g,r,i,a,m,e,d){"use strict";Object.defineProperty(e,'__esModule',{v
     assert.equal(report.error, undefined, report.error);
     assert.deepEqual(report.errors, []);
     for (const [check, passed] of Object.entries(report.checks)) assert.equal(passed, true, check);
-    assert.equal(Object.keys(report.checks).length, 35);
+    assert.equal(Object.keys(report.checks).length, 37);
   } finally {
     server?.closeAllConnections(); server?.close();
     rmSync(temp, { recursive: true, force: true });
