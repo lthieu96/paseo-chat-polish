@@ -248,7 +248,11 @@ export function tagParts(roots: DomElement[]) {
     const rows = Array.from(body?.children ?? []).filter((row) => row !== text);
     if (!bubble || !body || !rows.length) continue;
     bubble.setAttribute("data-cp-attach", "");
-    if (body !== bubble) body.setAttribute("data-cp-attach-body", "");
+    if (body !== bubble) {
+      body.setAttribute("data-cp-attach-body", "");
+      // Paseo's preview caps rows and text together at 240px, which cut the text bubble flat; its clamp is lifted (user-messages.ts clamps the text).
+      body.parentElement?.setAttribute("data-cp-attach-clip", "");
+    }
     for (const row of rows) {
       // Thumbnails open the lightbox, so their frames are buttons (their image may still be loading); labelled pills are plain views.
       const images = !!row.querySelector('[role="button"]');
