@@ -262,7 +262,7 @@ export function RichPreview({ theme, draft, prefs, layout }: { theme: PluginThem
   return (
     <View style={{ gap: 14 }}>
       <PreviewHead theme={theme} layout={layout} viewport={viewport} setViewport={setViewport} />
-      <MockChat theme={pt} layout={layout} viewport={viewport}>
+      <MockChat theme={pt} draft={draft} layout={layout} viewport={viewport}>
         <RichSample theme={pt} rt={prefs.richText} pele={Platform.OS === "web" && prefs.nativeStyle === "design" ? prefs.diagrams === "pele" : undefined} />
       </MockChat>
     </View>

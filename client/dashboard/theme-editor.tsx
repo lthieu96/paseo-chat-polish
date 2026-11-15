@@ -1,17 +1,20 @@
 // The Theme page's editor: theme tiles, colors with contrast checks, typography and the syntax theme.
 import type { PluginTheme } from "@getpaseo/plugin";
+import { useRpc } from "@getpaseo/plugin/client";
 import { TextInput } from "@getpaseo/plugin/client/react-native";
 import { useEffect, useState, type ReactNode } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Image, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import type { MessageKey } from "../../shared/i18n";
-import { contrast, isHex, PRESETS, TOKENS, type ThemeDraft, type Token } from "../../shared/theme";
+import { themeFromPixels } from "../../shared/palette";
+import { contrast, isHex, PRESETS, saveBackground, TOKENS, type ThemeDraft, type Token } from "../../shared/theme";
 import { PLAIN_SYNTAX, SYNTAX_THEMES } from "../highlight";
 import { useT } from "../i18n";
 import { Icon } from "../icons";
 import { alpha, PMONO, useStyles } from "../views";
-import { canSetAppTheme, DEFAULTS, PASEO_FONT_STACKS } from "../web";
-import { Grid, Notice, SectionHead, Segmented, SQUIRCLE_CARD } from "./controls";
+import { canSetAppTheme, DEFAULTS, PASEO_FONT_STACKS, pickImage } from "../web";
+import { Button, Grid, Notice, SectionHead, Segmented, SQUIRCLE_CARD } from "./controls";
 import { PASEO_DARK, PASEO_LIGHT, PASEO_THEMES, type PaseoTheme } from "./paseo-themes";
+import { useBackgroundUri } from "./preview";
 
 /** Fonts and sizes as Paseo's Settings → Appearance keeps them; empty fonts are the system default. */
 export interface Typography {
@@ -61,20 +64,20 @@ const STEPPER = 104;
 
 const input = (s: ReturnType<typeof useStyles>, c: PluginTheme["colors"]) => ({ ...s.target, color: c.foreground, backgroundColor: c.surface0, borderWidth: StyleSheet.hairlineWidth, borderColor: c.border, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8 });
 
-function Stepper({ theme, value, label, onChange }: { theme: PluginTheme; value: number; label: string; onChange(v: number): void }) {
+function Stepper({ theme, value, label, min = 8, max = 32, step: by1 = 1, unit = "", onChange }: { theme: PluginTheme; value: number; label: string; min?: number; max?: number; step?: number; unit?: string; onChange(v: number): void }) {
   const s = useStyles(theme);
   const c = theme.colors;
   const t = useT();
   const step = (icon: string, by: number) => (
-    <Pressable accessibilityRole="button" accessibilityLabel={t(by < 0 ? "themeEditor.decrease" : "themeEditor.increase", { label })} onPress={() => onChange(Math.min(32, Math.max(8, value + by)))} style={{ width: 28, height: FIELD - 2, alignItems: "center", justifyContent: "center" }}>
+    <Pressable accessibilityRole="button" accessibilityLabel={t(by < 0 ? "themeEditor.decrease" : "themeEditor.increase", { label })} onPress={() => onChange(Math.min(max, Math.max(min, value + by)))} style={{ width: 28, height: FIELD - 2, alignItems: "center", justifyContent: "center" }}>
       <Icon name={icon} size={13} color={c.foregroundMuted} />
     </Pressable>
   );
   return (
     <View style={{ flexDirection: "row", alignItems: "center", width: STEPPER, height: FIELD, borderRadius: 8, borderWidth: 1, borderColor: c.border, backgroundColor: c.surface0 }}>
-      {step("Minus", -1)}
-      <Text style={[s.target, { flex: 1, textAlign: "center", color: c.foreground, fontVariant: ["tabular-nums"] }]}>{value}</Text>
-      {step("Plus", 1)}
+      {step("Minus", -by1)}
+      <Text style={[s.target, { flex: 1, textAlign: "center", color: c.foreground, fontVariant: ["tabular-nums"] }]}>{value}{unit}</Text>
+      {step("Plus", by1)}
     </View>
   );
 }
@@ -132,6 +135,81 @@ function TypographySection({ theme, typo, setTypo }: { theme: PluginTheme; typo:
         </View>
         <Text style={[s.small, { flex: 1, fontSize: 12, lineHeight: 17 }]}>{t("themeEditor.typographyNote", { content: DEFAULTS.contentSize, code: DEFAULTS.codeSize })}</Text>
       </View>
+    </View>
+  );
+}
+
+type BackgroundKind = "none" | "image" | "mesh";
+
+/**
+ * What a theme has behind the window (web and desktop): nothing, an image (a thumbnail, Change and Remove, how much of it shows and how
+ * blurred) or a mesh gradient in the theme's own colors (its grain).
+ */
+function BackgroundSection({ theme, draft, setDraft, onPickImage }: { theme: PluginTheme; draft: ThemeDraft; setDraft(d: ThemeDraft): void; onPickImage(): void }) {
+  const s = useStyles(theme);
+  const c = theme.colors;
+  const t = useT();
+  const bg = draft.background;
+  const mesh = draft.mesh;
+  const kind: BackgroundKind = bg ? "image" : mesh ? "mesh" : "none";
+  const thumb = useBackgroundUri(bg?.id);
+  const choose = (k: BackgroundKind) => {
+    if (k === kind) return;
+    if (k === "image") return onPickImage();
+    setDraft({ ...draft, background: undefined, mesh: k === "mesh" ? { strength: 35, blur: 30, grain: 0 } : undefined });
+  };
+  const size = (label: string, children: ReactNode) => (
+    <View style={{ width: STEPPER, gap: 4 }}>
+      <Text style={[s.small, { fontSize: 12 }]} numberOfLines={1}>
+        {label}
+      </Text>
+      {children}
+    </View>
+  );
+  // Rows wrap like the Typography card's, so wide fonts and a narrow editor column can't push one control over another.
+  const row = { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 12, padding: 12 } as const;
+  return (
+    <View style={{ gap: 10 }}>
+      <SectionHead theme={theme} title={t("themeEditor.section.background")} hint={t("themeEditor.backgroundHint")} />
+      <View {...SQUIRCLE_CARD} style={{ borderRadius: 10, backgroundColor: c.surface1, borderWidth: StyleSheet.hairlineWidth, borderColor: c.border }}>
+        <View style={row}>
+          <Segmented<BackgroundKind>
+            theme={theme}
+            value={kind}
+            onChange={choose}
+            options={[
+              ["none", "Ban", t("themeEditor.backgroundNone")],
+              ["image", "Image", t("themeEditor.backgroundImage")],
+              ["mesh", "Sparkles", t("themeEditor.backgroundMesh")],
+            ]}
+          />
+        </View>
+        {bg ? (
+          <>
+            <View style={[row, { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border }]}>
+              <View style={{ width: FIELD * 2, height: FIELD, borderRadius: 8, overflow: "hidden", backgroundColor: c.surface2 }}>
+                {thumb ? <Image source={{ uri: thumb }} style={{ width: "100%", height: "100%" }} resizeMode="cover" /> : null}
+              </View>
+              <Button theme={theme} label={t("themeEditor.backgroundChange")} icon="ImagePlus" onPress={onPickImage} />
+              <Button theme={theme} label={t("themeEditor.backgroundRemove")} icon="Trash2" onPress={() => setDraft({ ...draft, background: undefined })} />
+            </View>
+            <View style={[row, { alignItems: "flex-start", borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border }]}>
+              {size(t("themeEditor.backgroundStrength"), <Stepper theme={theme} value={bg.strength} label={t("themeEditor.backgroundStrength")} min={10} max={60} step={5} unit="%" onChange={(strength) => setDraft({ ...draft, background: { ...bg, strength } })} />)}
+              {size(t("themeEditor.backgroundBlur"), <Stepper theme={theme} value={bg.blur} label={t("themeEditor.backgroundBlur")} min={0} max={80} step={5} onChange={(blur) => setDraft({ ...draft, background: { ...bg, blur } })} />)}
+            </View>
+          </>
+        ) : mesh ? (
+          <View style={[row, { alignItems: "flex-start", borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border }]}>
+            {size(t("themeEditor.backgroundStrength"), <Stepper theme={theme} value={mesh.strength} label={t("themeEditor.backgroundStrength")} min={10} max={60} step={5} unit="%" onChange={(strength) => setDraft({ ...draft, mesh: { ...mesh, strength } })} />)}
+            {size(t("themeEditor.backgroundBlur"), <Stepper theme={theme} value={mesh.blur} label={t("themeEditor.backgroundBlur")} min={0} max={80} step={5} onChange={(blur) => setDraft({ ...draft, mesh: { ...mesh, blur } })} />)}
+            {size(t("themeEditor.backgroundGrain"), <Stepper theme={theme} value={mesh.grain} label={t("themeEditor.backgroundGrain")} min={0} max={100} step={10} unit="%" onChange={(grain) => setDraft({ ...draft, mesh: { ...mesh, grain } })} />)}
+            <View style={{ alignSelf: "flex-end" }}>
+              <Button theme={theme} label={t("themeEditor.meshShuffle")} icon="Shuffle" onPress={() => setDraft({ ...draft, mesh: { ...mesh, seed: Math.floor(Math.random() * 2 ** 32) } })} />
+            </View>
+          </View>
+        ) : null}
+      </View>
+      {kind !== "none" ? <Text style={[s.small, { fontSize: 12, lineHeight: 17 }]}>{t(kind === "image" ? "themeEditor.backgroundNote" : "themeEditor.meshNote")}</Text> : null}
     </View>
   );
 }
@@ -251,6 +329,21 @@ export function Editor({ theme, draft, shown, view, appId, saved, typo, setDraft
   const presetOf = (d: ThemeDraft) => PRESETS.find((p) => sameColors(p.colors, d.colors) && (p.sidebar ?? "") === d.sidebar && p.syntax === d.syntax)?.id;
   const selected = locked ? undefined : presetOf(draft);
   const inUse = appId === "plugin" && saved ? presetOf(saved) : undefined;
+  const save = useRpc(saveBackground);
+  const [imageError, setImageError] = useState<string>();
+  // Picks an image, stores it on the daemon and starts a theme from its colors with it behind the window.
+  const fromImage = async () => {
+    setImageError(undefined);
+    try {
+      const picked = await pickImage();
+      if (!picked) return;
+      const { id } = await save({ dataUrl: picked.dataUrl });
+      setView(undefined);
+      setDraft({ ...themeFromPixels(picked.pixels), name: picked.name || t("theme.customTheme"), background: { id, strength: 35, blur: 30 } });
+    } catch (error) {
+      setImageError(t("themeEditor.fromImageFailed", { error: error instanceof Error ? error.message : String(error) }));
+    }
+  };
   const tokenText = typing[token] ?? draft.colors[token];
   const sidebarText = typing.sidebar ?? draft.sidebar;
   const sidebarBad = !!typing.sidebar && !isHex(normalize(typing.sidebar));
@@ -311,8 +404,24 @@ export function Editor({ theme, draft, shown, view, appId, saved, typo, setDraft
                 <Icon name="Plus" size={15} color={c.foregroundMuted} />
                 <Text style={[s.small, { fontSize: 12 }]}>{t("themeEditor.newTheme")}</Text>
               </Pressable>,
+              // The picker and the backdrop are DOM features; phones have neither.
+              ...(Platform.OS === "web"
+                ? [
+                    <Pressable
+                      key="image"
+                      accessibilityRole="button"
+                      accessibilityLabel={t("themeEditor.fromImageLabel")}
+                      onPress={() => void fromImage()}
+                      style={{ flex: 1, minHeight: 72, borderRadius: 8, borderWidth: StyleSheet.hairlineWidth, borderColor: c.border, alignItems: "center", justifyContent: "center", gap: 4 }}
+                    >
+                      <Icon name="ImagePlus" size={15} color={c.foregroundMuted} />
+                      <Text style={[s.small, { fontSize: 12 }]}>{t("themeEditor.fromImage")}</Text>
+                    </Pressable>,
+                  ]
+                : []),
             ]}
           </Grid>
+          {imageError ? <Text style={[s.small, { fontSize: 12, color: c.statusDanger }]}>{imageError}</Text> : null}
         </View>
         {locked ? null : (
           <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
@@ -329,6 +438,8 @@ export function Editor({ theme, draft, shown, view, appId, saved, typo, setDraft
           </View>
         )}
       </View>
+
+      {!locked && Platform.OS === "web" ? <BackgroundSection theme={theme} draft={draft} setDraft={setDraft} onPickImage={() => void fromImage()} /> : null}
 
       {canSetAppTheme ? <TypographySection theme={theme} typo={typo} setTypo={setTypo} /> : null}
 

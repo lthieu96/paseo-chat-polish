@@ -4,7 +4,8 @@ import { readImageFile } from "./server/image";
 import { renderDiagram } from "./shared/diagram";
 import { readImage } from "./shared/image";
 import { recapData } from "./shared/recap";
-import { getTheme, themeSchema, themeSettings } from "./shared/theme";
+import { getTheme, readBackground, saveBackground, themeSchema, themeSettings } from "./shared/theme";
+import { readBackgroundImage, saveBackgroundImage } from "./server/background";
 import { getIconSet, getPrefs, prefsSchema, prefsSettings } from "./shared/timeline";
 import { loadIconSet } from "./server/icons";
 import { installHeadlessShell, removeHeadlessShell, shellStatus, staleShell } from "./server/headless-shell";
@@ -22,6 +23,8 @@ export default function contribute(server: PluginServerContext) {
     const current = await theme.read();
     return current.status === "ready" ? current.values : themeSchema.parse({});
   });
+  server.handle(saveBackground, saveBackgroundImage);
+  server.handle(readBackground, readBackgroundImage);
   const prefs = server.registerSettings(prefsSettings);
   server.handle(getPrefs, async () => {
     const current = await prefs.read();

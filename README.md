@@ -9,7 +9,7 @@ A [Paseo](https://paseo.sh) plugin that redraws the agent chat as one quiet colu
 - **Tool calls as single rows.** An icon, a verb that shows the state (Running, Ran), the command or file, and a short detail. Open a row for its diff, output or raw input and output. Failed calls keep their red status and follow the same row strength as other calls; hover or open a row to brighten it.
 - **Diff wrapping.** Long diff lines scroll horizontally by default. Enable **Wrap diff lines** under **Tool calls** in the dashboard to wrap them to the available width.
 - **Steps merged between replies.** The thoughts and tool calls before an answer fold into one row, such as "Edited 1 file and ran 1 command", which opens to each step.
-- **Themes.** Pick one of Paseo's built-in themes or a Chat Polish one (Mariana, Ivory, Parchment, Dusk), or edit the colors with contrast checks. Fonts and sizes are set from the same page.
+- **Themes.** Pick one of Paseo's built-in themes or a Chat Polish one (Mariana, Ivory, Parchment, Dusk), or edit the colors with contrast checks. Fonts and sizes are set from the same page. **From image** starts a theme from a picture: its colors are picked from the image, which then sits behind the window, blurred under the theme's color, and shows less where it is too bright or dark for text to stay readable (desktop and web). Any editable theme can instead have a **mesh** gradient behind the window, drawn from its own colors.
 - **Window.** A flat or floating main area around the chat, with quieter sidebars, header, tabs and Explorer: lighter rules, smaller type, a denser changed-files tree with indent guides and status letters. Paseo's own colors, status dots and icons stay. Switch it under **Restyle Paseo's items → Window: Paseo / Flat / Floating** (desktop and web).
 - **Rich text styles.** Three or four looks each for quotes, tables, code blocks, inline code, headings, lists, callouts and rules.
 - **Diagrams.** Mermaid diagrams drawn by [Pele](https://pele.run) in the theme's colors, or by Paseo's mermaid with the same chart colors. Switch on the Rich text page, which previews both. A diagram left showing its source (Paseo's safety check rejects labels like `<id>`, or a render got stuck) has a redraw button that has Pele draw it as Paseo's own diagram, with zoom and full screen.
@@ -107,7 +107,7 @@ To update the Paseo Registry listing, submit the new GitHub tag as a revision th
 
 ## Limitations
 
-- Restyling Paseo's own items, the font settings and the app theme picker work on desktop and web only. On the iOS and Android apps the dashboard hides those options; to use a Chat Polish theme there, pick it in Paseo's Settings → Appearance.
+- Restyling Paseo's own items, the font settings, the app theme picker and window backgrounds (image or mesh) work on desktop and web only. On the iOS and Android apps the dashboard hides those options; to use a Chat Polish theme there, pick it in Paseo's Settings → Appearance.
 - On the mobile apps, merged steps show one by one for a moment when a chat opens, then fold into one row once its timeline loads.
 - With Chat Polish rows off on phones, the iOS and Android apps learn the choice from the daemon a moment after launch; a chat opened before then is drawn by Chat Polish once, then handed back to Paseo. Browsers remember the choice and skip the rows from the start.
 - Fonts, theme picks and the restyle write Paseo's own settings and DOM, which aren't a public API and may change.

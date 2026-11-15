@@ -14,8 +14,8 @@ import { currentLanguage, followLocale, t } from "./client/i18n";
 import { isPhone, polishesChat, rememberedPhoneChat, rememberPhoneChat } from "./client/phone";
 import { currentPrefs, savePrefs, setPrefs, subscribePrefs, usePrefsSaver } from "./client/prefs";
 import { bindThemeRegistry, currentTheme, registerTheme, subscribeTheme } from "./client/theme-registry";
-import { addIconSet, bindPromptKeys, centerControlText, clampUserMessages, iconTwins, jumpToPrompt, openAgentIds, paintSidebar, subagentPaneShown, tagWindow, redrawDiagrams, setCompactHandler, readHostAppearance, restyleNative, selectionCopyMenu, setLanguage, setNativeColors, stackImages, setRailProviders, setRichText, stylePluginViews, nativeIconSet, watchDom } from "./client/web";
-import { getTheme, THEME_CATALOG_ID, themeSchema } from "./shared/theme";
+import { addIconSet, paintBackdrop, bindPromptKeys, centerControlText, clampUserMessages, iconTwins, jumpToPrompt, openAgentIds, paintSidebar, subagentPaneShown, tagWindow, redrawDiagrams, setCompactHandler, readHostAppearance, restyleNative, selectionCopyMenu, setLanguage, setNativeColors, stackImages, setRailProviders, setRichText, stylePluginViews, nativeIconSet, watchDom } from "./client/web";
+import { getTheme, readBackground, THEME_CATALOG_ID, themeSchema } from "./shared/theme";
 import { getIconSet, getPrefs, type Prefs } from "./shared/timeline";
 import { HtmlItem, ImagesItem, NoticeItem, StackViewerHost, PlanItem, RecapItem, StepsItem, ThoughtItem, TodoItem, ToolItem } from "./client/views";
 import { htmlData, htmlSchema } from "./client/html";
@@ -64,6 +64,11 @@ export default function contribute(client: PluginClientContext) {
     const active = readHostAppearance().pluginThemeId === THEME_CATALOG_ID;
     return active && theme ? { sidebar: theme.sidebar } : undefined;
   }, subscribeTheme);
+  const unpaintBackdrop = paintBackdrop(
+    () => (readHostAppearance().pluginThemeId === THEME_CATALOG_ID ? currentTheme() : undefined),
+    subscribeTheme,
+    (id) => client.rpc(readBackground, { id }).then((r) => r.dataUrl),
+  );
 
   const unrestyle = restyleNative(() => currentPrefs().nativeStyle === "design", { render: (source) => client.rpc(renderDiagram, { source }), on: () => currentPrefs().diagrams === "pele" });
   const unstylePluginViews = stylePluginViews();
@@ -376,6 +381,7 @@ export default function contribute(client: PluginClientContext) {
     followed.forEach((stop) => stop());
     removeTransformers();
     unpaintSidebar();
+    unpaintBackdrop();
     uncenter();
     unclamp();
     unselect();

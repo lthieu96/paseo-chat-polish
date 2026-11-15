@@ -114,6 +114,20 @@ export const themeSchema = z.object({
   sidebar: hex.or(z.literal("")).default(mariana.sidebar ?? ""),
   /** Highlight theme for code the plugin draws (commands, diffs, JSON); "plain" turns it off. */
   syntax: z.string().default("one-dark-darker-mariana"),
+  /** An image behind the window, blurred under the theme's color (web and desktop): stored on the daemon by its SHA-256; strength and blur in percent and px. */
+  background: z
+    .object({ id: z.string().regex(/^[0-9a-f]{64}$/), strength: z.number().int().min(10).max(60).default(35), blur: z.number().int().min(0).max(80).default(30) })
+    .optional(),
+  /** A mesh gradient in the theme's own colors, shown like a background image instead of one (web and desktop); grain in percent. */
+  mesh: z
+    .object({
+      strength: z.number().int().min(10).max(60).default(35),
+      blur: z.number().int().min(0).max(80).default(30),
+      grain: z.number().int().min(0).max(100).default(0),
+      /** Picks the gradient and its layout (Shuffle); none: the original mesh. */
+      seed: z.number().int().min(0).max(2 ** 32 - 1).optional(),
+    })
+    .optional(),
 });
 export type ThemeDraft = z.output<typeof themeSchema>;
 
@@ -122,6 +136,12 @@ export const themeSettings = defineSettings({ id: "theme", scope: "host", versio
 
 /** Lets the client entry fetch the saved theme before any screen mounts. */
 export const getTheme = defineRpc({ name: "theme.get", input: z.object({}), output: themeSchema });
+
+/** Stores a theme's background image on the daemon (a JPEG, PNG or WebP data URL) and returns its id, the SHA-256 of the bytes. */
+export const saveBackground = defineRpc({ name: "theme.background.save", input: z.object({ dataUrl: z.string().max(24 * 1024 * 1024) }), output: z.object({ id: z.string() }) });
+
+/** Reads a stored background image back as a data URL. */
+export const readBackground = defineRpc({ name: "theme.background.read", input: z.object({ id: z.string().regex(/^[0-9a-f]{64}$/) }), output: z.object({ dataUrl: z.string() }) });
 
 export const THEME_ID = "chat-polish";
 /** Paseo's catalog id for this theme: `<plugin id>/theme/<theme id>`, assuming the manifest's plugin id. */

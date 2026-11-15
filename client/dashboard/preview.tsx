@@ -1,16 +1,17 @@
 // The live preview: a mock chat (or code view) drawn with the plugin's own rows in the draft theme.
 import type { PluginTheme } from "@getpaseo/plugin";
-import type { PluginScreenProps } from "@getpaseo/plugin/client";
-import { useMemo, useState, type ComponentProps, type ReactNode } from "react";
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
-import { onAccent, type ThemeDraft } from "../../shared/theme";
+import { useRpc, type PluginScreenProps } from "@getpaseo/plugin/client";
+import { useEffect, useMemo, useState, type ComponentProps, type ReactNode } from "react";
+import { Image, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { backdrop, type Extremes } from "../../shared/palette";
+import { onAccent, readBackground, type ThemeDraft } from "../../shared/theme";
 import type { Prefs } from "../../shared/timeline";
 import { useLanguage, useT } from "../i18n";
 import { Icon } from "../icons";
 import { hideableKind, todoData, toolData } from "../model";
 import { PrefsOverride } from "../prefs";
 import { alpha, AppearanceOverride, CodeLine, HtmlItem, ImagesItem, MergedSteps, PMONO, SyntaxOverride, ThoughtItem, TodoItem, ToolItem, useStyles } from "../views";
-import { PASEO_FONT_STACKS } from "../web";
+import { imageExtremes, meshImage, PASEO_FONT_STACKS, pictureOf } from "../web";
 import { Badge, Segmented, SQUIRCLE_CARD } from "./controls";
 import { CODE_CALLS, CODE_REPLY, LONG_MESSAGE, PREVIEW_CALLS, PREVIEW_IMAGE, PREVIEW_TODO, SAMPLE_PAGE } from "./samples";
 import type { Typography } from "./theme-editor";
@@ -31,6 +32,53 @@ export function previewTheme(d: ThemeDraft, host: PluginTheme): PluginTheme {
       accentForeground: onAccent(c.accent, c.background, c.foreground),
     },
   };
+}
+
+// Background images by id, read from the daemon once per dashboard session (they run to a few MB).
+const backgrounds = new Map<string, string>();
+
+/** A theme's background image as a data URL, or undefined while it loads or when there is none. */
+export function useBackgroundUri(id: string | undefined) {
+  const read = useRpc(readBackground);
+  const [loaded, setLoaded] = useState<{ id: string; uri: string }>();
+  useEffect(() => {
+    if (!id || backgrounds.has(id)) return;
+    let alive = true;
+    read({ id }).then((r) => (backgrounds.set(id, r.dataUrl), alive && setLoaded({ id, uri: r.dataUrl })), () => {});
+    return () => void (alive = false);
+  }, [id, read]);
+  return id ? (backgrounds.get(id) ?? (loaded?.id === id ? loaded.uri : undefined)) : undefined;
+}
+
+/**
+ * The draft's background behind a preview card, drawn as the app draws it behind the window (see pictureOf and backdrop): its image or
+ * mesh picture, blurred, under the veil; then the raised color that lifts the content panel. Web only, like the backdrop itself.
+ */
+function Frost({ draft }: { draft?: ThemeDraft }) {
+  const pic = Platform.OS === "web" ? pictureOf(draft) : undefined;
+  const id = pic?.id;
+  const image = useBackgroundUri(pic && !pic.mesh ? id : undefined);
+  const [shown, setShown] = useState<{ id: string; uri: string; ext: Extremes }>();
+  useEffect(() => {
+    const mesh = pic?.mesh;
+    const uri = mesh ? meshImage(mesh.colors, mesh.grain, mesh.seed) : image && Promise.resolve(image);
+    if (!id || !uri) return;
+    let alive = true;
+    uri.then(async (u) => ({ id, uri: u, ext: await imageExtremes(id, u) })).then((next) => alive && setShown(next), () => {});
+    return () => void (alive = false);
+  }, [id, image]);
+  if (!draft || !pic || shown?.id !== pic.id) return null;
+  const b = backdrop(draft, shown.ext, pic.strength);
+  const bleed = -pic.blur * 2;
+  return (
+    <View pointerEvents="none" style={[StyleSheet.absoluteFill, { overflow: "hidden" }]}>
+      <View style={{ position: "absolute", top: bleed, left: bleed, right: bleed, bottom: bleed, filter: `blur(${pic.blur}px)` }}>
+        <Image source={{ uri: shown.uri }} resizeMode="cover" style={{ width: "100%", height: "100%" }} />
+      </View>
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: b.veil }]} />
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: b.lift }]} />
+    </View>
+  );
 }
 
 /** A sample page in the theme being edited, drawn by the same row the chat uses. */
@@ -133,7 +181,7 @@ export function PreviewHead({ theme, layout, viewport, setViewport, hint, mode }
 }
 
 /** A chat as Paseo shows it: title bar, the timeline, and the composer. `theme` is the previewed theme. */
-export function MockChat({ theme, layout, viewport, children }: { theme: PluginTheme; layout: PluginScreenProps["layout"]; viewport: Viewport; children: ReactNode }) {
+export function MockChat({ theme, draft, layout, viewport, children }: { theme: PluginTheme; draft?: ThemeDraft; layout: PluginScreenProps["layout"]; viewport: Viewport; children: ReactNode }) {
   const s = useStyles(theme);
   const c = theme.colors;
   const t = useT();
@@ -147,6 +195,7 @@ export function MockChat({ theme, layout, viewport, children }: { theme: PluginT
   const narrow = layout.compact || viewport === "phone";
   return (
     <View {...SQUIRCLE_CARD} style={{ width: viewport === "phone" ? 390 : "100%", alignSelf: "center", borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, borderColor: c.border, backgroundColor: c.surface0, overflow: "hidden" }}>
+      <Frost draft={draft} />
       <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 20, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: alpha(c.border, 0.6) }}>
         <Text style={[s.target, { color: c.foreground, fontSize: 13, fontWeight: "500" }]}>{t("preview.mock.title")}</Text>
         <Text style={[s.target, { fontSize: 12 }]} numberOfLines={1}>
@@ -175,12 +224,13 @@ export function MockChat({ theme, layout, viewport, children }: { theme: PluginT
 }
 
 /** The code a chat shows, drawn by the same rows as the Chat view: an open merged row of sample calls, then a reply with a code block. */
-function CodeView({ theme, layout, viewport, props }: { theme: PluginTheme; layout: PluginScreenProps["layout"]; viewport: Viewport; props: ComponentProps<typeof MergedSteps> }) {
+function CodeView({ theme, draft, layout, viewport, props }: { theme: PluginTheme; draft: ThemeDraft; layout: PluginScreenProps["layout"]; viewport: Viewport; props: ComponentProps<typeof MergedSteps> }) {
   const s = useStyles(theme);
   const c = theme.colors;
   const t = useT();
   return (
-    <View {...SQUIRCLE_CARD} style={{ width: viewport === "phone" ? 390 : "100%", alignSelf: "center", gap: 16, padding: layout.compact || viewport === "phone" ? 12 : 20, borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, borderColor: c.border, backgroundColor: c.surface0 }}>
+    <View {...SQUIRCLE_CARD} style={{ width: viewport === "phone" ? 390 : "100%", alignSelf: "center", gap: 16, padding: layout.compact || viewport === "phone" ? 12 : 20, borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, borderColor: c.border, backgroundColor: c.surface0, overflow: "hidden" }}>
+      <Frost draft={draft} />
       <MergedSteps {...props} defaultOpen />
       <Text style={[s.prose, { color: c.foreground }]}>{t("preview.code.reply")}</Text>
       <View style={s.block}>
@@ -229,10 +279,10 @@ export function Preview({ theme, draft, prefs, layout, theming }: { theme: Plugi
             <View style={theming ? ({ "--paseo-ui-font": theming.uiFont || PASEO_FONT_STACKS.ui } as object) : null}>
               {mode === "code" ? (
                 <PrefsOverride.Provider value={{ ...prefs, toolDetails: "expanded" }}>
-                  <CodeView theme={pt} layout={layout} viewport={viewport} props={{ ...props, item: item(null), steps: CODE_CALLS.map((item) => ({ item, phase: "complete" as const })), ms: 9000, growing: false }} />
+                  <CodeView theme={pt} draft={draft} layout={layout} viewport={viewport} props={{ ...props, item: item(null), steps: CODE_CALLS.map((item) => ({ item, phase: "complete" as const })), ms: 9000, growing: false }} />
                 </PrefsOverride.Provider>
               ) : (
-                <MockChat theme={pt} layout={layout} viewport={viewport}>
+                <MockChat theme={pt} draft={draft} layout={layout} viewport={viewport}>
                   <PreviewBubble theme={pt} clamp={prefs.userMessages === "clamp"} />
                   {prefs.merge === "on" ? (
                     <MergedSteps

@@ -16,3 +16,5 @@ export { setLanguage, setRichText } from "./web/rich-text";
 export { selectionCopyMenu } from "./web/selection-copy";
 export { stackImages } from "./web/image-stacks";
 export { paintSidebar } from "./web/sidebar";
+export { imageExtremes, paintBackdrop, pickImage, pictureOf } from "./web/backdrop";
+export { meshImage } from "./web/mesh";

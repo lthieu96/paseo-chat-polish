@@ -44,7 +44,8 @@ export function ThemePage({ theme, layout }: Pick<PluginScreenProps, "theme" | "
   const apply = async (useAsAppTheme = false) => {
     if (!draft || settings.status !== "ready") return;
     if (themeDirty) {
-      if (!(await settings.save(draft, settings.revision))) return;
+      // Through JSON first: settings only take JSON values, and a removed background or mesh is a key set to undefined.
+      if (!(await settings.save(JSON.parse(JSON.stringify(draft)) as ThemeDraft, settings.revision))) return;
       registerTheme(draft);
     }
     const typoPatch = typoDirty ? fonts : {};
