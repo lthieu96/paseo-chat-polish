@@ -101,7 +101,8 @@ __d(function(g,r,i,a,m,e,d){"use strict";Object.defineProperty(e,'__esModule',{v
           checks.controlFontMetrics = Math.abs(fix.ascent - 1.013) < 0.001 && Math.abs(fix.ascent + fix.descent - 1.294) < 1e-9 && load('web/control-font').centeredMetrics({ ascent: 0.967, descent: 0.211, capHeight: 0.705 }) === undefined
             && load('web/control-font').centeredMetrics({ ascent: 0.952, descent: 0.241, capHeight: 0.705 }) === undefined;
           // Paseo 0.14's chat display setting, with the tool call display it replaced as the fallback.
-          const realNow = Date.now; let clock = 0; Date.now = () => (clock += 5000);
+          // The clock starts at the real time: the restyle already read (and cached) these settings when it started.
+          const realNow = Date.now; let clock = realNow(); Date.now = () => (clock += 5000);
           const display = (settings) => (localStorage.setItem('@paseo:app-settings', JSON.stringify(settings)), load('web/host').readHostAppearance().chatDisplay);
           checks.chatDisplaySetting = display({ chatDisplay: 'collapseTurns' }) === 'collapseTurns' && display({ chatDisplay: 'full', toolCallDetailLevel: 'overview' }) === 'full'
             && display({ toolCallDetailLevel: 'overview' }) === 'collapseToolCalls' && display({ compactToolCalls: true }) === 'collapseToolCalls' && display({}) === 'full';
