@@ -1,8 +1,8 @@
 // Whether this window is a phone, for the "Chat on phones" pref. Kept free of react-native so tests can import it.
 import type { Prefs } from "../shared/timeline";
 
-/** Paseo's own compact layout (one pane, drawer sidebar) starts below its `md` breakpoint, 720pt; narrower web windows count as phones too. */
-export const PHONE_WIDTH = 720;
+/** Paseo's own compact layout (one pane, drawer sidebar) starts below its `md` breakpoint, 600pt; narrower web windows count as phones too. */
+export const PHONE_WIDTH = 600;
 
 /** The iOS and Android apps at any size, and web windows narrower than Paseo's compact layout breakpoint (mobile browsers). */
 export const isPhone = (os: string, width: number) => os === "ios" || os === "android" || width < PHONE_WIDTH;

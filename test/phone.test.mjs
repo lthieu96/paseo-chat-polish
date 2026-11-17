@@ -11,6 +11,7 @@ test("phones: the iOS and Android apps at any width, web windows under Paseo's c
   assert.equal(isPhone("web", 390), true);
   assert.equal(isPhone("web", PHONE_WIDTH - 1), true);
   assert.equal(isPhone("web", PHONE_WIDTH), false);
+  assert.equal(isPhone("web", 640), false);
   assert.equal(isPhone("macos", 1440), false);
   // Off only matters on a phone; on keeps today's behaviour everywhere.
   assert.equal(polishesChat({ phoneChat: "off" }, true), false);
