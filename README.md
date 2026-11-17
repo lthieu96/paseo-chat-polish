@@ -43,7 +43,7 @@ The Theme page previews code too. The Code tab draws the same rows the chat uses
 
 ## Install
 
-Requires Paseo 0.12.0 or later (on Paseo 0.11, install v0.2.5), with Node.js 20.9+ and npm available on the **daemon host**. For a remote host, install prerequisites there. Paseo prepares the locked dependencies and image thumbnail support automatically.
+Requires Paseo 0.12–0.15 (for Paseo 0.16 use v0.15.0 or later; on Paseo 0.11, install v0.2.5), with Node.js 20.9+ and npm available on the **daemon host**. For a remote host, install prerequisites there. Paseo prepares the locked dependencies and image thumbnail support automatically.
 
 ### From the Paseo app
 
@@ -71,7 +71,7 @@ paseo plugin add git:lthieu96/paseo-chat-polish
 Or install a specific GitHub release:
 
 ```sh
-paseo plugin add git:lthieu96/paseo-chat-polish --ref v0.7.0
+paseo plugin add git:lthieu96/paseo-chat-polish --ref v0.14.2
 ```
 
 For the reviewed Paseo Registry revision:
