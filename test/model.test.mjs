@@ -271,7 +271,7 @@ test("steps: runs split on replies, fold tool updates and thought chunks, skip h
 });
 
 test("steps: with Collapse turns, replies before a turn's last fold into its run; the last reply and the next turn stay out", async () => {
-  const { stepRuns, stepKey, stepSummary } = await import("../client/steps.ts");
+  const { stepRuns, stepKey, stepSummary, runHead } = await import("../client/steps.ts");
   const reply = (text) => ({ type: "assistant_message", text });
   const list = [
     { type: "user_message", text: "go" },
@@ -289,6 +289,9 @@ test("steps: with Collapse turns, replies before a turn's last fold into its run
   assert.deepEqual(stepRuns(list, () => false, true).map((r) => r.steps.map(stepKey)), [["t:a", "m:Let me look.", "t:b"], ["t:c", "m:![Image](file:///tmp/shot.png)", "t:d"], ["m:Only one."]]);
   // Without Collapse turns a reply ends a run, as before.
   assert.deepEqual(stepRuns(list, () => false, false).map((r) => r.steps.map(stepKey)), [["t:a"], ["t:b"], ["t:c"], ["t:d"]]);
+  // The merged row stands on a run's first tool call or thought, never on a folded reply (Paseo 0.16 would fold it as a reply), unless only replies make the run.
+  assert.deepEqual(stepRuns([list[0], list[2], list[1], list[4]], () => false, true).map((r) => runHead(r.steps)), ["t:a"]);
+  assert.equal(runHead([reply("Only one.")]), "m:Only one.");
   // Another agent's notice steered into the running turn shares its id, so it doesn't end the turn: the reply before it still folds.
   const steered = [
     { item: { type: "user_message", text: "go" }, turn: "t1" },

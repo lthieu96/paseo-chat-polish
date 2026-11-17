@@ -2,7 +2,7 @@
 import { tagContextCard } from "./context-card";
 import { within, type ComputedStyle, type DomElement, type ResizeObserverClass, type WebDocument } from "./dom";
 import { rowIconMask } from "./icons";
-import { ACTION, CHIP, CTX, PERMISSION, PLAN, PRIMARY, ROW, ROW_ICON, SECONDARY, SETTINGS_PANE, SLASH, SLASH_GLIDE_MS, SURFACE, USAGE, WORKING_BOX } from "./selectors";
+import { ACTION, CHIP, CTX, PERMISSION, PLAN, PRIMARY, ROW, ROW_HEAD, ROW_ICON, SECONDARY, SETTINGS_PANE, SLASH, SLASH_GLIDE_MS, SURFACE, USAGE, WORKING_BOX } from "./selectors";
 
 declare const document: WebDocument;
 declare function getComputedStyle(el: DomElement): ComputedStyle;
@@ -27,9 +27,10 @@ function actionAs(el: DomElement, part: "primary" | "secondary") {
 // [child, parent it marks, part]
 const PARTS: Array<[string, (el: DomElement) => DomElement | null | undefined, string]> = [
   ['[data-testid="assistant-fork-menu-trigger"]', (el) => el.parentElement, "fork"],
-  ['[data-testid="assistant-fork-menu-trigger"]', (el) => el.parentElement?.parentElement, "footer"],
-  // The box that spaces the turn footer (or the working line) from what's above it.
-  ['[data-testid="assistant-fork-menu-trigger"]', (el) => el.parentElement?.parentElement?.parentElement?.parentElement, "footer-gap"],
+  // The turn footer's row (its actions, then the timing label), or the working line's while the agent runs.
+  ['[data-testid="turn-footer"]', (el) => el.firstElementChild?.firstElementChild, "footer"],
+  // The box that spaces the footer (or the working line) from what's above it; Paseo sets its own 20px margin on it.
+  ['[data-testid="turn-footer"]', (el) => el, "footer-gap"],
   // The plan card shows the same question; it has its own styles.
   ['[data-testid="permission-request-question"]', (el) => (el.parentElement?.parentElement?.getAttribute("data-testid") === "permission-plan-card" ? null : el.parentElement), "permission"],
   ['[data-paseo-markdown-tag="img"]', (el) => el.parentElement, "image-text"],
@@ -64,7 +65,8 @@ const PARTS: Array<[string, (el: DomElement) => DomElement | null | undefined, s
   ['[data-testid="tool-call-badge"] > div:nth-child(2) [style*="max-height"]', (el) => el, "detail-scroll"],
   // Parts otherwise picked by position mid-selector (X > div:nth-child(2) > div), which makes the browser restyle whole sibling rows
   // whenever Paseo's virtual list inserts one. Later entries build on tags set by earlier ones.
-  [`${ROW} > button > div > div:nth-child(2)`, (el) => el, "row-label"],
+  [`${ROW} > div:first-child`, (el) => el, "row-head"],
+  [`${ROW_HEAD} > button > div:nth-child(2)`, (el) => el, "row-label"],
   ['[data-testid="tool-call-group"] > div:nth-child(2)', (el) => el, "group-body"],
   ['[data-testid="tool-call-badge"] > div:nth-child(2)', (el) => el, "badge-body"],
   [`${PERMISSION} > div:nth-child(2)`, (el) => el, "permission-body"],
@@ -282,7 +284,7 @@ export function tagParts(roots: DomElement[]) {
     }
     // Open rows turn the chevron 90°. A turn summary's rows follow it as separate list rows, so its button stays its last child
     // and the faded rule would keep it faded while open; this tag is the only open mark it has (Paseo sets no aria-expanded).
-    const row = slot.parentElement?.parentElement?.parentElement;
+    const row = slot.closest(ROW);
     if (!row) continue;
     if (chevron && slot.querySelector('[style*="rotate(90deg)"]')) {
       // A summary already on screen that opens now, not one the list remounts open while scrolling: its rows may rise in.

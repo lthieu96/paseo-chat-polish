@@ -11,7 +11,9 @@ export const DOC = ':is([data-testid="assistant-message"], [data-cp-plan-md], [d
 export const ROW = ':is([data-testid="tool-call-group"], [data-testid="tool-call-badge"], [data-testid="turn-summary"])';
 // A prompt's bubble. From Paseo 0.14 a prompt another agent sent leads with a "Sent by" button, so the bubble isn't the first child.
 export const BUBBLE = '[data-testid="user-message"] > div > div:not([data-testid])';
-export const ROW_ICON = `${ROW} > button > div > div:first-child`;
+// From Paseo 0.16 a row's button sits in a header that carries the badge's background and border; tagParts tags it.
+export const ROW_HEAD = '[data-cp-part="row-head"]';
+export const ROW_ICON = `${ROW_HEAD} > button > div:first-child`;
 // Parts Paseo marks only through a child, and containers whose every descendant is restyled, are tagged by tagParts.
 // :has(), and "X *" where X is only known by data-testid (on nearly every ancestor), re-match the whole timeline
 // on every node a scroll mounts, which made fast scrolling stutter.

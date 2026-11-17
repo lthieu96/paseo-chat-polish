@@ -111,8 +111,8 @@ __d(function(g,r,i,a,m,e,d){"use strict";Object.defineProperty(e,'__esModule',{v
           checks.permissionActionVariants = action('always') === 'secondary' && action('once') === 'primary';
           // Collapse turns (Paseo 0.14+): an open summary turns its chevron 90°; its rows sit in IndentRails in their own history rows.
           const turn = document.createElement('section');
-          turn.innerHTML = '<div data-history-row-id="t1"><div><div data-testid="turn-summary" id="ts"><button><div><div><div style="transform: rotate(90deg);"><svg><path d="m9 18 6-6-6-6"></path></svg></div></div><div>Ran 2 commands</div></div></button></div><div id="tail"></div></div></div>'
-            + '<div data-history-row-id="t2"><div><div id="rail"><div data-testid="tool-call-badge"><button></button></div></div></div></div>'
+          turn.innerHTML = '<div data-history-row-id="t1"><div><div data-testid="turn-summary" id="ts"><div><button><div><div style="transform: rotate(90deg);"><svg><path d="m9 18 6-6-6-6"></path></svg></div></div><div>Ran 2 commands</div></button></div></div><div id="tail"></div></div></div>'
+            + '<div data-history-row-id="t2"><div><div id="rail"><div data-testid="tool-call-badge"><div><button></button></div></div></div></div></div>'
             + '<div data-history-row-id="t3"><div><div id="railView"><div style="display: contents;"></div></div></div></div>'
             + '<div data-history-row-id="paseo-chat-polish/x"><div><div style="display: contents;" id="view"><div></div></div></div></div>'
             + '<div data-history-row-id="t4"><div><div id="wrap"><div data-cp-part="footer"></div></div></div></div>';
@@ -127,15 +127,22 @@ __d(function(g,r,i,a,m,e,d){"use strict";Object.defineProperty(e,'__esModule',{v
           const remounted = !turn.querySelector('[data-cp-enter]');
           summary.querySelector('[style]').style.transform = 'rotate(90deg)'; await wait();
           const opened = document.createElement('div'); opened.setAttribute('data-history-row-id', 't5');
-          opened.innerHTML = '<div><div id="railNew"><div data-testid="tool-call-badge"><button></button></div></div></div>';
+          opened.innerHTML = '<div><div id="railNew"><div data-testid="tool-call-badge"><div><button></button></div></div></div></div>';
           turn.insertBefore(opened, turn.children[1]); await wait();
           const badge = opened.querySelector('[data-testid="tool-call-badge"]');
           badge.insertAdjacentHTML('beforeend', '<div><div><div id="sec"><div dir="auto">Details</div><div><div><div dir="auto">Limit</div><div dir="auto">3</div></div></div></div></div></div>'); await wait();
           checks.turnEnter = remounted && document.getElementById('railNew').hasAttribute('data-cp-enter') && badge.lastElementChild.hasAttribute('data-cp-enter') && document.getElementById('sec').dataset.cpPart === 'tool-section';
           turn.remove(); await wait();
+          // Paseo 0.16's turn footer: turn-footer > slot > row of [actions (copy, fork), timing label]; the footer row and its gap are tagged from it.
+          const foot = document.createElement('div');
+          foot.innerHTML = '<div><div><div data-testid="assistant-message"></div></div><div data-testid="turn-footer" id="tf"><div><div id="fr"><div><button aria-label="Copy turn"></button><div><button data-testid="assistant-fork-menu-trigger"></button></div></div><button><div>4s</div></button></div></div></div></div>';
+          document.body.appendChild(foot); await wait();
+          const tf = document.getElementById('tf');
+          checks.turnFooter = document.getElementById('fr').dataset.cpPart === 'footer' && tf.dataset.cpPart === 'footer-gap' && tf.hasAttribute('data-cp-tight');
+          foot.remove(); await wait();
           // A loading row (Paseo's gradient copy over its label) runs in the plugin's look; its next step's label rises in; done once the copy goes.
           const loading = document.createElement('div');
-          loading.innerHTML = '<div data-testid="tool-call-group" id="lg"><button><div><div><svg></svg></div><div><div dir="auto" id="lt">Ran 1 command</div><div><div style="background-image: linear-gradient(red, blue)">Ran 1 command</div></div></div></div></button></div>';
+          loading.innerHTML = '<div data-testid="tool-call-group" id="lg"><div><button><div><svg></svg></div><div><div dir="auto" id="lt">Ran 1 command</div><div><div style="background-image: linear-gradient(red, blue)">Ran 1 command</div></div></div></button></div></div>';
           document.body.appendChild(loading); await wait();
           const lg = document.getElementById('lg'), label = lg.querySelector('[data-cp-part="row-label"]');
           const startedRunning = lg.hasAttribute('data-cp-running') && label?.hasAttribute('data-cp-running-label');
@@ -305,7 +312,7 @@ __d(function(g,r,i,a,m,e,d){"use strict";Object.defineProperty(e,'__esModule',{v
     assert.equal(report.error, undefined, report.error);
     assert.deepEqual(report.errors, []);
     for (const [check, passed] of Object.entries(report.checks)) assert.equal(passed, true, check);
-    assert.equal(Object.keys(report.checks).length, 37);
+    assert.equal(Object.keys(report.checks).length, 38);
   } finally {
     server?.closeAllConnections(); server?.close();
     rmSync(temp, { recursive: true, force: true });
