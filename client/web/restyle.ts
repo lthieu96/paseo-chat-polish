@@ -18,10 +18,21 @@ declare const document: WebDocument;
 
 const MONO_FALLBACK = "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
 
+/** Publishes the code font and text sizes (Settings → Appearance, not the theme) as CSS variables for restyleNative. */
+function setAppearanceVars() {
+  const a = readHostAppearance();
+  const vars: Record<string, string> = {
+    "--cp-mono": a.monoFont ? `${a.monoFont}, ${MONO_FALLBACK}` : MONO_FALLBACK,
+    "--cp-code": `${a.codeSize}px`,
+    "--cp-content": `${a.contentSize}px`,
+  };
+  for (const [k, v] of Object.entries(vars)) document.documentElement.style.setProperty(k, v);
+}
+
 /** Publishes the app theme's colors and the code font as CSS variables for restyleNative. */
 export function setNativeColors(c: { surface0: string; surface1: string; surface2: string; border: string; foreground: string; foregroundMuted: string; accent: string; accentForeground: string; statusSuccess: string; statusWarning: string; statusDanger: string }) {
   if (Platform.OS !== "web" || typeof document === "undefined") return;
-  const a = readHostAppearance();
+  setAppearanceVars();
   const vars: Record<string, string> = {
     "--cp-fg": c.foreground,
     "--cp-muted": c.foregroundMuted,
@@ -33,9 +44,6 @@ export function setNativeColors(c: { surface0: string; surface1: string; surface
     // small step toward the text color.
     "--cp-sunken": isDark(c.surface0) ? darker(c.surface0) : mix(c.surface0, c.foreground, 0.04),
     "--cp-rule": hexAlpha(c.border, 0.6),
-    "--cp-mono": a.monoFont ? `${a.monoFont}, ${MONO_FALLBACK}` : MONO_FALLBACK,
-    "--cp-code": `${a.codeSize}px`,
-    "--cp-content": `${a.contentSize}px`,
     "--cp-ok": c.statusSuccess,
     "--cp-warn": c.statusWarning,
   };
@@ -100,6 +108,8 @@ export function restyleNative(enabled: () => boolean, pele?: PeleDiagrams) {
         style = document.createElement("style");
         style.textContent = NATIVE_CSS + RICH_TEXT_CSS + MODEL_SELECTOR_CSS + WINDOW_CSS + ICON_VARS.join("\n");
         document.head.appendChild(style);
+        // setNativeColors runs from the sidebar row, which Paseo 0.16 unmounts when the row is hidden; the fonts don't need the theme.
+        setAppearanceVars();
         const sheet = (style as unknown as { sheet?: { cssRules: ArrayLike<CssRuleLike> } }).sheet;
         if (sheet) guardRules(sheet.cssRules);
         document.addEventListener("click", noteClick, true);

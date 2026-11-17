@@ -529,3 +529,21 @@ test("css: the window restyle applies only while <html> has data-cp-rt-window (w
   assert.ok(selectors.length > 40);
   for (const list of selectors) for (const selector of splitTop(list, (ch) => ch === ",")) assert.match(selector.trim(), /^:root\[data-cp-rt-window(="(flat|floating)")?\]/, selector);
 });
+
+test("Command Center toggles save through the settings RPCs, one at a time, each on the revision it just read", async () => {
+  const { bindPrefsSaving, savePrefs, currentPrefs } = await import("../client/prefs.ts");
+  const calls = [];
+  let revision = 0;
+  const unbind = bindPrefsSaving(async (contract, input) => {
+    const kind = contract.name.split(".").pop();
+    calls.push(kind === "read" ? "read" : `write@${input.revision}`);
+    if (kind === "read") return { status: "ready", revision: `r${revision}`, values: {} };
+    await new Promise((r) => setTimeout(r, 5));
+    return { status: "saved", revision: `r${++revision}`, values: input.values };
+  });
+  savePrefs({ ...currentPrefs(), density: "compact" });
+  await savePrefs({ ...currentPrefs(), density: "normal" });
+  assert.deepEqual(calls, ["read", "write@r0", "read", "write@r1"]);
+  assert.equal(currentPrefs().density, "normal");
+  unbind();
+});
