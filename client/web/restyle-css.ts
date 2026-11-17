@@ -153,7 +153,7 @@ ${TRACK_PANEL} [role="menuitem"]:is(:hover, :focus-visible) > div { background-c
 /* Command Center marks a query's match with a filled box (a nested Text, the only spans there with a style class besides the
    file row's name and path, which carry testIDs). Draw it as accent text instead, like the plugin's other menus. */
 [data-testid="command-center-panel"] [dir] > span[class*="unistyles"]:not([data-testid]) { background-color: transparent !important; color: var(--cp-accent, var(--colors-accent-bright)) !important; }
-[data-testid="command-center-panel"] button { margin: 0 6px !important; padding: 8px 10px !important; border-radius: 6px !important; }
+[data-testid="command-center-panel"] button:not([data-testid^="command-center-tab-"]) { margin: 0 6px !important; padding: 8px 10px !important; border-radius: 6px !important; }
 [data-testid="combobox-desktop-container"]:not([${TAG}]) > div:first-child > div { padding: 4px 12px !important; }
 [data-testid="combobox-desktop-container"]:not([${TAG}]) > div:nth-child(2) button { min-height: 28px !important; margin: 0 4px !important; padding: 0 8px !important; }
 /* Picker rows sit 4px inside a 12px card with a 1px border: 12 - 1 - 4 = 7px keeps their corners concentric with the card's. */
@@ -163,8 +163,12 @@ ${TRACK_PANEL} [role="menuitem"]:is(:hover, :focus-visible) > div { background-c
 /* Pin the bottom while the chat follows output. Paseo scrolls to the bottom a frame after a row grows (streaming text, a tool call
    finishing), so one frame painted with the bottom cut off: the jitter. With every child but the last (its bottom inset) out of
    scroll anchoring, the browser keeps that inset in place in the same layout. Scrolled up, Paseo sets overflow-anchor: none on the
-   scroller, which turns this off. Measured on a streaming reply: off-bottom frames went from 12/33 to 0/69. */
-[data-testid="agent-chat-scroll"] > div > :not(:last-child) { overflow-anchor: none !important; }
+   scroller, which turns this off. Measured on a streaming reply: off-bottom frames went from 12/33 to 0/69. From 0.16 the inset shares
+   a wrapper (tagged chat-aux) with the turn footer and permission cards. A box fully on screen is taken as the anchor whole, so a growing
+   footer pushed the inset down for a frame: the wrapper drops its box (its parent is the same flex column) and only the inset stays in.
+   Paseo's underfill check then reads the wrapper as 0px tall, so a short chat may load older history a little sooner. */
+[data-testid="agent-chat-scroll"] > div > :not(:last-child), [data-cp-part="chat-aux"] > :not(:last-child) { overflow-anchor: none !important; }
+[data-cp-part="chat-aux"] { display: contents !important; }
 
 [data-cp-part="composer"] { border-radius: 12px !important; padding: 14px 10px 10px 16px !important; gap: 20px !important; }
 @supports (corner-shape: squircle) { [data-cp-part="composer"] { border-radius: 28px !important; corner-shape: squircle; } }

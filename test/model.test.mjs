@@ -451,7 +451,9 @@ test("css guard: positional selectors get a :where() precheck on their subject, 
   const { guardPositional } = await import("../client/css-guard.ts");
   assert.equal(guardPositional('[data-x] > div'), '[data-x] > div');
   assert.equal(guardPositional('[data-x] > div > div:first-child'), '[data-x] > div > div:where([data-x] > div > div):first-child');
-  assert.equal(guardPositional('[data-x] > :last-child *'), '[data-x] > :last-child *:where([data-x] >  *)');
+  // A compound of only positional pseudo-classes keeps its place as *: dropped, it merged two steps or left ">  >" (an invalid :where()).
+  assert.equal(guardPositional('[data-x] > :last-child *'), '[data-x] > :last-child *:where([data-x] > * *)');
+  assert.equal(guardPositional('[data-x] > div > :last-child > :not(:last-child)'), '[data-x] > div > :last-child > :where([data-x] > div > * > *):not(:last-child)');
   assert.equal(guardPositional('[data-x] div:nth-child(2)::before'), '[data-x] div:where([data-x] div):nth-child(2)::before');
   assert.equal(guardPositional('[data-x] > :first-child'), '[data-x] > :where([data-x] > *):first-child');
   assert.equal(guardPositional('[data-x] :last-child'), '[data-x] :where([data-x] *):last-child');

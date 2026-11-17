@@ -73,7 +73,8 @@ export function tagWindow(roots: DomElement[]) {
         writes.push(() => set(row, WIN, "header"));
         break;
       }
-    const panel = header.parentElement;
+    // On a workspace, Paseo 0.16 wraps the header and tab row in a measuring view (AdaptiveWorkspaceChrome); the pane is above it.
+    const panel = header.closest(DECK) ? header.parentElement?.parentElement : header.parentElement;
     if (!panel) continue;
     // Floating shows the window color around the panel, so the shell layers that paint behind it are tagged too.
     if (style === "floating" && !walked.has(panel)) {

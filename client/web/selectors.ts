@@ -54,5 +54,5 @@ export const SURFACE = ':is([data-testid="combobox-desktop-container"], [data-cp
 export const IN_SURFACE = "[data-cp-surface]";
 export const SETTINGS_PANE = '[data-testid="settings-detail-pane"]';
 // The panels the composer's subagent and task pills open (Paseo 0.14 rows light an inset child).
-export const TRACK_PANEL = ':is([data-testid="subagents-track-header-panel"], [data-testid="agent-task-list-header-panel"])';
+export const TRACK_PANEL = ':is([data-testid="subagents-track-header-panel"], [data-testid="agent-task-list-header-panel"], [data-testid="background-work-panel"])';
 export const POP = '[data-testid="combobox-desktop-container"]';

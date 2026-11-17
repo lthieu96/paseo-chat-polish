@@ -130,7 +130,7 @@ __d(function(g,r,i,a,m,e,d){"use strict";Object.defineProperty(e,'__esModule',{v
           opened.innerHTML = '<div><div id="railNew"><div data-testid="tool-call-badge"><div><button></button></div></div></div></div>';
           turn.insertBefore(opened, turn.children[1]); await wait();
           const badge = opened.querySelector('[data-testid="tool-call-badge"]');
-          badge.insertAdjacentHTML('beforeend', '<div><div><div id="sec"><div dir="auto">Details</div><div><div><div dir="auto">Limit</div><div dir="auto">3</div></div></div></div></div></div>'); await wait();
+          badge.insertAdjacentHTML('beforeend', '<div><div style="max-height: 400px;"><div><div id="sec"><div dir="auto">Details</div><div><div><div dir="auto">Limit</div><div dir="auto">3</div></div></div></div></div></div></div>'); await wait();
           checks.turnEnter = remounted && document.getElementById('railNew').hasAttribute('data-cp-enter') && badge.lastElementChild.hasAttribute('data-cp-enter') && document.getElementById('sec').dataset.cpPart === 'tool-section';
           turn.remove(); await wait();
           // Paseo 0.16's turn footer: turn-footer > slot > row of [actions (copy, fork), timing label]; the footer row and its gap are tagged from it.

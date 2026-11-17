@@ -58,6 +58,8 @@ const PARTS: Array<[string, (el: DomElement) => DomElement | null | undefined, s
   ['[data-testid="workspace-hover-card"]', (el) => el, "ws-card"],
   // The timeline item around each reply block, which holds Paseo's gap between blocks.
   ['[data-testid="assistant-message"]', (el) => el.parentElement, "msg-item"],
+  // The chat's live rows (turn footer, permission cards, bottom inset): the content's next box after the history slot and the rows.
+  ['[data-testid="agent-chat-scroll"] > div > [data-testid="older-history-slot"]', (el) => el.nextElementSibling?.nextElementSibling, "chat-aux"],
   // Paseo's dropdown menus share no marker; the nearest testID above an item is the menu's surface.
   ['[role="menuitem"]', (el) => el.closest('[role="menu"]') ?? el.parentElement?.closest("[data-testid]"), "menu"],
   ['[data-testid="turn-working-indicator"] > div > div:first-child > div > div', (el) => el, "loader"],
@@ -308,8 +310,8 @@ export function tagParts(roots: DomElement[]) {
   // A row's details opened now (its body is new in a row already on screen) fade in; remounted ones show at once.
   for (const body of within(roots, ':is([data-cp-part="badge-body"], [data-cp-part="group-body"])')) if (body.parentElement && !mountedWith(roots, body.parentElement)) body.setAttribute("data-cp-enter", "");
   // Paseo's own tools show their input and output as titled sections of label/value fields ("Details", "Result"); drawn like the
-  // plugin's input/output block. A section is the body's grandchild that starts with its title text.
-  for (const section of within(roots, '[data-cp-part="badge-body"] > div > div')) {
+  // plugin's input/output block. A section starts with its title text, two levels inside the detail scroller (0.16 wraps every detail in one).
+  for (const section of within(roots, '[data-cp-part="detail-scroll"] > div > div')) {
     if (section.firstElementChild?.hasAttribute("dir") && section.children.length === 2) section.setAttribute("data-cp-part", "tool-section");
   }
   // The turn's last row: the history row after it isn't on the rail. Decided for the pair as either mounts, like footer-gap.

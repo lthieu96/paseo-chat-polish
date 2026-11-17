@@ -370,7 +370,8 @@ export function redrawDiagram(box: DomElement, button: DomElement) {
   box.querySelector(":scope > [data-cp-redraw-card]")?.remove();
   button.setAttribute("data-cp-redraw", "");
   button.setAttribute("title", t("web.redrawDiagram"));
-  const viewport = box.nextElementSibling;
+  // From Paseo 0.16 the viewport sits in an inert display: contents wrapper after the source block.
+  const viewport = box.nextElementSibling?.querySelector(':scope > [data-testid="mermaid-viewport"]') ?? box.nextElementSibling;
   const taken = viewport?.matches('[data-testid="mermaid-viewport"]') && claimDiagram ? claimDiagram(viewport, source) : Promise.resolve(false);
   // Once Paseo takes the drawing, it unmounts the source block.
   void taken.then((ok) => setTimeout(() => box.isConnected && drawCard(box, button, source), ok ? 800 : 0));
