@@ -1,6 +1,7 @@
-import { useSettings } from "@getpaseo/plugin/client";
-import { createContext, useContext, useEffect, useRef, useSyncExternalStore } from "react";
-import { prefsSchema, prefsSettings, type Prefs } from "../shared/timeline";
+import { settingsRpc } from "@getpaseo/plugin";
+import type { PluginClientContext } from "@getpaseo/plugin/client";
+import { createContext, useContext, useSyncExternalStore } from "react";
+import { prefsSchema, prefsSettings, type Prefs } from "../shared/timeline.ts";
 
 // Saved prefs, shared by transformers (read at transform time) and renderers (subscribed).
 let prefs: Prefs = prefsSchema.parse({});
@@ -24,25 +25,25 @@ export function usePrefs() {
   return override ?? live;
 }
 
-// Settings can only be saved from a component; Command Center toggles hand their change to one that is always mounted.
-const savers = new Set<(next: Prefs) => void>();
+// Command Center toggles save through the settings RPCs useSettings calls, so they need no mounted component: Paseo 0.16 unmounts
+// the sidebar row (which used to save them) while it is hidden. Saves run one at a time, each on the revision it just read.
+let save: ((next: Prefs) => Promise<void>) | undefined;
+let saving = Promise.resolve();
 
-/** Applies prefs now and saves them through a mounted `usePrefsSaver` (the sidebar item); without one they last until reload. */
+/** Applies prefs now and saves them (once bindPrefsSaving has run). */
 export function savePrefs(next: Prefs) {
   setPrefs(next);
-  savers.forEach((save) => save(next));
+  const run = save;
+  if (run) saving = saving.then(() => run(next)).catch((error: unknown) => console.warn("[chat-polish] Couldn't save prefs", error));
+  return saving;
 }
 
-export function usePrefsSaver() {
-  const settings = useSettings(prefsSettings);
-  const latest = useRef(settings);
-  latest.current = settings;
-  useEffect(() => {
-    const save = (next: Prefs) => {
-      const s = latest.current;
-      if (s.status === "ready") void s.save(next, s.revision);
-    };
-    savers.add(save);
-    return () => void savers.delete(save);
-  }, []);
+export function bindPrefsSaving(rpc: PluginClientContext["rpc"]) {
+  const { read, write } = settingsRpc(prefsSettings.id);
+  save = async (next) => {
+    const { revision } = await rpc(read, {});
+    const result = await rpc(write, { revision, values: next });
+    if (result.status !== "saved") throw new Error(result.error);
+  };
+  return () => void (save = undefined);
 }
