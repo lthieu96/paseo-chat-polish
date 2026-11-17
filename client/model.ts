@@ -295,8 +295,9 @@ function describe(d: ToolCallDetail, name: string, running: boolean, lang: Langu
   }
 }
 
-// The daemon's notice to a parent agent opens with this line ("Agent <id> (<title>) finished."); clients get the notice as plain text.
-const AGENT_STATUS = /^Agent (\S+) \((.*)\) (finished|errored|needs permission|is unavailable|was closed|was canceled)\.$/;
+// The notice's opening line ("Agent <id> (<title>) finished.") names a finer reason than its event: Paseo sends a canceled agent as errored.
+const AGENT_STATUS = /^Agent \S+ \(.*\) (finished|errored|needs permission|is unavailable|was closed|was canceled)\.$/;
+const AGENT_EVENTS = { finished: "finished", errored: "errored", "permission-required": "needs permission", closed: "was closed" } as const;
 const AGENT_VERBS: Record<string, [icon: string, verb: MessageKey]> = {
   finished: ["Bot", "agentStatus.finished"],
   errored: ["CircleAlert", "agentStatus.errored"],
@@ -309,18 +310,19 @@ const AGENT_VERBS: Record<string, [icon: string, verb: MessageKey]> = {
 /** Paseo's notice about another agent (finished, errored, needs permission…): its title is the target and its last reply the detail,
  * without the status and server lines written for the receiving agent. Undefined for anything else, a message from an agent included. */
 export function agentEventData(item: Item<"tool_call">, lang: Language = "en"): ToolData | undefined {
-  const body = item.detail.type === "plain_text" ? (item.detail.text ?? "") : "";
-  const [first = "", ...rest] = body.split("\n\n");
-  const status = AGENT_STATUS.exec(first.trim());
-  if (!status) return undefined;
-  const reply = /<agent-response>\n?([\s\S]*?)\n?<\/agent-response>/.exec(body)?.[1];
-  const text = (reply ?? rest.filter((part) => !part.startsWith("Server: ")).join("\n\n")).trim();
-  const [icon, verb] = AGENT_VERBS[status[3]!]!;
+  const message = item.agentMessage;
+  if (!message || message.event === "message") return undefined;
+  const [first = "", ...rest] = message.text.split("\n\n");
+  const status = AGENT_STATUS.exec(first.trim())?.[1];
+  const reason = status ?? AGENT_EVENTS[message.event];
+  const reply = /<agent-response>\n?([\s\S]*?)\n?<\/agent-response>/.exec(message.text)?.[1];
+  const text = (reply ?? (status ? rest : [first, ...rest]).filter((part) => !part.startsWith("Server: ")).join("\n\n")).trim();
+  const [icon, verb] = AGENT_VERBS[reason]!;
   return {
-    status: status[3] === "errored" ? "failed" : "completed",
+    status: reason === "errored" ? "failed" : "completed",
     icon,
     verb: translate(lang, verb),
-    target: status[2] || status[1],
+    target: message.sender.title ?? message.sender.id,
     mono: false,
     detail: text ? { kind: "prose", text: clipLines(text) } : undefined,
   };
