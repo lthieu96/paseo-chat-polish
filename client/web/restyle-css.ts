@@ -184,8 +184,9 @@ ${TRACK_PANEL} [role="menuitem"]:is(:hover, :focus-visible) > div { background-c
 [data-testid="message-input-root"] textarea { field-sizing: content !important; height: auto !important; min-height: 21px !important; }
 [data-cp-part="input-extra"] { display: none !important; }
 /* The / popup: one card like the plugin's pickers, its rows chips. Rows are matched by their label: the list's 4px end padding is a
-   cell too, and sized like a row it left a blank strip under the last command. */
-${SLASH} > div { background-color: var(--cp-raised, var(--colors-surface1)) !important; border: 1px solid var(--cp-rule, var(--colors-border)) !important; border-radius: 16px !important; padding: 4px !important; gap: 0 !important; overflow: hidden !important; box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35) !important; }
+   cell too, and sized like a row it left a blank strip under the last command. That padding gives the card its 4px top and bottom,
+   so the card pads only the sides, and drops Paseo's 46px minimum (its 36px row plus that padding). */
+${SLASH} > div { background-color: var(--cp-raised, var(--colors-surface1)) !important; border: 1px solid var(--cp-rule, var(--colors-border)) !important; border-radius: 16px !important; padding: 0 4px !important; min-height: 0 !important; gap: 0 !important; overflow: hidden !important; box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35) !important; }
 ${SLASH} > div > div { background-color: transparent !important; border-width: 0 !important; border-radius: 0 !important; box-shadow: none !important; }
 ${SLASH} > div[data-cp-glide] { transition: height ${SLASH_GLIDE_MS}ms cubic-bezier(0.2, 0.8, 0.2, 1) !important; }
 [data-cp-part="slash-list"] > div > div { padding: 0 !important; }
