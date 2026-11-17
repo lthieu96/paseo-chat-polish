@@ -3,7 +3,7 @@ import { Platform } from "react-native";
 import { guardPositional, POSITIONAL, splitTop } from "../css-guard";
 import { onAccent } from "../../shared/theme";
 import { darker, hexAlpha, isDark, mix } from "./color";
-import { watchDom, type DomElement, type WebDocument } from "./dom";
+import { watchDom, type DomElement, type MutationObserverClass, type WebDocument } from "./dom";
 import { readHostAppearance } from "./host";
 import { dropGhost, ghostOutlinePreview, hoverCardsRemoved, notePointer, swapOutlinePreview, watchHoverCards } from "./hover-cards";
 import { ICON_VARS } from "./icons";
@@ -15,6 +15,9 @@ import { markBlocks, RICH_TEXT_CSS } from "./rich-text";
 import { tagWindow, WINDOW_CSS } from "./window";
 
 declare const document: WebDocument;
+declare const MutationObserver: MutationObserverClass;
+declare function getComputedStyle(el: DomElement): { getPropertyValue(name: string): string };
+declare function matchMedia(query: string): { addEventListener(type: "change", cb: () => void): void; removeEventListener(type: "change", cb: () => void): void };
 
 const MONO_FALLBACK = "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
 
@@ -49,6 +52,36 @@ export function setNativeColors(c: { surface0: string; surface1: string; surface
   };
   for (const [k, v] of Object.entries(vars)) document.documentElement.style.setProperty(k, v);
   setDiagramColors(c);
+}
+
+const THEME_COLORS = ["surface0", "surface1", "surface2", "border", "foreground", "foregroundMuted", "accent", "accentForeground", "statusSuccess", "statusWarning", "statusDanger"] as const;
+
+/**
+ * Keeps setNativeColors on the app theme's colors, read from the --colors-* variables Paseo puts on :root, so no React surface has to
+ * stay mounted (Paseo 0.16 unmounts the sidebar row while it's hidden). They change with the root's class, the theme stylesheet, or
+ * the system appearance (a light/dark media query in that stylesheet).
+ */
+export function followThemeColors() {
+  if (Platform.OS !== "web" || typeof document === "undefined") return () => {};
+  let last = "";
+  const sync = () => {
+    const css = getComputedStyle(document.documentElement);
+    const c = Object.fromEntries(THEME_COLORS.map((k) => [k, css.getPropertyValue(`--colors-${k.replace(/[A-Z]/g, (ch) => `-${ch.toLowerCase()}`)}`).trim()])) as Record<(typeof THEME_COLORS)[number], string>;
+    const key = JSON.stringify(c);
+    if (!c.foreground || key === last) return;
+    last = key;
+    setNativeColors(c);
+  };
+  sync();
+  const observer = new MutationObserver(sync);
+  observer.observe(document.documentElement, { childList: false, subtree: false, attributes: true, attributeFilter: ["class"] });
+  observer.observe(document.head, { childList: true, subtree: true, characterData: true });
+  const scheme = matchMedia("(prefers-color-scheme: dark)");
+  scheme.addEventListener("change", sync);
+  return () => {
+    observer.disconnect();
+    scheme.removeEventListener("change", sync);
+  };
 }
 
 type CssRuleLike = { selectorText?: string; cssRules?: ArrayLike<CssRuleLike> };
@@ -108,7 +141,6 @@ export function restyleNative(enabled: () => boolean, pele?: PeleDiagrams) {
         style = document.createElement("style");
         style.textContent = NATIVE_CSS + RICH_TEXT_CSS + MODEL_SELECTOR_CSS + WINDOW_CSS + ICON_VARS.join("\n");
         document.head.appendChild(style);
-        // setNativeColors runs from the sidebar row, which Paseo 0.16 unmounts when the row is hidden; the fonts don't need the theme.
         setAppearanceVars();
         const sheet = (style as unknown as { sheet?: { cssRules: ArrayLike<CssRuleLike> } }).sheet;
         if (sheet) guardRules(sheet.cssRules);

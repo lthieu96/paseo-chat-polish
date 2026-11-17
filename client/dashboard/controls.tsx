@@ -1,7 +1,7 @@
 // The dashboard's shared controls and page layout, drawn in the plugin theme's colors.
 import type { PluginTheme } from "@getpaseo/plugin";
 import type { PluginScreenProps } from "@getpaseo/plugin/client";
-import { ScrollView } from "@getpaseo/plugin/client/react-native";
+import { ScrollView } from "@getpaseo/plugin/client/ui";
 import { useState, type ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from "react-native";
 import { onAccent } from "../../shared/theme";

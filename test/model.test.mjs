@@ -312,13 +312,20 @@ test("steps: with Collapse turns, replies before a turn's last fold into its run
 
 test("an agent's finish notice reads as a row: its title, then only its reply", async () => {
   const { agentEventData } = await import("../client/model.ts");
-  const notice = (text) => tool({ type: "plain_text", text, icon: "bot" }, { name: "agent_message" });
-  const done = agentEventData(notice("Agent 48a6 (Fixture) finished.\n\nServer: srv_1\n\n<agent-response>\nThe chart is a fixture.\n</agent-response>"));
+  const notice = (event, text, title = "Fixture") => tool({ type: "plain_text", text, icon: "bot" }, { name: "agent_message", agentMessage: { event, sender: { id: "48a6", serverId: "srv_1", ...(title ? { title } : {}) }, text } });
+  const done = agentEventData(notice("finished", "Agent 48a6 (Fixture) finished.\n\nServer: srv_1\n\n<agent-response>\nThe chart is a fixture.\n</agent-response>"));
   assert.deepEqual([done.verb, done.target, done.mono, done.status, done.detail], ["Agent finished", "Fixture", false, "completed", { kind: "prose", text: "The chart is a fixture." }]);
-  const failed = agentEventData(notice("Agent 48a6 (Fixture) errored.\n\nServer: srv_1"));
+  const failed = agentEventData(notice("errored", "Agent 48a6 (Fixture) errored.\n\nServer: srv_1"));
   assert.deepEqual([failed.verb, failed.status, failed.detail], ["Agent errored", "failed", undefined]);
-  // A message from another agent has no status line: Paseo shows it as a prompt.
-  assert.equal(agentEventData(notice("Please review the diff.")), undefined);
+  // Paseo sends a canceled agent as errored; the status line keeps it a cancel.
+  const canceled = agentEventData(notice("errored", "Agent 48a6 (Fixture) was canceled.\n\nServer: srv_1"));
+  assert.deepEqual([canceled.icon, canceled.status], ["CircleSlash", "completed"]);
+  // A host that dropped has no status line: the event names it and the body is the detail; no title falls back to the id.
+  const lost = agentEventData(notice("errored", "Host srv_2 was removed or is unavailable.\n\nServer: srv_2", ""));
+  assert.deepEqual([lost.verb, lost.target, lost.detail.text], ["Agent errored", "48a6", "Host srv_2 was removed or is unavailable."]);
+  // A message from another agent, or a tool with no agentMessage, stays Paseo's.
+  assert.equal(agentEventData(notice("message", "Please review the diff.")), undefined);
+  assert.equal(agentEventData(tool({ type: "plain_text", text: "Agent 48a6 (Fixture) finished." }, { name: "agent_message" })), undefined);
   assert.ok(toolSchema.safeParse(done).success);
 });
 

@@ -1,6 +1,6 @@
 import type { PluginTheme } from "@getpaseo/plugin";
 import { openExternalUrl, useAgent, useRpc, type PluginTimelineItemProps } from "@getpaseo/plugin/client";
-import { copyText, ScrollView, useRevealedText, useToast } from "@getpaseo/plugin/client/react-native";
+import { copyText, ScrollView, StreamedText, useToast } from "@getpaseo/plugin/client/ui";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { AccessibilityInfo, Animated, Easing, Image, LayoutAnimation, Modal, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View, type StyleProp, type TextStyle, type ViewStyle } from "react-native";
 import type { AgentTimelineItem } from "@getpaseo/protocol/agent-types";
@@ -704,7 +704,7 @@ export function ThoughtItem({ item, theme, layout, nested }: PluginTimelineItemP
   const [open, toggle] = useDisclosure(reasoning === "paseo" ? readHostAppearance().autoExpandReasoning : reasoning === "expanded");
   const streaming = item.data.phase === "streaming";
   const enter = useEnter(streaming);
-  const text = useRevealedText(item.data.text, item.data.phase);
+  const paras = item.data.text.trim().split(/\n\s*\n/);
   const inset = useIndent("thought") ? 9 : 0;
   return (
     <Animated.View style={[nested ? null : TIGHT[density], enter]}>
@@ -716,19 +716,14 @@ export function ThoughtItem({ item, theme, layout, nested }: PluginTimelineItemP
         verb={t(streaming ? "chat.thinking" : "chat.thought")}
         pulsing={streaming}
         open={open}
-        onToggle={text.trim() ? toggle : undefined}
+        onToggle={paras[0] ? toggle : undefined}
       />
       {open ? (
         <FadeIn style={[s.detail, { paddingLeft: inset, paddingTop: 0 }]}>
           <View style={[s.ruled, { gap: 10 }]}>
-            {text
-              .trim()
-              .split(/\n\s*\n/)
-              .map((para, i) => (
-                <Text key={i} style={s.prose} selectable>
-                  {para}
-                </Text>
-              ))}
+            {paras.map((para, i) => (
+              <StreamedText key={i} text={para} phase={i === paras.length - 1 ? item.data.phase : "complete"} style={s.prose} selectable />
+            ))}
           </View>
         </FadeIn>
       ) : null}
@@ -740,7 +735,7 @@ export function PlanItem({ item, theme }: PluginTimelineItemProps<z.output<typeo
   const s = useStyles(theme);
   const t = useT();
   const [open, toggle] = useDisclosure();
-  const text = useRevealedText(item.data.text, item.data.phase).trim();
+  const text = item.data.text.trim();
   const long = text.split("\n").length > 14 || text.length > 1200;
   const steps = text.match(/^\s*\d+[.)]\s/gm)?.length ?? 0;
   return (
@@ -751,9 +746,7 @@ export function PlanItem({ item, theme }: PluginTimelineItemProps<z.output<typeo
         {steps ? <Text style={[s.meta, { marginLeft: 0 }]}>{t("chat.planSteps", { n: steps })}</Text> : null}
       </View>
       <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: long ? 6 : 14, maxHeight: long && !open ? 320 : undefined, overflow: "hidden" }}>
-        <Text style={[s.prose, { color: theme.colors.foreground, lineHeight: Math.round(s.prose.fontSize * 1.5) }]} selectable>
-          {text}
-        </Text>
+        <StreamedText text={text} phase={item.data.phase} style={[s.prose, { color: theme.colors.foreground, lineHeight: Math.round(s.prose.fontSize * 1.5) }]} selectable />
       </View>
       {long ? (
         <Pressable accessibilityRole="button" onPress={toggle} style={s.more}>

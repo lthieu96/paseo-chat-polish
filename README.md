@@ -31,7 +31,7 @@ A [Paseo](https://paseo.sh) plugin that redraws the agent chat as one quiet colu
 
 ## Dashboard
 
-Open **Chat Polish** in the sidebar. Every page has a live preview, and changes save as you pick.
+Open **Chat Polish** in the sidebar, or from **Settings → Plugins → Chat Polish** (also when you hide its sidebar row). Every page has a live preview, and changes save as you pick.
 
 | Messages | Rich text |
 | --- | --- |
@@ -56,7 +56,7 @@ Requires Paseo 0.16.0 or later (on Paseo 0.12–0.15, install v0.14.2; on Paseo 
    ```
 
 4. Select **Install plugin** and wait for its status to become **running**.
-5. Open **Chat Polish** in the sidebar.
+5. Open **Chat Polish** in the sidebar, or on its page in **Settings → Plugins**.
 
 To install the reviewed Paseo Registry revision instead, use `lthieu96/chat-polish` in **Plugin source**. A registry revision can be older than the latest GitHub release.
 

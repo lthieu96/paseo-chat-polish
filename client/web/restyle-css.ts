@@ -115,6 +115,8 @@ ${IN_SURFACE} :is(button, [role="button"], [role="menuitem"], [role="option"], a
 ${IN_SURFACE} :is(button, [role="button"], [role="menuitem"], [role="option"], a[href]):not(:disabled):not([aria-disabled="true"]) * { cursor: pointer !important; }
 ${IN_SURFACE} :is(button, [role="button"], [role="menuitem"], [role="option"], a[href]):not(:disabled):not([aria-disabled="true"]):is(:hover, :focus-visible, [aria-selected="true"]) { background-color: color-mix(in srgb, var(--cp-control), var(--cp-fg) 12%) !important; }
 :root:is(.light, .pluginLight) ${IN_SURFACE} :is(button, [role="button"], [role="menuitem"], [role="option"], a[href]):not(:disabled):not([aria-disabled="true"]):is(:hover, :focus-visible, [aria-selected="true"]) { background-color: color-mix(in srgb, var(--cp-raised), var(--cp-fg) 8%) !important; }
+/* Paseo focuses a menu's first item on open and lights it like a hovered one: with the pointer on another item, only that one lights. */
+:root ${IN_SURFACE}:has([role="menuitem"]:hover) [role="menuitem"]:not(:hover):not(:disabled) { background-color: transparent !important; }
 /* The composer's track panels (subagents, tasks) light a row on a child inset 4px; the fill goes there, not on the full-width row, or both show. */
 :root ${TRACK_PANEL} [role="menuitem"]:not(:disabled):not([aria-disabled="true"]):is(:hover, :focus-visible, [aria-selected="true"]) { background-color: transparent !important; }
 ${TRACK_PANEL} [role="menuitem"] > div { border-radius: 11px !important; }
@@ -158,6 +160,11 @@ ${TRACK_PANEL} [role="menuitem"]:is(:hover, :focus-visible) > div { background-c
 /* Picker rows sit 4px inside a 12px card with a 1px border: 12 - 1 - 4 = 7px keeps their corners concentric with the card's. */
 [data-testid="combobox-desktop-container"]:not([${TAG}="models"]) button { border-radius: 7px !important; }
 :is(:is([data-testid="combobox-desktop-container"]:not([${TAG}]) > div:nth-child(2) button, [data-cp-part="menu"] [role="menuitem"]) > div:nth-child(2), [data-testid="command-center-panel"] button > div > div:first-child > div:nth-child(2)) > :first-child { font-size: 13px !important; font-weight: 500 !important; }
+
+/* The sidebar's host picker draws its own rows (a combobox with children, not options): the menus' 28px rows, 13px/500 labels, 4px insets. */
+[data-testid="combobox-desktop-container"]:not([${TAG}]):has([data-testid="sidebar-host-add"]) > div:first-child > div { padding: 4px 0 !important; }
+:is([data-testid^="sidebar-host-row-"], [data-testid="sidebar-host-add"]) { min-height: 28px !important; padding: 4px 8px !important; margin: 0 4px !important; }
+:is([data-testid^="sidebar-host-row-"], [data-testid="sidebar-host-add"]) > div:nth-child(2) > :first-child { font-size: 13px !important; font-weight: 500 !important; }
 
 /* Pin the bottom while the chat follows output. Paseo scrolls to the bottom a frame after a row grows (streaming text, a tool call
    finishing), so one frame painted with the bottom cut off: the jitter. With every child but the last (its bottom inset) out of
@@ -308,8 +315,8 @@ ${USAGE} > div:nth-child(4) { margin-top: -6px !important; }
 `;
 
 export const NATIVE_CSS = `
-/* setNativeColors sets these inline from a sidebar item, which Settings doesn't mount, nor does Paseo 0.16 while the row is hidden
-   from the sidebar: menus then drew with unset colors (no fill at all). Paseo's own colors stand in until it runs. */
+/* followThemeColors (restyle.ts) sets these inline from Paseo's --colors-*; unset, menus drew with no fill at all, so Paseo's own
+   colors stand in until it runs. */
 :root { --cp-fg: var(--colors-foreground); --cp-muted: var(--colors-foreground-muted); --cp-accent: var(--colors-accent); --cp-accent-fg: var(--colors-accent-foreground); --cp-raised: var(--colors-surface1); --cp-control: var(--colors-surface2); --cp-sunken: var(--colors-surface0); --cp-rule: color-mix(in srgb, var(--colors-border) 60%, transparent); --cp-ok: var(--colors-status-success); --cp-warn: var(--colors-status-warning); }
 /* Settings pages (tagged by tagSettings): surfaces 12, controls 8, and one text field, 32px in a sunken well that lights up on focus.
    Settings has its own sidebar, so a reload there can come before the --cp-* colors are set: Paseo's own colors stand in. */

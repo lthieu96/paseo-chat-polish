@@ -10,7 +10,7 @@ export { loadPaseoLightbox, type PaseoLightbox } from "./web/lightbox";
 export { setRailProviders, type RailProvider } from "./web/model-picker";
 export { stylePluginViews } from "./web/plugin-views";
 export { bindPromptKeys, followExpansionAtBottom, jumpToPrompt } from "./web/prompts";
-export { restyleNative, setNativeColors } from "./web/restyle";
+export { followThemeColors, restyleNative } from "./web/restyle";
 export { tagWindow } from "./web/window";
 export { setLanguage, setRichText } from "./web/rich-text";
 export { selectionCopyMenu } from "./web/selection-copy";
