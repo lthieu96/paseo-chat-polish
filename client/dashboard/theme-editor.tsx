@@ -1,6 +1,6 @@
 // The Theme page's editor: theme tiles, colors with contrast checks, typography and the syntax theme.
 import type { PluginTheme } from "@getpaseo/plugin";
-import { TextInput } from "@getpaseo/plugin/client/react-native";
+import { TextInput } from "@getpaseo/plugin/client/ui";
 import { useEffect, useState, type ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { MessageKey } from "../../shared/i18n";

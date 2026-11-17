@@ -35,9 +35,9 @@ export default function contribute(server: PluginServerContext) {
   server.handle(storedPage, readStoredPage);
   server.handle(browserStatus, shellStatus);
   server.handle(installBrowser, () => (void installHeadlessShell(), shellStatus()));
-  server.handle(removeBrowser, () => removeHeadlessShell().then(shellStatus));
+  server.handle(removeBrowser, async () => (await removeHeadlessShell(), shellStatus()));
   if (staleShell()) void installHeadlessShell();
-  server.before("agent.create", async ({ request }, { paseo }) => {
+  server.addHook("agent.create.before", async ({ request }, { paseo }) => {
     // Off by default, so unreadable prefs mean off; internal agents (commit and PR messages) never draw.
     const current = await prefs.read();
     if (current.status !== "ready" || current.values.html !== "on" || request.config.internal) return undefined;
@@ -49,7 +49,7 @@ export default function contribute(server: PluginServerContext) {
   });
   server.handle(checkUpdate, () => checkForUpdate());
   server.handle(applyUpdate, () => installUpdate());
-  server.on("agent.turn_ended", async (event, { paseo }) => {
+  server.addHook("agent.turn.after", async (event, { paseo }) => {
     const current = await prefs.read();
     if (current.status === "ready" && current.values.recap === "off") return;
     // Paseo 0.13 sends turn_ended with an empty timeline, so fetch the turn instead.

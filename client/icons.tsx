@@ -1,4 +1,4 @@
-import { Icon as PaseoIcon } from "@getpaseo/plugin/client/react-native";
+import { Icon as PaseoIcon } from "@getpaseo/plugin/client/ui";
 import { useSyncExternalStore } from "react";
 import { Image, Platform } from "react-native";
 import { usePrefs } from "./prefs";
