@@ -12,7 +12,7 @@ import { followAgent, isTodo, isTurnTrigger, onShownAgent, onStaleSteps, onUnpla
 import { renderDiagram } from "./shared/diagram";
 import { currentLanguage, followLocale, t } from "./client/i18n";
 import { isPhone, polishesChat, rememberedPhoneChat, rememberPhoneChat } from "./client/phone";
-import { currentPrefs, savePrefs, setPrefs, subscribePrefs, usePrefsSaver } from "./client/prefs";
+import { bindPrefsSaving, currentPrefs, savePrefs, setPrefs, subscribePrefs } from "./client/prefs";
 import { bindThemeRegistry, currentTheme, registerTheme, subscribeTheme } from "./client/theme-registry";
 import { addIconSet, bindPromptKeys, centerControlText, clampUserMessages, iconTwins, jumpToPrompt, openAgentIds, paintSidebar, subagentPaneShown, tagWindow, redrawDiagrams, setCompactHandler, readHostAppearance, restyleNative, selectionCopyMenu, setLanguage, setNativeColors, stackImages, setRailProviders, setRichText, stylePluginViews, nativeIconSet, watchDom } from "./client/web";
 import { getTheme, THEME_CATALOG_ID, themeSchema } from "./shared/theme";
@@ -23,14 +23,12 @@ import { recapSchema } from "./shared/recap";
 
 const KIND = "chat-polish";
 
-// Toasts come from a hook; the sidebar item, always mounted on desktop, lends its toast to Command Center callbacks.
+// Toasts come from a hook; the sidebar item lends its toast to Command Center callbacks (none while Paseo 0.16 hides the row).
 let toast: ToastApi | undefined;
 
 function DashboardItem({ currentScreen, openScreen, theme }: PluginSidebarItemProps) {
-  // Always mounted on desktop, so it is where the restyle learns the app theme's colors.
+  // Mounted on desktop unless the row is hidden (restyle-css.ts has stand-ins), so it is where the restyle learns the app theme's colors.
   useEffect(() => setNativeColors(theme.colors), [theme]);
-  // Also always mounted, so it saves the prefs Command Center toggles change.
-  usePrefsSaver();
   const hostToast = useToast();
   useEffect(() => {
     toast = hostToast;
@@ -45,6 +43,7 @@ function DashboardItem({ currentScreen, openScreen, theme }: PluginSidebarItemPr
 }
 
 export default function contribute(client: PluginClientContext) {
+  const unbindPrefsSaving = bindPrefsSaving((contract, input) => client.rpc(contract, input));
   // Rows, Command Center titles and injected strings follow Paseo's own language; React surfaces re-render through useT().
   const unfollowLocale = followLocale(client.i18n, () => {
     setLanguage(currentLanguage());
@@ -367,6 +366,7 @@ export default function contribute(client: PluginClientContext) {
     unsubscribeToggles();
     removeToggles.forEach((r) => void r());
     unfollowLocale();
+    unbindPrefsSaving();
     removeCommands.forEach((r) => void r());
     unbindPromptKeys();
     unsubscribePrefs();
