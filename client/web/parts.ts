@@ -59,8 +59,8 @@ const PARTS: Array<[string, (el: DomElement) => DomElement | null | undefined, s
   ['[data-testid="assistant-message"]', (el) => el.parentElement, "msg-item"],
   // The chat's live rows (turn footer, permission cards, bottom inset): the content's next box after the history slot and the rows.
   ['[data-testid="agent-chat-scroll"] > div > [data-testid="older-history-slot"]', (el) => el.nextElementSibling?.nextElementSibling, "chat-aux"],
-  // Paseo's dropdown menus share no marker; the nearest testID above an item is the menu's surface.
-  ['[role="menuitem"]', (el) => el.closest('[role="menu"]') ?? el.parentElement?.closest("[data-testid]"), "menu"],
+  // A menu item's surface: Paseo 0.16 marks it (data-menu-surface), with or without a testID (the workspace row's ⋮ menu has none).
+  ['[role="menuitem"]', (el) => el.closest('[data-menu-surface="true"], [role="menu"]') ?? el.parentElement?.closest("[data-testid]"), "menu"],
   ['[data-testid="turn-working-indicator"] > div > div:first-child > div > div', (el) => el, "loader"],
   // The vertical scroller of a tool call's details; its depth varies by tool.
   ['[data-testid="tool-call-badge"] > div:nth-child(2) [style*="max-height"]', (el) => el, "detail-scroll"],
