@@ -3,7 +3,7 @@ import type { PluginClientContext, PluginSidebarItemProps } from "@getpaseo/plug
 import { copyText, useToast, type ToastApi } from "@getpaseo/plugin/client/react-native";
 import { SidebarRow } from "@getpaseo/plugin/client/ui";
 import { useEffect } from "react";
-import { Dimensions, Platform } from "react-native";
+import { Dimensions, Platform, View } from "react-native";
 import { Dashboard } from "./client/dashboard";
 import { clearImageCache } from "./client/images";
 import { sidebarIcon } from "./client/mark";
@@ -360,6 +360,8 @@ export default function contribute(client: PluginClientContext) {
   const unsubscribeToggles = subscribePrefs(addToggles);
 
   client.addScreen({ id: "dashboard", title: "Chat Polish", Component: Dashboard });
+  // The cog on Chat Polish in Settings → Plugins (Paseo 0.16) opens the same dashboard there. Settings scrolls, so it gets a height.
+  client.addSettingsScreen({ id: "dashboard", title: "Chat Polish", icon: sidebarIcon, Component: (props) => <View style={{ height: 760 }}><Dashboard {...props} params={{}} /></View> });
   client.addSidebarHeaderItem({ id: "dashboard", title: "Chat Polish", Component: DashboardItem });
   return () => {
     clearImageCache();

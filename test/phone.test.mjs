@@ -75,6 +75,7 @@ function loadEntry({ os, width }) {
     addTimelineRenderer: noop,
     addCommandCenterItem: noop,
     addScreen: noop,
+    addSettingsScreen: noop,
     addSidebarHeaderItem: noop,
   };
   const dispose = entry.default(client);

@@ -1,6 +1,6 @@
 // The Chat Polish design for what Paseo draws itself: chat chrome, composer, cards, popovers, tool rows and markdown.
 import { icon } from "./icons";
-import { BUBBLE, CHIP, CODE_BLOCK, CTX, CTX_HEAD, HEADING, INLINE_CODE, LANG, LIMIT, MARK, MARK_OL, md, MD, MSG, DOC_MD, PERMISSION, PLAN, QUESTION, ROW, ROW_HEAD, ROW_ICON, SLASH, SLASH_GLIDE_MS, SURFACE, IN_SURFACE, TAG, TRACK_PANEL, USAGE, WORKING_BOX } from "./selectors";
+import { BUBBLE, CHIP, CODE_BLOCK, CTX, CTX_HEAD, LANG, LIMIT, MD, MSG, DOC_MD, PERMISSION, PLAN, QUESTION, ROW, ROW_HEAD, ROW_ICON, SLASH, SLASH_GLIDE_MS, SURFACE, IN_SURFACE, TAG, TRACK_PANEL, USAGE, WORKING_BOX } from "./selectors";
 
 // Values come from CSS variables set by setNativeColors (restyle.ts), so a theme switch restyles without re-tagging.
 
@@ -52,7 +52,6 @@ const WRENCH_MASK = icon("Wrench", '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1
 // The merged steps row's icon (views.tsx StepsItem), at the 1.5 stroke Paseo draws its icons with.
 const LIST_TREE_MASK = icon("ListTree", '<g stroke-width="1.5"><path d="M8 5h13"/><path d="M13 12h8"/><path d="M13 19h8"/><path d="M3 10a2 2 0 0 0 2 2h3"/><path d="M3 5v12a2 2 0 0 0 2 2h3"/></g>');
 const SUMMARY_ICON = `[data-testid="turn-summary"] > ${ROW_ICON}`;
-const THUMBS =`:root:not([data-cp-rt-images="native"]) ${MSG} [data-paseo-markdown-tag="img"]`;
 const CLOCK_MASK = icon("Clock", '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16.5 12"/>');
 const REDRAW_MASK = icon("RefreshCw", '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>');
 // Paseo renders a popover once hidden (inline opacity 0, or parked at -9999px) to measure it, then places it. Animating
@@ -462,8 +461,6 @@ ${BUBBLE} > button > [dir] { font-size: 12px !important; font-weight: 500 !impor
 /* As padding: in an opened turn (Paseo 0.14) the item is the turn's rail, and a margin would break its line. */
 [data-cp-part="msg-item"] { margin-bottom: 0 !important; padding-bottom: var(--cp-d-item) !important; }
 [data-testid="assistant-message"] { padding-top: var(--cp-d-pad) !important; padding-bottom: var(--cp-d-pad) !important; }
-/* A paragraph alone in its block; consecutive paragraphs (a quote, the plan card) keep Paseo's gap between them. */
-[data-testid="assistant-message"] ${md("p")}:last-child { margin-bottom: 0 !important; }
 /* The timestamp and rewind row under a prompt only shows on hover; let it overlap the gap below instead of adding 32px to it. */
 [data-testid="user-message-trailing-row"] { margin-top: 2px !important; margin-bottom: -5px !important; }
 /* The turn footer, and the working line while the agent runs (it has the same fork button): close under reply text, which ends
@@ -474,27 +471,6 @@ ${BUBBLE} > button > [dir] { font-size: 12px !important; font-weight: 500 !impor
 [data-testid="user-message"] [data-message-text] { line-height: 1.55 !important; }
 
 ${MSG} span { line-height: 1.6 !important; }
-${MSG} ${INLINE_CODE} { border-radius: 4px !important; padding: 2px 5px !important; }
-${MSG} ${md("strong")}, ${MSG} ${md("strong")} span { font-weight: 600 !important; }
-${MSG} ${HEADING(1)} { font-size: 24px !important; line-height: 1.3 !important; }
-${MSG} ${HEADING(2)} { font-size: 20px !important; line-height: 1.3 !important; }
-${MSG} ${HEADING(3)} { font-size: 16px !important; line-height: 1.3 !important; }
-${MSG} ${md("h1")}, ${MSG} ${md("h2")} { border-bottom-width: 0 !important; padding-bottom: 0 !important; }
-${MSG} ${md("li")}:not(:last-child) { margin-bottom: var(--cp-d-li) !important; }
-${MSG} ${md("li")}:last-child { margin-bottom: 0 !important; }
-${MSG} ${MARK} { margin: 0 10px 0 4px !important; line-height: calc(var(--cp-content) * 1.6) !important; }
-${MSG} ${MARK_OL} { font-family: var(--cp-mono) !important; font-size: calc(var(--cp-code) + 1px) !important; }
-${MSG} ${md("blockquote")} { background: transparent !important; border-left: 2px solid var(--cp-accent) !important; border-radius: 0 !important; padding: 2px 0 2px 14px !important; margin: 4px 0 !important; }
-${MSG} ${md("blockquote")} > :last-child { margin-bottom: 0 !important; }
-${MSG} ${md("blockquote")} span { font-style: italic !important; color: var(--cp-muted) !important; }
-${MSG} ${md("table")} { border-radius: 8px !important; border-color: var(--cp-rule) !important; overflow: hidden !important; }
-${MSG} ${md("table")} > div > div { border-color: var(--cp-rule) !important; }
-${MSG} ${md("table")} > div:last-child > div:last-child { border-bottom-width: 0 !important; }
-${MSG} ${md("table")} > div > div > div { padding: 9px 14px !important; border-right-width: 0 !important; border-bottom-width: 0 !important; background: transparent !important; }
-${MSG} ${md("table")} > div:first-child { background: var(--cp-raised) !important; }
-${MSG} ${md("table")} span:not(${INLINE_CODE}) { font-size: calc(var(--cp-content) - 1px) !important; }
-${MSG} ${md("table")} span { line-height: 1.45 !important; }
-${MSG} ${md("table")} > div:first-child span:not(${INLINE_CODE}) { font-size: 12px !important; font-weight: 600 !important; color: var(--cp-muted) !important; }
 ${CODE_BLOCK} { background: var(--cp-sunken) !important; border-color: var(--cp-rule) !important; border-radius: 8px !important; padding: 12px 14px !important; }
 ${CODE_BLOCK} :is(div, span) { line-height: 1.5 !important; }
 /* Code block A: the language in a header strip, with Paseo's copy button in it. B floats the language instead; C has none. */
@@ -521,11 +497,6 @@ ${CODE_BLOCK} :is(div, span) { line-height: 1.5 !important; }
 [data-cp-redraw-card] > iframe { display: block; width: 100%; height: 120px; border: 0; background: transparent; pointer-events: none; }
 [data-cp-diagram-full] { position: fixed; inset: 0; z-index: 2147483000; padding: 32px; background-color: var(--cp-sunken); cursor: zoom-out; }
 [data-cp-diagram-full] > iframe { display: block; width: 100%; height: 100%; border: 0; background: transparent; pointer-events: none; }
-/* Images in a reply that also has text (tool screenshots land at the end of the text before them) get the plugin's thumbnail size; Paseo's own button still opens the full image. */
-${THUMBS} { width: auto !important; min-height: 0 !important; margin: 6px 8px 2px 0 !important; }
-:root:not([data-cp-rt-images="native"]) ${MSG} [data-cp-part="image-text"] > [dir] { flex-basis: 100% !important; }
-${THUMBS} > button { width: var(--cp-thumb-w) !important; height: var(--cp-thumb-h) !important; aspect-ratio: auto !important; border: 1px solid var(--cp-rule) !important; border-radius: 8px !important; background-color: var(--cp-raised) !important; }
-${THUMBS} > button div { width: 100% !important; height: 100% !important; background-size: cover !important; }
 :root { --cp-thumb-w: 200px; --cp-thumb-h: 128px; }
 :root[data-cp-rt-images="large"] { --cp-thumb-w: 320px; --cp-thumb-h: 200px; }
 :root[data-cp-rt-images="xlarge"] { --cp-thumb-w: 480px; --cp-thumb-h: 300px; }
