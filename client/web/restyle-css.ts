@@ -161,6 +161,11 @@ ${TRACK_PANEL} [role="menuitem"]:is(:hover, :focus-visible) > div { background-c
 [data-testid="combobox-desktop-container"]:not([${TAG}="models"]) button { border-radius: 7px !important; }
 :is(:is([data-testid="combobox-desktop-container"]:not([${TAG}]) > div:nth-child(2) button, [data-cp-part="menu"] [role="menuitem"]) > div:nth-child(2), [data-testid="command-center-panel"] button > div > div:first-child > div:nth-child(2)) > :first-child { font-size: 13px !important; font-weight: 500 !important; }
 
+/* The sidebar's host picker draws its own rows (a combobox with children, not options): the menus' 28px rows, 13px/500 labels, 4px insets. */
+[data-testid="combobox-desktop-container"]:not([${TAG}]):has([data-testid="sidebar-host-add"]) > div:first-child > div { padding: 4px 0 !important; }
+:is([data-testid^="sidebar-host-row-"], [data-testid="sidebar-host-add"]) { min-height: 28px !important; padding: 4px 8px !important; margin: 0 4px !important; }
+:is([data-testid^="sidebar-host-row-"], [data-testid="sidebar-host-add"]) > div:nth-child(2) > :first-child { font-size: 13px !important; font-weight: 500 !important; }
+
 /* Pin the bottom while the chat follows output. Paseo scrolls to the bottom a frame after a row grows (streaming text, a tool call
    finishing), so one frame painted with the bottom cut off: the jitter. With every child but the last (its bottom inset) out of
    scroll anchoring, the browser keeps that inset in place in the same layout. Scrolled up, Paseo sets overflow-anchor: none on the
