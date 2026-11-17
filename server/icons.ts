@@ -30,7 +30,7 @@ export const UNTITLED: Record<string, string> = {
   MessageSquareWarning: "MessageAlertSquare", Mic: "Microphone01", MicOff: "MicrophoneOff01", MicVocal: "Microphone01",
   Minimize2: "Minimize01", Minus: "Minus", Monitor: "Monitor01", Moon: "Moon01", Network: "Dataflow01",
   OctagonAlert: "AlertOctagon", Paintbrush: "Brush01", Palette: "Palette", PanelLeft: "LayoutLeft", PanelRight: "LayoutRight",
-  Pencil: "Edit05", Plus: "Plus", Pointer: "Cursor01", Puzzle: "PuzzlePiece01", QrCode: "QrCode01", RefreshCcw: "RefreshCcw01",
+  Pencil: "Edit05", Plus: "Plus", Pointer: "Cursor01", Power: "Power01", Puzzle: "PuzzlePiece01", QrCode: "QrCode01", RefreshCcw: "RefreshCcw01",
   RotateCcw: "RefreshCcw01", RotateCcwClock: "ClockRewind", RotateCw: "RefreshCw01", Scan: "Scan", Scissors: "Scissors01",
   Search: "SearchMd", Send: "Send01", Server: "Server01", Settings: "Settings01", Settings2: "Sliders04", Shapes: "Cube01",
   Shield: "Shield01", ShieldCheck: "ShieldTick", ShieldOff: "ShieldOff", ShieldPlus: "ShieldPlus", Smartphone: "Phone01",
@@ -54,18 +54,18 @@ export const HUGEICONS: Record<string, string> = {
   FileDiff: "file-diff", FilePlus: "file-plus", FileText: "file-text", Folder: "folder-01", FolderGit2: "folder-git-2",
   FolderMinus: "folder-minus", FolderOpen: "folder-open", FolderPlus: "folder-plus", Forward: "arrow-turn-forward", Gauge: "gauge",
   Gift: "gift", GitBranch: "git-branch", GitCommitHorizontal: "git-commit-horizontal", GitPullRequest: "git-pull-request",
-  Globe: "globe", HardDrive: "hard-drive", Image: "image-01", ImageOff: "image-off", Inbox: "inbox", Info: "info",
+  Globe: "globe", GripVertical: "grip-vertical", HardDrive: "hard-drive", Image: "image-01", ImageOff: "image-off", Inbox: "inbox", Info: "info",
   Keyboard: "keyboard", Layers: "layers-01", Lightbulb: "lightbulb", Link: "link", Link2: "link-02", ListChecks: "list-checks",
   ListTodo: "list-todo", ListTree: "list-tree", LoaderCircle: "loader-circle", Lock: "lock", Map: "map", Merge: "git-merge",
   MessageCircleQuestion: "message-question", MessageSquare: "message-square", MessageSquarePlus: "message-square-plus",
   MessageSquareText: "message-square-text", MessageSquareWarning: "message-square-warning", Mic: "mic-01", MicOff: "mic-off-01",
   MicVocal: "mic-vocal", Minimize2: "arrow-shrink-02", Minus: "minus", Monitor: "monitor", Moon: "moon", Network: "network",
   OctagonAlert: "octagon-alert", Paintbrush: "paintbrush", Palette: "palette", PanelLeft: "panel-left", PanelRight: "panel-right",
-  Pencil: "pencil-edit-02", Plus: "plus", Pointer: "pointer", Puzzle: "puzzle", QrCode: "qr-code", RefreshCcw: "refresh-ccw",
+  Pencil: "pencil-edit-02", Plus: "plus", Pointer: "pointer", Power: "power", Puzzle: "puzzle", QrCode: "qr-code", RefreshCcw: "refresh-ccw",
   RotateCcw: "undo", RotateCcwClock: "history", RotateCw: "redo", Scan: "scan", Scissors: "scissors", Search: "search-01",
   Send: "send", Server: "server", Settings: "settings-01", Settings2: "sliders-horizontal", Shapes: "shapes", Shield: "shield-01",
   ShieldCheck: "shield-check", ShieldOff: "shield-off", ShieldPlus: "shield-plus", Smartphone: "smartphone", Sparkle: "sparkle",
-  Sparkles: "sparkles", Split: "split", Square: "square", SquareCheck: "square-check", SquarePen: "square-pen",
+  Sparkles: "sparkles", Split: "split", Square: "square", SquareCheck: "square-check", SquarePen: "square-pen", SquareSlash: "square-slash",
   SquareTerminal: "square-terminal", Sun: "sun-03", Table: "table", Tag: "tag-01", Terminal: "terminal",
   TriangleAlert: "triangle-alert", Type: "type", Undo2: "undo-02", Upload: "upload-01", User: "user", Users: "users",
   Workflow: "workflow", Wrench: "wrench-01", X: "x", Zap: "zap", ZoomIn: "zoom-in", ZoomOut: "zoom-out",
@@ -163,7 +163,7 @@ export function loadIconSet(set: IconSetName) {
 async function readIconSet(set: IconSetName) {
   const pkg = PACKAGES[set];
   // Named after the pinned version, so a bump or a changed map (bump the suffix) skips an old cache.
-  const file = join(cacheDir(), `${set}-${/-([^-/]+)\.tgz$/.exec(pkg.tarball)![1]}.v1.json`);
+  const file = join(cacheDir(), `${set}-${/-([^-/]+)\.tgz$/.exec(pkg.tarball)![1]}.v2.json`);
   try {
     return JSON.parse(await readFile(file, "utf8")) as Record<string, string>;
   } catch {

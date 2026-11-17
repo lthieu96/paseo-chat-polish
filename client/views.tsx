@@ -1110,9 +1110,9 @@ function PaseoImage({ Viewer, images, index, onIndex, onClose }: { Viewer: Paseo
     target.addEventListener("keydown", onKey);
     return () => target.removeEventListener("keydown", onKey);
   }, [images.length, index, onIndex]);
-  // Nothing until the first image loads; an empty uri is Paseo's "couldn't load" state.
+  // Nothing until the first image loads. A failed one gets a uri that can't load, which Paseo 0.16 shows as "couldn't load" (an empty uri shows nothing).
   if (!uri && !failed) return null;
-  return <Viewer source={{ type: "uri", uri: uri ?? "" }} onClose={onClose} />;
+  return <Viewer source={{ type: "uri", uri: uri ?? "data:," }} onClose={onClose} />;
 }
 
 /** The viewer for a set of images: Paseo's own (from usePaseoLightbox, called where the images mount) once found, else the plugin's. */

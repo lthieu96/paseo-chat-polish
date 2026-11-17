@@ -102,4 +102,9 @@ test("history excludes import timestamps beyond the next prompt or the idle agen
   assert.equal(stepRuns(historyEntries(entries), () => false)[0].ms, undefined, "the next prompt also bounds history while an agent runs");
   const missing = historyEntries([{ item: tool("missing-time"), timestamp: "invalid" }]);
   assert.equal(stepRuns(missing, () => false)[0].ms, undefined);
+  // Back-to-back replies (two screenshots) are one message in the app, so they are one entry here, keyed by the joined text.
+  // Like Paseo, a reply with its own message id starts a new message.
+  const reply = (text, messageId) => ({ type: "assistant_message", text, ...(messageId ? { messageId } : {}) });
+  const shots = historyEntries([[tool("a"), "x"], [reply("![a](a.png)"), "x"], [reply("![b](b.png)"), "x"], [reply("Done.", "m1"), "x"], [reply(" More.", "m1"), "x"]].map(([item, timestamp]) => ({ item, timestamp })));
+  assert.deepEqual(shots.map((e) => e.item.type === "assistant_message" ? e.item.text : e.item.type), ["tool_call", "![a](a.png)![b](b.png)", "Done. More."]);
 });

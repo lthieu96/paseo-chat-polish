@@ -2,7 +2,7 @@
 import { tagContextCard } from "./context-card";
 import { within, type ComputedStyle, type DomElement, type ResizeObserverClass, type WebDocument } from "./dom";
 import { rowIconMask } from "./icons";
-import { ACTION, CHIP, CTX, PERMISSION, PLAN, PRIMARY, ROW, ROW_ICON, SECONDARY, SETTINGS_PANE, SLASH, SLASH_GLIDE_MS, SURFACE, USAGE, WORKING_BOX } from "./selectors";
+import { ACTION, CHIP, CTX, PERMISSION, PLAN, PRIMARY, ROW, ROW_HEAD, ROW_ICON, SECONDARY, SETTINGS_PANE, SLASH, SLASH_GLIDE_MS, SURFACE, USAGE, WORKING_BOX } from "./selectors";
 
 declare const document: WebDocument;
 declare function getComputedStyle(el: DomElement): ComputedStyle;
@@ -27,12 +27,12 @@ function actionAs(el: DomElement, part: "primary" | "secondary") {
 // [child, parent it marks, part]
 const PARTS: Array<[string, (el: DomElement) => DomElement | null | undefined, string]> = [
   ['[data-testid="assistant-fork-menu-trigger"]', (el) => el.parentElement, "fork"],
-  ['[data-testid="assistant-fork-menu-trigger"]', (el) => el.parentElement?.parentElement, "footer"],
-  // The box that spaces the turn footer (or the working line) from what's above it.
-  ['[data-testid="assistant-fork-menu-trigger"]', (el) => el.parentElement?.parentElement?.parentElement?.parentElement, "footer-gap"],
+  // The turn footer's row (its actions, then the timing label), or the working line's while the agent runs.
+  ['[data-testid="turn-footer"]', (el) => el.firstElementChild?.firstElementChild, "footer"],
+  // The box that spaces the footer (or the working line) from what's above it; Paseo sets its own 20px margin on it.
+  ['[data-testid="turn-footer"]', (el) => el, "footer-gap"],
   // The plan card shows the same question; it has its own styles.
   ['[data-testid="permission-request-question"]', (el) => (el.parentElement?.parentElement?.getAttribute("data-testid") === "permission-plan-card" ? null : el.parentElement), "permission"],
-  ['[data-paseo-markdown-tag="img"]', (el) => el.parentElement, "image-text"],
   // Paseo's "View diagram" button, the sibling after a diagram's source block.
   ['[data-paseo-markdown-language="mermaid"]', (el) => el.nextElementSibling, "diagram-toggle"],
   [CHIP, (el) => el, "chip"],
@@ -57,6 +57,8 @@ const PARTS: Array<[string, (el: DomElement) => DomElement | null | undefined, s
   ['[data-testid="workspace-hover-card"]', (el) => el, "ws-card"],
   // The timeline item around each reply block, which holds Paseo's gap between blocks.
   ['[data-testid="assistant-message"]', (el) => el.parentElement, "msg-item"],
+  // The chat's live rows (turn footer, permission cards, bottom inset): the content's next box after the history slot and the rows.
+  ['[data-testid="agent-chat-scroll"] > div > [data-testid="older-history-slot"]', (el) => el.nextElementSibling?.nextElementSibling, "chat-aux"],
   // Paseo's dropdown menus share no marker; the nearest testID above an item is the menu's surface.
   ['[role="menuitem"]', (el) => el.closest('[role="menu"]') ?? el.parentElement?.closest("[data-testid]"), "menu"],
   ['[data-testid="turn-working-indicator"] > div > div:first-child > div > div', (el) => el, "loader"],
@@ -64,16 +66,16 @@ const PARTS: Array<[string, (el: DomElement) => DomElement | null | undefined, s
   ['[data-testid="tool-call-badge"] > div:nth-child(2) [style*="max-height"]', (el) => el, "detail-scroll"],
   // Parts otherwise picked by position mid-selector (X > div:nth-child(2) > div), which makes the browser restyle whole sibling rows
   // whenever Paseo's virtual list inserts one. Later entries build on tags set by earlier ones.
-  [`${ROW} > button > div > div:nth-child(2)`, (el) => el, "row-label"],
+  [`${ROW} > div:first-child`, (el) => el, "row-head"],
+  [`${ROW_HEAD} > button > div:nth-child(2)`, (el) => el, "row-label"],
   ['[data-testid="tool-call-group"] > div:nth-child(2)', (el) => el, "group-body"],
   ['[data-testid="tool-call-badge"] > div:nth-child(2)', (el) => el, "badge-body"],
   [`${PERMISSION} > div:nth-child(2)`, (el) => el, "permission-body"],
   ['[data-cp-part="input-row"] > div + div', (el) => el, "input-extra"],
   [`${USAGE} > div:first-child > div:nth-child(3)`, (el) => el, "usage-plan"],
   [`${USAGE} > div:nth-child(2)`, (el) => el, "usage-limits"],
-  // A limit row's box of label row, bar and (0.15+) reset line. Up to 0.14 it sat in a wrapper after an empty highlight layer; 0.15 dropped
-  // both, so the row is the box. The bar is the child holding just its fill (a balance row may have none).
-  ['[data-cp-part="usage-limits"] > div', (el) => (el.firstElementChild?.firstElementChild ? el : el.children[1]?.firstElementChild), "limit-body"],
+  // A limit row: its label row, bar and reset line. The bar is the child holding just its fill (a balance row may have none).
+  ['[data-cp-part="usage-limits"] > div', (el) => el, "limit-body"],
   ['[data-cp-part="limit-body"] > div', (el) => (el.children.length === 1 && !el.firstElementChild?.firstElementChild && !el.textContent ? el : null), "limit-bar"],
   ['[data-testid^="model-row-"] > div > div:nth-child(2)', (el) => el, "model-text"],
 ];
@@ -282,7 +284,7 @@ export function tagParts(roots: DomElement[]) {
     }
     // Open rows turn the chevron 90°. A turn summary's rows follow it as separate list rows, so its button stays its last child
     // and the faded rule would keep it faded while open; this tag is the only open mark it has (Paseo sets no aria-expanded).
-    const row = slot.parentElement?.parentElement?.parentElement;
+    const row = slot.closest(ROW);
     if (!row) continue;
     if (chevron && slot.querySelector('[style*="rotate(90deg)"]')) {
       // A summary already on screen that opens now, not one the list remounts open while scrolling: its rows may rise in.
@@ -306,8 +308,8 @@ export function tagParts(roots: DomElement[]) {
   // A row's details opened now (its body is new in a row already on screen) fade in; remounted ones show at once.
   for (const body of within(roots, ':is([data-cp-part="badge-body"], [data-cp-part="group-body"])')) if (body.parentElement && !mountedWith(roots, body.parentElement)) body.setAttribute("data-cp-enter", "");
   // Paseo's own tools show their input and output as titled sections of label/value fields ("Details", "Result"); drawn like the
-  // plugin's input/output block. A section is the body's grandchild that starts with its title text.
-  for (const section of within(roots, '[data-cp-part="badge-body"] > div > div')) {
+  // plugin's input/output block. A section starts with its title text, two levels inside the detail scroller (0.16 wraps every detail in one).
+  for (const section of within(roots, '[data-cp-part="detail-scroll"] > div > div')) {
     if (section.firstElementChild?.hasAttribute("dir") && section.children.length === 2) section.setAttribute("data-cp-part", "tool-section");
   }
   // The turn's last row: the history row after it isn't on the rail. Decided for the pair as either mounts, like footer-gap.

@@ -1,7 +1,7 @@
 import { Platform } from "react-native";
 import type { WebDocument } from "./dom";
 import { stopFollowingExpansion } from "./prompts";
-import { ROW } from "./selectors";
+import { ROW, ROW_HEAD } from "./selectors";
 
 declare const document: WebDocument;
 
@@ -11,7 +11,7 @@ export function stylePluginViews() {
   const style = document.createElement("style");
   style.textContent = `
 @supports (corner-shape: squircle) { [data-cp-squircle="card"] { border-radius: 28px !important; corner-shape: squircle; } }
-[data-cp-row], ${ROW} > button { transition: opacity 80ms ease-out, background-color 80ms ease-out; }
+[data-cp-row], ${ROW_HEAD} { transition: opacity 80ms ease-out, background-color 80ms ease-out; }
 [data-cp-row] [dir], ${ROW} [data-cp-part="row-label"] > [dir] { transition: color 80ms ease-out; }
 /* One scroller for both axes keeps the horizontal bar visible with tall diffs. */
 [data-cp-nowrap] { overflow: auto !important; }
@@ -51,7 +51,7 @@ export function stylePluginViews() {
   [data-cp-stack-card], [data-cp-stack-lift] { transition: none !important; animation: none !important; }
   [data-cp-running-label] { animation: none; -webkit-mask-image: none; mask-image: none; }
   [data-cp-expand] { transition: none; }
-  [data-cp-row], [data-cp-row] [dir], ${ROW} > button, ${ROW} [data-cp-part="row-label"] > [dir] { transition: none; }
+  [data-cp-row], [data-cp-row] [dir], ${ROW_HEAD}, ${ROW} [data-cp-part="row-label"] > [dir] { transition: none; }
 }`;
   document.head.appendChild(style);
   return () => { stopFollowingExpansion(); style.remove(); };

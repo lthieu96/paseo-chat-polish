@@ -11,20 +11,16 @@ export const DOC = ':is([data-testid="assistant-message"], [data-cp-plan-md], [d
 export const ROW = ':is([data-testid="tool-call-group"], [data-testid="tool-call-badge"], [data-testid="turn-summary"])';
 // A prompt's bubble. From Paseo 0.14 a prompt another agent sent leads with a "Sent by" button, so the bubble isn't the first child.
 export const BUBBLE = '[data-testid="user-message"] > div > div:not([data-testid])';
-export const ROW_ICON = `${ROW} > button > div > div:first-child`;
+// From Paseo 0.16 a row's button sits in a header that carries the badge's background and border; tagParts tags it.
+export const ROW_HEAD = '[data-cp-part="row-head"]';
+export const ROW_ICON = `${ROW_HEAD} > button > div:first-child`;
 // Parts Paseo marks only through a child, and containers whose every descendant is restyled, are tagged by tagParts.
 // :has(), and "X *" where X is only known by data-testid (on nearly every ancestor), re-match the whole timeline
 // on every node a scroll mounts, which made fast scrolling stutter.
-// Paseo marks each markdown part for its copy-as-markdown feature; the restyle keys on those marks.
+// Paseo marks code fences for its copy-as-markdown feature (pre around the block, code inside); the restyle keys on those marks.
 export const md = (tag: string) => `[data-paseo-markdown-tag="${tag}"]`;
-export const INLINE_CODE = `span${md("code")}`;
-export const HEADING = (n: number) => `${md(`h${n}`)} > [dir] > span`;
-export const MARK = "[data-paseo-markdown-list-marker]";
-export const MARK_UL = `${md("ul")} > ${md("li")} > ${MARK}`;
-export const MARK_OL = `${md("ol")} > ${md("li")} > ${MARK}`;
 export const CODE_BLOCK = `${DOC} ${md("pre")}`;
-// Paseo 0.12 renders markdown as plain HTML (p, h1, li, table, …) inside .enrm-text, styled inline and without the marks above,
-// except code fences, which keep them. The md() rules for other elements only match 0.11's renderer (plugin v0.2.x).
+// Everything else in a reply is plain HTML (p, h1, li, table, …) inside .enrm-text, styled inline.
 export const MD = `${MSG} .enrm-text`;
 export const DOC_MD = `${DOC} .enrm-text`;
 export const TASK_BOX = `${DOC_MD} li > span > input[type="checkbox"]`;
@@ -52,5 +48,5 @@ export const SURFACE = ':is([data-testid="combobox-desktop-container"], [data-cp
 export const IN_SURFACE = "[data-cp-surface]";
 export const SETTINGS_PANE = '[data-testid="settings-detail-pane"]';
 // The panels the composer's subagent and task pills open (Paseo 0.14 rows light an inset child).
-export const TRACK_PANEL = ':is([data-testid="subagents-track-header-panel"], [data-testid="agent-task-list-header-panel"])';
+export const TRACK_PANEL = ':is([data-testid="subagents-track-header-panel"], [data-testid="agent-task-list-header-panel"], [data-testid="background-work-panel"])';
 export const POP = '[data-testid="combobox-desktop-container"]';

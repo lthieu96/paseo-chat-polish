@@ -25,7 +25,7 @@ __d(function(g,r,i,a,m,e,d){"use strict";Object.defineProperty(e,'__esModule',{v
     const html = `<!doctype html><html><head><title>pending</title><script type="text/plain" src="/bundle.js"></script></head><body><img src="/hold" hidden>
       <div data-testid="settings-detail-pane"></div>
       <div data-testid="context-window-details" style="position:absolute;border:1px solid black;border-radius:12px;background:white"><div><span>Context</span><span>35% used</span></div><div data-testid="usage-report-test" style="height:180px">Usage</div></div>
-      <div data-testid="assistant-message"><div data-paseo-markdown-tag="blockquote"><span id="marker">[!NO</span></div></div>
+      <div data-testid="assistant-message"><div class="enrm-text"><div class="enrm-admonition"><div id="marker">No</div><p>Text</p></div></div></div>
       <div><div data-testid="permission-request-deny" style="color:#888"><div><span>Deny</span></div></div><div data-testid="permission-request-action-always" style="color:#888"><div><span>Allow always</span></div></div><div data-testid="permission-request-action-once" style="color:#eee"><div><span>Allow once</span></div></div></div>
       <script>
         const checks = {}; const errors = [];
@@ -112,8 +112,8 @@ __d(function(g,r,i,a,m,e,d){"use strict";Object.defineProperty(e,'__esModule',{v
           checks.permissionActionVariants = action('always') === 'secondary' && action('once') === 'primary';
           // Collapse turns (Paseo 0.14+): an open summary turns its chevron 90°; its rows sit in IndentRails in their own history rows.
           const turn = document.createElement('section');
-          turn.innerHTML = '<div data-history-row-id="t1"><div><div data-testid="turn-summary" id="ts"><button><div><div><div style="transform: rotate(90deg);"><svg><path d="m9 18 6-6-6-6"></path></svg></div></div><div>Ran 2 commands</div></div></button></div><div id="tail"></div></div></div>'
-            + '<div data-history-row-id="t2"><div><div id="rail"><div data-testid="tool-call-badge"><button></button></div></div></div></div>'
+          turn.innerHTML = '<div data-history-row-id="t1"><div><div data-testid="turn-summary" id="ts"><div><button><div><div style="transform: rotate(90deg);"><svg><path d="m9 18 6-6-6-6"></path></svg></div></div><div>Ran 2 commands</div></button></div></div><div id="tail"></div></div></div>'
+            + '<div data-history-row-id="t2"><div><div id="rail"><div data-testid="tool-call-badge"><div><button></button></div></div></div></div></div>'
             + '<div data-history-row-id="t3"><div><div id="railView"><div style="display: contents;"></div></div></div></div>'
             + '<div data-history-row-id="paseo-chat-polish/x"><div><div style="display: contents;" id="view"><div></div></div></div></div>'
             + '<div data-history-row-id="t4"><div><div id="wrap"><div data-cp-part="footer"></div></div></div></div>';
@@ -128,15 +128,22 @@ __d(function(g,r,i,a,m,e,d){"use strict";Object.defineProperty(e,'__esModule',{v
           const remounted = !turn.querySelector('[data-cp-enter]');
           summary.querySelector('[style]').style.transform = 'rotate(90deg)'; await wait();
           const opened = document.createElement('div'); opened.setAttribute('data-history-row-id', 't5');
-          opened.innerHTML = '<div><div id="railNew"><div data-testid="tool-call-badge"><button></button></div></div></div>';
+          opened.innerHTML = '<div><div id="railNew"><div data-testid="tool-call-badge"><div><button></button></div></div></div></div>';
           turn.insertBefore(opened, turn.children[1]); await wait();
           const badge = opened.querySelector('[data-testid="tool-call-badge"]');
-          badge.insertAdjacentHTML('beforeend', '<div><div><div id="sec"><div dir="auto">Details</div><div><div><div dir="auto">Limit</div><div dir="auto">3</div></div></div></div></div></div>'); await wait();
+          badge.insertAdjacentHTML('beforeend', '<div><div style="max-height: 400px;"><div><div id="sec"><div dir="auto">Details</div><div><div><div dir="auto">Limit</div><div dir="auto">3</div></div></div></div></div></div></div>'); await wait();
           checks.turnEnter = remounted && document.getElementById('railNew').hasAttribute('data-cp-enter') && badge.lastElementChild.hasAttribute('data-cp-enter') && document.getElementById('sec').dataset.cpPart === 'tool-section';
           turn.remove(); await wait();
+          // Paseo 0.16's turn footer: turn-footer > slot > row of [actions (copy, fork), timing label]; the footer row and its gap are tagged from it.
+          const foot = document.createElement('div');
+          foot.innerHTML = '<div><div><div data-testid="assistant-message"></div></div><div data-testid="turn-footer" id="tf"><div><div id="fr"><div><button aria-label="Copy turn"></button><div><button data-testid="assistant-fork-menu-trigger"></button></div></div><button><div>4s</div></button></div></div></div></div>';
+          document.body.appendChild(foot); await wait();
+          const tf = document.getElementById('tf');
+          checks.turnFooter = document.getElementById('fr').dataset.cpPart === 'footer' && tf.dataset.cpPart === 'footer-gap' && tf.hasAttribute('data-cp-tight');
+          foot.remove(); await wait();
           // A loading row (Paseo's gradient copy over its label) runs in the plugin's look; its next step's label rises in; done once the copy goes.
           const loading = document.createElement('div');
-          loading.innerHTML = '<div data-testid="tool-call-group" id="lg"><button><div><div><svg></svg></div><div><div dir="auto" id="lt">Ran 1 command</div><div><div style="background-image: linear-gradient(red, blue)">Ran 1 command</div></div></div></div></button></div>';
+          loading.innerHTML = '<div data-testid="tool-call-group" id="lg"><div><button><div><svg></svg></div><div><div dir="auto" id="lt">Ran 1 command</div><div><div style="background-image: linear-gradient(red, blue)">Ran 1 command</div></div></div></button></div></div>';
           document.body.appendChild(loading); await wait();
           const lg = document.getElementById('lg'), label = lg.querySelector('[data-cp-part="row-label"]');
           const startedRunning = lg.hasAttribute('data-cp-running') && label?.hasAttribute('data-cp-running-label');
@@ -159,7 +166,7 @@ __d(function(g,r,i,a,m,e,d){"use strict";Object.defineProperty(e,'__esModule',{v
           Document.prototype.querySelectorAll = function(selector) { if (selector === '*') fullScans++; return queryDocument.call(this, selector); };
           const queryElement = Element.prototype.querySelectorAll;
           Element.prototype.querySelectorAll = function(selector) { if (this === document.documentElement && selector.includes('data-paseo-markdown')) markdownScans++; return queryElement.call(this, selector); };
-          document.getElementById('marker').firstChild.nodeValue = '[!NOTE]';
+          document.getElementById('marker').firstChild.nodeValue = 'Note';
           document.querySelector('[data-testid="settings-detail-pane"]').appendChild(document.createElement('div'));
           await wait(300);
           checks.calloutUpdated = document.getElementById('marker').parentElement.dataset.cpCallout === 'note';
@@ -174,6 +181,14 @@ __d(function(g,r,i,a,m,e,d){"use strict";Object.defineProperty(e,'__esModule',{v
           checks.fileContextMenuKeepsHeight = fileFixture.querySelector('[data-menu-surface]').getBoundingClientRect().height === 52;
           checks.fileContextMenuBackdropKeepsHeight = fileFixture.lastElementChild.getBoundingClientRect().height === 80;
           fileFixture.remove(); document.documentElement.removeAttribute('data-cp-rt-window'); await wait();
+          // Floating frames a workspace's pane, the header's grandparent from Paseo 0.16, and clears the frame an older copy left on the header's wrapper.
+          const deck = document.createElement('div');
+          deck.innerHTML = '<div data-testid="workspace-deck-entry-x"><div id="winPane" data-cp-win-bg=""><div id="winWrap" data-cp-win="panel"><div data-testid="composer-dock-header"><div style="border-bottom: 1px solid red">Header</div></div></div></div></div>';
+          document.documentElement.setAttribute('data-cp-rt-window', 'floating'); document.body.appendChild(deck);
+          load('web/window').tagWindow([deck]);
+          const winPane = document.getElementById('winPane');
+          checks.floatingPanel = winPane.getAttribute('data-cp-win') === 'panel' && !winPane.hasAttribute('data-cp-win-bg') && !document.getElementById('winWrap').hasAttribute('data-cp-win');
+          deck.remove(); document.documentElement.removeAttribute('data-cp-rt-window'); await wait();
           clamp(); restyle();
           const unstyle = web.stylePluginViews();
           checks.accordionCloses = true; checks.accordionReverses = true;
@@ -306,7 +321,7 @@ __d(function(g,r,i,a,m,e,d){"use strict";Object.defineProperty(e,'__esModule',{v
     assert.equal(report.error, undefined, report.error);
     assert.deepEqual(report.errors, []);
     for (const [check, passed] of Object.entries(report.checks)) assert.equal(passed, true, check);
-    assert.equal(Object.keys(report.checks).length, 37);
+    assert.equal(Object.keys(report.checks).length, 39);
   } finally {
     server?.closeAllConnections(); server?.close();
     rmSync(temp, { recursive: true, force: true });

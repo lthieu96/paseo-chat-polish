@@ -199,29 +199,30 @@ test("turn recap: files with +/− relative to cwd, failed commands with exit co
   assert.equal(recapData([tool({ type: "read", filePath: "/w/a.ts" }), tool({ type: "shell", command: "ls" })], "/w"), undefined);
 });
 
-test("latest turn: pages back from the tail through the turn's entries, skipping plugin rows", async () => {
+test("latest turn: one whole-turn tail page, filtered to the turn, skipping plugin rows", async () => {
   const { latestTurn } = await import("../server/turn.ts");
   const shell = (command, turnId) => ({ item: tool({ type: "shell", command }), turnId });
   const recap = { item: { type: "plugin", kind: "chat-polish-recap" } };
   const all = [shell("old", "t-1"), recap, ...Array.from({ length: 450 }, (_, i) => shell(`c${i}`, "t-2")), recap, shell("now", "t-3")];
   const calls = [];
+  // Paseo keeps the last turn whole: the page starts at the newest turn's first entry, plugin rows after it included.
   const timeline = {
     async refetch(options) {
-      calls.push(options.direction);
-      const end = options.cursor ? options.cursor.seq : all.length;
-      const start = Math.max(0, end - options.limit);
-      return { entries: all.slice(start, end), startCursor: { epoch: "e", seq: start }, hasOlder: start > 0 };
+      calls.push(options);
+      const last = all.findLast((e) => e.turnId)?.turnId;
+      return { entries: all.slice(all.findIndex((e) => e.turnId === last)) };
     },
   };
   assert.deepEqual((await latestTurn(timeline, "t-3")).map((i) => i.detail.command), ["now"]);
   // A null turnId falls back to the newest entry's turn.
   assert.deepEqual((await latestTurn(timeline, null)).map((i) => i.detail.command), ["now"]);
+  // A newer turn started before the read: nothing to recap.
+  assert.deepEqual(await latestTurn(timeline, "t-2"), []);
   all.splice(-2);
-  calls.length = 0;
   const items = await latestTurn(timeline, "t-2");
   assert.equal(items.length, 450);
   assert.equal(items[0].detail.command, "c0");
-  assert.deepEqual(calls, ["tail", "before", "before"]);
+  assert.deepEqual(calls.at(-1), { direction: "tail", limit: 1, projection: "canonical", wholeTurns: true });
 });
 
 test("turn as Markdown: quoted prompt, reply, then changes from the recap", async () => {
@@ -271,7 +272,7 @@ test("steps: runs split on replies, fold tool updates and thought chunks, skip h
 });
 
 test("steps: with Collapse turns, replies before a turn's last fold into its run; the last reply and the next turn stay out", async () => {
-  const { stepRuns, stepKey, stepSummary } = await import("../client/steps.ts");
+  const { stepRuns, stepKey, stepSummary, runHead } = await import("../client/steps.ts");
   const reply = (text) => ({ type: "assistant_message", text });
   const list = [
     { type: "user_message", text: "go" },
@@ -289,6 +290,9 @@ test("steps: with Collapse turns, replies before a turn's last fold into its run
   assert.deepEqual(stepRuns(list, () => false, true).map((r) => r.steps.map(stepKey)), [["t:a", "m:Let me look.", "t:b"], ["t:c", "m:![Image](file:///tmp/shot.png)", "t:d"], ["m:Only one."]]);
   // Without Collapse turns a reply ends a run, as before.
   assert.deepEqual(stepRuns(list, () => false, false).map((r) => r.steps.map(stepKey)), [["t:a"], ["t:b"], ["t:c"], ["t:d"]]);
+  // The merged row stands on a run's first tool call or thought, never on a folded reply (Paseo 0.16 would fold it as a reply), unless only replies make the run.
+  assert.deepEqual(stepRuns([list[0], list[2], list[1], list[4]], () => false, true).map((r) => runHead(r.steps)), ["t:a"]);
+  assert.equal(runHead([reply("Only one.")]), "m:Only one.");
   // Another agent's notice steered into the running turn shares its id, so it doesn't end the turn: the reply before it still folds.
   const steered = [
     { item: { type: "user_message", text: "go" }, turn: "t1" },
@@ -448,7 +452,9 @@ test("css guard: positional selectors get a :where() precheck on their subject, 
   const { guardPositional } = await import("../client/css-guard.ts");
   assert.equal(guardPositional('[data-x] > div'), '[data-x] > div');
   assert.equal(guardPositional('[data-x] > div > div:first-child'), '[data-x] > div > div:where([data-x] > div > div):first-child');
-  assert.equal(guardPositional('[data-x] > :last-child *'), '[data-x] > :last-child *:where([data-x] >  *)');
+  // A compound of only positional pseudo-classes keeps its place as *: dropped, it merged two steps or left ">  >" (an invalid :where()).
+  assert.equal(guardPositional('[data-x] > :last-child *'), '[data-x] > :last-child *:where([data-x] > * *)');
+  assert.equal(guardPositional('[data-x] > div > :last-child > :not(:last-child)'), '[data-x] > div > :last-child > :where([data-x] > div > * > *):not(:last-child)');
   assert.equal(guardPositional('[data-x] div:nth-child(2)::before'), '[data-x] div:where([data-x] div):nth-child(2)::before');
   assert.equal(guardPositional('[data-x] > :first-child'), '[data-x] > :where([data-x] > *):first-child');
   assert.equal(guardPositional('[data-x] :last-child'), '[data-x] :where([data-x] *):last-child');

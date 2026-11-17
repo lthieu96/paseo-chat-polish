@@ -77,6 +77,11 @@ export function stepKey(item: Item): string | undefined {
   return words ? `${reply ? "m" : "r"}:${words}` : undefined;
 }
 
+/** Paseo's rule (appendAssistantMessage): a reply joins the reply before it unless it carries a different message id. The app shows the
+ * two as one message (a tool's screenshots, a provider's chunks), keyed by the joined text. */
+const joinsReply = (last: Entry | undefined, item: Item): last is Entry & { item: Extract<Item, { type: "assistant_message" }> } =>
+  item.type === "assistant_message" && last?.item.type === "assistant_message" && (item.messageId === undefined || last.item.messageId === item.messageId);
+
 /** Folds a live timeline event into an agent's list the way the daemon's projection does: tool updates replace their call, thought chunks
  * extend the thought before. Returns false when the runs can't have changed (a reply chunk after a reply), so streaming text costs nothing. */
 export function applyItem(list: Entry[], item: Item, at: number, turn?: string): boolean {
@@ -89,10 +94,10 @@ export function applyItem(list: Entry[], item: Item, at: number, turn?: string):
     list[i] = { ...old, item: { ...call, ...item, detail: item.detail.type === "unknown" ? call.detail : item.detail }, at };
   } else if (item.type === "reasoning" && last?.item.type === "reasoning") {
     list[list.length - 1] = { ...last, item: { type: "reasoning", text: last.item.text + item.text }, at };
-  } else if (item.type === "assistant_message" && last?.item.type === "assistant_message") {
+  } else if (item.type === "assistant_message" && joinsReply(last, item)) {
     // One entry per reply (with the time of the latest chunk). Its text keys it when Collapse turns folds it; a reply that is still
     // streaming is the turn's last, so its runs can't have changed.
-    list[list.length - 1] = { ...last, item: { ...last.item, text: last.item.text + item.text }, at };
+    list[list.length - 1] = { ...last, item: { ...last.item, text: last.item.text + item.text.replace(/\r/g, "") }, at };
     return false;
   } else list.push({ item, at, turn });
   return true;
@@ -107,7 +112,12 @@ const timestampMs = (timestamp: string | undefined) => {
  * Keep their content, but leave timing unknown rather than measuring the gap to the import date. */
 export function historyEntries(entries: readonly { item: Item; timestamp: string; turnId?: string }[], endedAt?: string): Entry[] {
   let ceiling = timestampMs(endedAt);
-  const list: Entry[] = entries.map(({ item, timestamp, turnId }) => ({ item, at: timestampMs(timestamp), turn: turnId }));
+  const list: Entry[] = [];
+  for (const { item, timestamp, turnId } of entries) {
+    const last = list.at(-1);
+    if (item.type === "assistant_message" && joinsReply(last, item)) list[list.length - 1] = { ...last, item: { ...last.item, text: last.item.text + item.text.replace(/\r/g, "") }, at: timestampMs(timestamp) ?? last.at };
+    else list.push({ item, at: timestampMs(timestamp), turn: turnId });
+  }
   for (let i = list.length - 1; i >= 0; i--) {
     const entry = list[i]!;
     if (entry.at === undefined) continue;
@@ -299,6 +309,13 @@ function trimHistory(list: Entry[]) {
   if (cut) list.splice(0, cut);
 }
 
+/**
+ * The step the merged row stands in for: the run's first thought or tool call; todo updates are only ever folded in. Not a folded reply:
+ * from Paseo 0.16 Collapse turns treats a plugin row made from a reply as one, and would fold the merged row behind its own summary.
+ * A run of replies alone has nothing else to stand on.
+ */
+export const runHead = (steps: readonly Item[]) => stepKey(steps.find((s) => s.type !== "todo" && s.type !== "assistant_message") ?? steps.find((s) => s.type !== "todo")!)!;
+
 /** Re-splits one agent's runs, notifying only changed runs and restoring rows that left the retained history. */
 function rebuild(agentId: string) {
   const oldKeys = keysByAgent.get(agentId) ?? [];
@@ -316,8 +333,7 @@ function rebuild(agentId: string) {
     keys.push(key);
   }
   for (const run of stepRuns(list, skip)) {
-    // The merged row stands where the run's first thought or tool call is; todo updates are only ever folded in.
-    const head = stepKey(run.steps.find((s) => s.type !== "todo")!)!;
+    const head = runHead(run.steps);
     const before = oldRuns.get(head);
     runs.set(head, run);
     if (!before || before.ms !== run.ms || before.open !== run.open || before.steps.length !== run.steps.length || before.steps.some((x, i) => x !== run.steps[i])) touch(head);

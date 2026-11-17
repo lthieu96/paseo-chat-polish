@@ -127,7 +127,8 @@ export const THEME_ID = "chat-polish";
 /** Paseo's catalog id for this theme: `<plugin id>/theme/<theme id>`, assuming the manifest's plugin id. */
 export const THEME_CATALOG_ID = `paseo-chat-polish/theme/${THEME_ID}`;
 
-export const toContribution = (t: ThemeDraft): PluginThemeContribution => ({ id: THEME_ID, name: t.name, appearance: t.appearance, colors: t.colors });
+// Paseo 0.16 takes `sidebar` as a theme color and derives the sidebar's hover and selected rows from it; empty leaves Paseo's own.
+export const toContribution = (t: ThemeDraft): PluginThemeContribution => ({ id: THEME_ID, name: t.name, appearance: t.appearance, colors: { ...t.colors, ...(t.sidebar ? { sidebar: t.sidebar } : {}) } });
 
 export const isHex = (v: string) => hex.safeParse(v).success;
 

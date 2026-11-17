@@ -1,5 +1,8 @@
 export const POSITIONAL = /:(?:nth-(?:last-)?child\([^)]*\)|first-child|last-child|only-child)/;
 
+const NOT_POSITIONAL = /:not\(\s*:(?:first|last|only)-child\s*\)/g;
+const LONE = new RegExp(`(^|[\\s>+~])(?:${NOT_POSITIONAL.source}|${POSITIONAL.source})+(?=$|[\\s>+~])`, "g");
+
 /** Splits at a top-level character (outside parentheses, brackets and quotes). */
 export function splitTop(text: string, at: (ch: string) => boolean) {
   const parts: string[] = [];
@@ -29,13 +32,14 @@ export function guardPositional(complex: string) {
   const compounds = splitTop(complex, (ch) => ch === " " || ch === ">" || ch === "+" || ch === "~");
   const subject = compounds.at(-1)!;
   const head = complex.slice(0, complex.length - subject.length);
+  // A compound that is only positional pseudo-classes ("X > :first-child > p", "X > :last-child *") becomes *: dropping it would leave
+  // two combinators in a row (an invalid :where(), which matches nothing) or merge two steps into one.
   let pre = complex
-    .replace(/:not\(\s*:(?:first|last|only)-child\s*\)/g, "")
+    .replace(LONE, "$1*")
+    .replace(NOT_POSITIONAL, "")
     .replace(new RegExp(POSITIONAL.source, "g"), "")
     .replace(/::?(?:before|after|placeholder|marker|selection)\b/g, "")
-    .trimStart();
-  // A bare positional subject ("X > :first-child") leaves a dangling combinator; :where(X >) is invalid and matches nothing.
-  pre = (/[\s>+~]$/.test(pre) ? `${pre.trimEnd()} *` : pre).trim();
+    .trim();
   if (!pre || !subject) return complex;
   const lead = /^(?:\*|[a-zA-Z][\w-]*)?/.exec(subject)![0];
   return `${head}${lead}:where(${pre})${subject.slice(lead.length)}`;
