@@ -47,7 +47,8 @@ export function centerControlText() {
     return `@font-face { font-family: "${FAMILY}"; src: ${src}; font-weight: ${weight}; ascent-override: ${(fix.ascent * 100).toFixed(1)}%; descent-override: ${(fix.descent * 100).toFixed(1)}%; }`;
   });
   const style = document.createElement("style");
-  style.textContent = `${faces.join("\n")}\n:is(${CONTROLS}) { --paseo-ui-font: "${FAMILY}", ${font}; }`;
+  // The queued message card isn't a control, but its text and "Queued" label sit beside icons in one row, where low text shows.
+  style.textContent = `${faces.join("\n")}\n:is(${CONTROLS}, [data-cp-part="queued"]) { --paseo-ui-font: "${FAMILY}", ${font}; }`;
   document.head.appendChild(style);
   return () => style.remove();
 }
