@@ -115,6 +115,8 @@ ${IN_SURFACE} :is(button, [role="button"], [role="menuitem"], [role="option"], a
 ${IN_SURFACE} :is(button, [role="button"], [role="menuitem"], [role="option"], a[href]):not(:disabled):not([aria-disabled="true"]) * { cursor: pointer !important; }
 ${IN_SURFACE} :is(button, [role="button"], [role="menuitem"], [role="option"], a[href]):not(:disabled):not([aria-disabled="true"]):is(:hover, :focus-visible, [aria-selected="true"]) { background-color: color-mix(in srgb, var(--cp-control), var(--cp-fg) 12%) !important; }
 :root:is(.light, .pluginLight) ${IN_SURFACE} :is(button, [role="button"], [role="menuitem"], [role="option"], a[href]):not(:disabled):not([aria-disabled="true"]):is(:hover, :focus-visible, [aria-selected="true"]) { background-color: color-mix(in srgb, var(--cp-raised), var(--cp-fg) 8%) !important; }
+/* Paseo focuses a menu's first item on open and lights it like a hovered one: with the pointer on another item, only that one lights. */
+:root ${IN_SURFACE}:has([role="menuitem"]:hover) [role="menuitem"]:not(:hover):not(:disabled) { background-color: transparent !important; }
 /* The composer's track panels (subagents, tasks) light a row on a child inset 4px; the fill goes there, not on the full-width row, or both show. */
 :root ${TRACK_PANEL} [role="menuitem"]:not(:disabled):not([aria-disabled="true"]):is(:hover, :focus-visible, [aria-selected="true"]) { background-color: transparent !important; }
 ${TRACK_PANEL} [role="menuitem"] > div { border-radius: 11px !important; }
