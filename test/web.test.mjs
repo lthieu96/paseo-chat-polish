@@ -180,6 +180,14 @@ __d(function(g,r,i,a,m,e,d){"use strict";Object.defineProperty(e,'__esModule',{v
           checks.fileContextMenuKeepsHeight = fileFixture.querySelector('[data-menu-surface]').getBoundingClientRect().height === 52;
           checks.fileContextMenuBackdropKeepsHeight = fileFixture.lastElementChild.getBoundingClientRect().height === 80;
           fileFixture.remove(); document.documentElement.removeAttribute('data-cp-rt-window'); await wait();
+          // Floating frames a workspace's pane, the header's grandparent from Paseo 0.16, and clears the frame an older copy left on the header's wrapper.
+          const deck = document.createElement('div');
+          deck.innerHTML = '<div data-testid="workspace-deck-entry-x"><div id="winPane" data-cp-win-bg=""><div id="winWrap" data-cp-win="panel"><div data-testid="composer-dock-header"><div style="border-bottom: 1px solid red">Header</div></div></div></div></div>';
+          document.documentElement.setAttribute('data-cp-rt-window', 'floating'); document.body.appendChild(deck);
+          load('web/window').tagWindow([deck]);
+          const winPane = document.getElementById('winPane');
+          checks.floatingPanel = winPane.getAttribute('data-cp-win') === 'panel' && !winPane.hasAttribute('data-cp-win-bg') && !document.getElementById('winWrap').hasAttribute('data-cp-win');
+          deck.remove(); document.documentElement.removeAttribute('data-cp-rt-window'); await wait();
           clamp(); restyle();
           const unstyle = web.stylePluginViews();
           checks.accordionCloses = true; checks.accordionReverses = true;
@@ -312,7 +320,7 @@ __d(function(g,r,i,a,m,e,d){"use strict";Object.defineProperty(e,'__esModule',{v
     assert.equal(report.error, undefined, report.error);
     assert.deepEqual(report.errors, []);
     for (const [check, passed] of Object.entries(report.checks)) assert.equal(passed, true, check);
-    assert.equal(Object.keys(report.checks).length, 38);
+    assert.equal(Object.keys(report.checks).length, 39);
   } finally {
     server?.closeAllConnections(); server?.close();
     rmSync(temp, { recursive: true, force: true });

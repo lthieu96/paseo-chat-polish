@@ -85,6 +85,10 @@ export function tagWindow(roots: DomElement[]) {
           writes.push(() => set(layer, "data-cp-win-bg", ""));
         }
     }
+    // Tags from a copy of the plugin that ran before an update (or before 0.16 moved the header) stay on the page until it reloads:
+    // the header's wrapper framed as the panel, and the pane painted as the window behind it.
+    const stale = [...Array.from(panel.querySelectorAll(`[${WIN}="panel"]`)), ...(panel.hasAttribute("data-cp-win-bg") ? [panel] : [])];
+    if (stale.length) writes.push(() => stale.forEach((el) => (el === panel ? el.removeAttribute("data-cp-win-bg") : el.removeAttribute(WIN))));
     if (panel.getAttribute(WIN) === "panel") continue;
     const row = findRow(panel);
     writes.push(() => (panel.setAttribute(WIN, "panel"), setRow(panel, row)));
