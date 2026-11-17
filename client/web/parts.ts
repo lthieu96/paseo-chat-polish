@@ -84,16 +84,14 @@ const slashCards = new WeakSet<DomElement>();
 const boxHeight = (el: DomElement) => (el as unknown as { getBoundingClientRect(): { height: number } }).getBoundingClientRect().height;
 
 /**
- * Tags the / popup's detail card (there while the highlighted command has a description) and its list. Retagged on every change:
- * React reuses these divs when the popup switches to "Loading" or "No results", so a tag set once would stick to the wrong one.
+ * Tags the / popup's list (the card's last child). Retagged on every change: React reuses these divs when the popup switches to
+ * "Loading" or "No results", so a tag set once would stick to the wrong one.
  */
 function tagSlash(card: DomElement) {
-  const children = Array.from(card.children);
-  const detail = children.length > 1 ? children[0] : undefined;
-  for (const child of children) {
-    const part = child === detail ? "slash-detail" : child === children[children.length - 1] ? "slash-list" : null;
-    if (part && child.getAttribute("data-cp-part") !== part) child.setAttribute("data-cp-part", part);
-    else if (!part) child.removeAttribute("data-cp-part");
+  for (const child of Array.from(card.children)) {
+    if (child === card.lastElementChild) {
+      if (child.getAttribute("data-cp-part") !== "slash-list") child.setAttribute("data-cp-part", "slash-list");
+    } else child.removeAttribute("data-cp-part");
   }
 }
 
@@ -234,6 +232,8 @@ export function tagParts(roots: DomElement[]) {
   for (const [child, parentOf, part] of PARTS) for (const el of within(roots, child)) parentOf(el)?.setAttribute("data-cp-part", part);
   for (const el of within(roots, SURFACE)) el.setAttribute("data-cp-surface", "");
   for (const card of within(roots, `${SLASH} > div`)) watchSlash(card);
+  // Paseo swaps in a new list as the filter changes, often at the same height, so no resize retags it.
+  for (const root of roots) if (root.parentElement?.matches(`${SLASH} > div`)) tagSlash(root.parentElement);
   for (const body of within(roots, '[data-testid="permission-plan-card"] > div:nth-child(2)')) body.setAttribute("data-cp-plan-md", "");
   // The turn footer sits close under a reply block. Decided once per pair, not with a sibling combinator: the virtual list mounts and
   // drops rows in either order, and a gap that flips with it makes Paseo re-measure the list.
