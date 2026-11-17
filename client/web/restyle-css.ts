@@ -183,23 +183,19 @@ ${TRACK_PANEL} [role="menuitem"]:is(:hover, :focus-visible) > div { background-c
 [data-cp-part="composer"] > div:last-child { margin-right: 0 !important; }
 [data-testid="message-input-root"] textarea { field-sizing: content !important; height: auto !important; min-height: 21px !important; }
 [data-cp-part="input-extra"] { display: none !important; }
-/* The / popup: one card like the plugin's pickers. Paseo stacks a detail card for the highlighted command over the list; the card
-   turns them around so the detail is the list's footer, next to the input, with the argument hint as a mono chip beside the name. */
-${SLASH} > div { background-color: var(--cp-raised, var(--colors-surface1)) !important; border: 1px solid var(--cp-rule, var(--colors-border)) !important; border-radius: 16px !important; padding: 4px !important; gap: 0 !important; flex-direction: column-reverse !important; overflow: hidden !important; box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35) !important; }
+/* The / popup: one card like the plugin's pickers, its rows chips. Rows are matched by their label: the list's 4px end padding is a
+   cell too, and sized like a row it left a blank strip under the last command. */
+${SLASH} > div { background-color: var(--cp-raised, var(--colors-surface1)) !important; border: 1px solid var(--cp-rule, var(--colors-border)) !important; border-radius: 16px !important; padding: 4px !important; gap: 0 !important; overflow: hidden !important; box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35) !important; }
 ${SLASH} > div > div { background-color: transparent !important; border-width: 0 !important; border-radius: 0 !important; box-shadow: none !important; }
 ${SLASH} > div[data-cp-glide] { transition: height ${SLASH_GLIDE_MS}ms cubic-bezier(0.2, 0.8, 0.2, 1) !important; }
 [data-cp-part="slash-list"] > div > div { padding: 0 !important; }
-[data-cp-part="slash-list"] > div > div > div { min-height: 32px !important; padding: 0 10px !important; border-radius: 11px !important; }
+[data-cp-part="slash-list"] > div > div > [aria-label] { min-height: 32px !important; padding: 0 10px !important; border-radius: 11px !important; }
 @supports (corner-shape: squircle) {
   ${SLASH} > div { border-radius: 28px !important; corner-shape: squircle; }
-  [data-cp-part="slash-list"] > div > div > div { border-radius: 18px !important; corner-shape: squircle; }
+  [data-cp-part="slash-list"] > div > div > [aria-label] { border-radius: 18px !important; corner-shape: squircle; }
 }
-[data-cp-part="slash-list"] > div > div > div > div > :first-child { font-size: 13px !important; font-weight: 500 !important; color: var(--cp-fg, var(--colors-foreground)) !important; }
-[data-cp-part="slash-detail"] { display: grid !important; grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 8px; row-gap: 4px; margin-top: 4px !important; padding: 10px 10px 8px !important; border-top: 1px solid var(--cp-rule, var(--colors-border)) !important; }
-[data-cp-part="slash-detail"] > :first-child { grid-area: 1 / 1; font-family: var(--cp-mono, ui-monospace, monospace) !important; font-size: 12px !important; color: var(--cp-accent, var(--colors-accent-bright)) !important; }
-/* Skill descriptions run to paragraphs; three lines, like the row above shows one. */
-[data-cp-part="slash-detail"] > :nth-child(2) { grid-area: 2 / 1 / 3 / 3; margin-top: 0 !important; font-size: 12px !important; line-height: 1.45 !important; display: -webkit-box !important; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden !important; }
-[data-cp-part="slash-detail"] > :nth-child(3) { grid-area: 1 / 2; justify-self: start; max-width: 100%; margin-top: 0 !important; padding: 1px 5px !important; border: 1px solid var(--cp-rule, var(--colors-border)) !important; border-radius: 4px !important; background-color: var(--cp-sunken, var(--colors-surface0)) !important; font-family: var(--cp-mono, ui-monospace, monospace) !important; font-size: 11px !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
+/* Row: icon, name, argument hint, description, tag. */
+[data-cp-part="slash-list"] > div > div > [aria-label] > :nth-child(2) { font-size: 13px !important; font-weight: 500 !important; color: var(--cp-fg, var(--colors-foreground)) !important; }
 ${CHIP} { height: 24px !important; padding: 0 7px !important; border-radius: 8px !important; }
 [data-cp-part="chip"] * { font-size: 13px !important; font-weight: 500 !important; }
 [data-cp-part="chip"] > div > div:last-child:nth-child(3) { display: none !important; }
