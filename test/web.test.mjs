@@ -25,7 +25,7 @@ __d(function(g,r,i,a,m,e,d){"use strict";Object.defineProperty(e,'__esModule',{v
     const html = `<!doctype html><html><head><title>pending</title><script type="text/plain" src="/bundle.js"></script></head><body><img src="/hold" hidden>
       <div data-testid="settings-detail-pane"></div>
       <div data-testid="context-window-details" style="position:absolute;border:1px solid black;border-radius:12px;background:white"><div><span>Context</span><span>35% used</span></div><div data-testid="usage-report-test" style="height:180px">Usage</div></div>
-      <div data-testid="assistant-message"><div data-paseo-markdown-tag="blockquote"><span id="marker">[!NO</span></div></div>
+      <div data-testid="assistant-message"><div class="enrm-text"><div class="enrm-admonition"><div id="marker">No</div><p>Text</p></div></div></div>
       <div><div data-testid="permission-request-deny" style="color:#888"><div><span>Deny</span></div></div><div data-testid="permission-request-action-always" style="color:#888"><div><span>Allow always</span></div></div><div data-testid="permission-request-action-once" style="color:#eee"><div><span>Allow once</span></div></div></div>
       <script>
         const checks = {}; const errors = [];
@@ -165,7 +165,7 @@ __d(function(g,r,i,a,m,e,d){"use strict";Object.defineProperty(e,'__esModule',{v
           Document.prototype.querySelectorAll = function(selector) { if (selector === '*') fullScans++; return queryDocument.call(this, selector); };
           const queryElement = Element.prototype.querySelectorAll;
           Element.prototype.querySelectorAll = function(selector) { if (this === document.documentElement && selector.includes('data-paseo-markdown')) markdownScans++; return queryElement.call(this, selector); };
-          document.getElementById('marker').firstChild.nodeValue = '[!NOTE]';
+          document.getElementById('marker').firstChild.nodeValue = 'Note';
           document.querySelector('[data-testid="settings-detail-pane"]').appendChild(document.createElement('div'));
           await wait(300);
           checks.calloutUpdated = document.getElementById('marker').parentElement.dataset.cpCallout === 'note';

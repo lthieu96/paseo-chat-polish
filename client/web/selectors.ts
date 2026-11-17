@@ -17,16 +17,10 @@ export const ROW_ICON = `${ROW_HEAD} > button > div:first-child`;
 // Parts Paseo marks only through a child, and containers whose every descendant is restyled, are tagged by tagParts.
 // :has(), and "X *" where X is only known by data-testid (on nearly every ancestor), re-match the whole timeline
 // on every node a scroll mounts, which made fast scrolling stutter.
-// Paseo marks each markdown part for its copy-as-markdown feature; the restyle keys on those marks.
+// Paseo marks code fences for its copy-as-markdown feature (pre around the block, code inside); the restyle keys on those marks.
 export const md = (tag: string) => `[data-paseo-markdown-tag="${tag}"]`;
-export const INLINE_CODE = `span${md("code")}`;
-export const HEADING = (n: number) => `${md(`h${n}`)} > [dir] > span`;
-export const MARK = "[data-paseo-markdown-list-marker]";
-export const MARK_UL = `${md("ul")} > ${md("li")} > ${MARK}`;
-export const MARK_OL = `${md("ol")} > ${md("li")} > ${MARK}`;
 export const CODE_BLOCK = `${DOC} ${md("pre")}`;
-// Paseo 0.12 renders markdown as plain HTML (p, h1, li, table, …) inside .enrm-text, styled inline and without the marks above,
-// except code fences, which keep them. The md() rules for other elements only match 0.11's renderer (plugin v0.2.x).
+// Everything else in a reply is plain HTML (p, h1, li, table, …) inside .enrm-text, styled inline.
 export const MD = `${MSG} .enrm-text`;
 export const DOC_MD = `${DOC} .enrm-text`;
 export const TASK_BOX = `${DOC_MD} li > span > input[type="checkbox"]`;
