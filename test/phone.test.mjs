@@ -77,6 +77,7 @@ function loadEntry({ os, width }) {
     addCommandCenterItem: noop,
     addScreen: noop,
     addSettingsScreen: noop,
+    addComposerItem: noop,
     addSidebarHeaderItem: noop,
   };
   const dispose = entry.default(client);

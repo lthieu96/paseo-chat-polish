@@ -1,6 +1,6 @@
 import type { PluginTimelineData } from "@getpaseo/plugin";
 import type { PluginClientContext, PluginSidebarItemProps } from "@getpaseo/plugin/client";
-import { copyText, useToast, type ToastApi } from "@getpaseo/plugin/client/react-native";
+import { copyText, useToast, type ToastApi } from "@getpaseo/plugin/client/ui";
 import { SidebarRow } from "@getpaseo/plugin/client/ui";
 import { useEffect } from "react";
 import { Dimensions, Platform, View } from "react-native";
@@ -14,7 +14,7 @@ import { currentLanguage, followLocale, t } from "./client/i18n";
 import { isPhone, polishesChat, rememberedPhoneChat, rememberPhoneChat } from "./client/phone";
 import { bindPrefsSaving, currentPrefs, savePrefs, setPrefs, subscribePrefs } from "./client/prefs";
 import { bindThemeRegistry, currentTheme, registerTheme, subscribeTheme } from "./client/theme-registry";
-import { addIconSet, bindPromptKeys, centerControlText, clampUserMessages, iconTwins, jumpToPrompt, openAgentIds, paintSidebar, subagentPaneShown, tagWindow, redrawDiagrams, setCompactHandler, readHostAppearance, restyleNative, selectionCopyMenu, setLanguage, setNativeColors, stackImages, setRailProviders, setRichText, stylePluginViews, nativeIconSet, watchDom } from "./client/web";
+import { addIconSet, bindPromptKeys, centerControlText, clampUserMessages, iconTwins, jumpToPrompt, openAgentIds, paintSidebar, subagentPaneShown, tagWindow, redrawDiagrams, setCompactHandler, readHostAppearance, restyleNative, selectionCopyMenu, setLanguage, followThemeColors, stackImages, setRailProviders, setRichText, stylePluginViews, nativeIconSet, watchDom } from "./client/web";
 import { getTheme, THEME_CATALOG_ID, themeSchema } from "./shared/theme";
 import { getIconSet, getPrefs, type Prefs } from "./shared/timeline";
 import { HtmlItem, ImagesItem, NoticeItem, StackViewerHost, PlanItem, RecapItem, StepsItem, ThoughtItem, TodoItem, ToolItem } from "./client/views";
@@ -23,16 +23,19 @@ import { recapSchema } from "./shared/recap";
 
 const KIND = "chat-polish";
 
-// Toasts come from a hook; the sidebar item lends its toast to Command Center callbacks (none while Paseo 0.16 hides the row).
-let toast: ToastApi | undefined;
-
-function DashboardItem({ currentScreen, openScreen, theme }: PluginSidebarItemProps) {
-  // Mounted on desktop unless the row is hidden (restyle-css.ts has stand-ins), so it is where the restyle learns the app theme's colors.
-  useEffect(() => setNativeColors(theme.colors), [theme]);
+// Toasts come from a hook: every composer hosts an invisible item that lends its toast to Command Center callbacks.
+const toasts: ToastApi[] = [];
+function ToastLender() {
   const hostToast = useToast();
   useEffect(() => {
-    toast = hostToast;
+    toasts.push(hostToast);
+    return () => void toasts.splice(toasts.indexOf(hostToast), 1);
   }, [hostToast]);
+  return null;
+}
+const toast = () => toasts.at(-1);
+
+function DashboardItem({ currentScreen, openScreen }: PluginSidebarItemProps) {
   return (
     <>
       <SidebarRow icon={sidebarIcon} active={currentScreen?.screenId === "dashboard"} onPress={() => openScreen({ screenId: "dashboard" })} />
@@ -64,6 +67,7 @@ export default function contribute(client: PluginClientContext) {
     return active && theme ? { sidebar: theme.sidebar } : undefined;
   }, subscribeTheme);
 
+  const unfollowColors = followThemeColors();
   const unrestyle = restyleNative(() => currentPrefs().nativeStyle === "design", { render: (source) => client.rpc(renderDiagram, { source }), on: () => currentPrefs().diagrams === "pele" });
   const unstylePluginViews = stylePluginViews();
   const uncenter = centerControlText();
@@ -317,12 +321,12 @@ export default function contribute(client: PluginClientContext) {
           try {
             const page = await paseo.agents.ref(agent.id).timeline.refetch({ direction: "tail", limit: 500, projection: "projected" });
             const markdown = turnMarkdown(page.entries.map((e) => e.item), agent.cwd, currentLanguage());
-            if (!markdown) return void toast?.show(t("toast.noTurn"));
+            if (!markdown) return void toast()?.show(t("toast.noTurn"));
             await copyText(markdown);
-            toast?.show(t("toast.copiedTurn"), { variant: "success" });
+            toast()?.show(t("toast.copiedTurn"), { variant: "success" });
           } catch (error) {
             console.warn("[chat-polish] Copy last turn failed", error);
-            toast?.error(t("toast.copyTurnFailed"));
+            toast()?.error(t("toast.copyTurnFailed"));
           }
         },
       }),
@@ -362,6 +366,7 @@ export default function contribute(client: PluginClientContext) {
   // The cog on Chat Polish in Settings → Plugins (Paseo 0.16) opens the same dashboard there. Settings scrolls, so it gets a height.
   client.addSettingsScreen({ id: "dashboard", title: "Chat Polish", icon: sidebarIcon, Component: (props) => <View style={{ height: 760 }}><Dashboard {...props} params={{}} /></View> });
   client.addSidebarHeaderItem({ id: "dashboard", title: "Chat Polish", Component: DashboardItem });
+  client.addComposerItem({ id: "toast", Component: ToastLender });
   return () => {
     clearImageCache();
     unsetCompact();
@@ -385,6 +390,7 @@ export default function contribute(client: PluginClientContext) {
     unicons();
     unsubscribeProviders();
     unrestyle();
+    unfollowColors();
     unstylePluginViews();
     unbindTheme();
   };
