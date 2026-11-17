@@ -199,29 +199,30 @@ test("turn recap: files with +/− relative to cwd, failed commands with exit co
   assert.equal(recapData([tool({ type: "read", filePath: "/w/a.ts" }), tool({ type: "shell", command: "ls" })], "/w"), undefined);
 });
 
-test("latest turn: pages back from the tail through the turn's entries, skipping plugin rows", async () => {
+test("latest turn: one whole-turn tail page, filtered to the turn, skipping plugin rows", async () => {
   const { latestTurn } = await import("../server/turn.ts");
   const shell = (command, turnId) => ({ item: tool({ type: "shell", command }), turnId });
   const recap = { item: { type: "plugin", kind: "chat-polish-recap" } };
   const all = [shell("old", "t-1"), recap, ...Array.from({ length: 450 }, (_, i) => shell(`c${i}`, "t-2")), recap, shell("now", "t-3")];
   const calls = [];
+  // Paseo keeps the last turn whole: the page starts at the newest turn's first entry, plugin rows after it included.
   const timeline = {
     async refetch(options) {
-      calls.push(options.direction);
-      const end = options.cursor ? options.cursor.seq : all.length;
-      const start = Math.max(0, end - options.limit);
-      return { entries: all.slice(start, end), startCursor: { epoch: "e", seq: start }, hasOlder: start > 0 };
+      calls.push(options);
+      const last = all.findLast((e) => e.turnId)?.turnId;
+      return { entries: all.slice(all.findIndex((e) => e.turnId === last)) };
     },
   };
   assert.deepEqual((await latestTurn(timeline, "t-3")).map((i) => i.detail.command), ["now"]);
   // A null turnId falls back to the newest entry's turn.
   assert.deepEqual((await latestTurn(timeline, null)).map((i) => i.detail.command), ["now"]);
+  // A newer turn started before the read: nothing to recap.
+  assert.deepEqual(await latestTurn(timeline, "t-2"), []);
   all.splice(-2);
-  calls.length = 0;
   const items = await latestTurn(timeline, "t-2");
   assert.equal(items.length, 450);
   assert.equal(items[0].detail.command, "c0");
-  assert.deepEqual(calls, ["tail", "before", "before"]);
+  assert.deepEqual(calls.at(-1), { direction: "tail", limit: 1, projection: "canonical", wholeTurns: true });
 });
 
 test("turn as Markdown: quoted prompt, reply, then changes from the recap", async () => {
