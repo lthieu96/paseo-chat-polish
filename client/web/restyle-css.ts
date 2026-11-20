@@ -206,8 +206,27 @@ ${CHIP}:hover { background-color: var(--cp-control) !important; }
 button[aria-label="Stop agent"] { background-color: var(--cp-control) !important; border: 1px solid var(--cp-rule) !important; }
 button[aria-label="Stop agent"] svg { width: 11px !important; height: 11px !important; stroke: var(--cp-fg) !important; fill: var(--cp-fg) !important; }
 /* Paseo 0.14 gives these pills a 32px min-height; its link back to a subagent's parent joins them. */
-:is([data-testid="subagents-track-header"], [data-testid="composer-diff-stat-pill"], [data-testid="composer-parent-agent-pill"]) { height: 24px !important; min-height: 24px !important; padding: 0 10px !important; border-radius: 999px !important; border-color: var(--cp-rule) !important; }
+:is([data-testid="subagents-track-header"], [data-testid="background-work"], [data-testid="composer-diff-stat-pill"], [data-testid="composer-parent-agent-pill"]) { height: 24px !important; min-height: 24px !important; padding: 0 10px !important; border-radius: 999px !important; border-color: var(--cp-rule) !important; }
 [data-testid="composer-parent-agent-pill"] { padding-left: 6px !important; }
+[data-testid="background-work"] [dir] { font-size: 12px !important; }
+/* Background tasks panel (tagged by tagBackgroundWork): a status dot, then the title with its elapsed time on the right over the command,
+   each cut to one line (the tooltip has the rest), hairlines between tasks. Paseo stacked all three and wrapped long commands. */
+[data-cp-part="bg-item"] { position: relative; }
+[data-cp-part="bg-item"] + [data-cp-part="bg-item"]::before { content: ""; position: absolute; top: 0; left: 16px; right: 16px; height: 1px; background-color: var(--cp-rule); }
+[data-cp-part="bg-row"] { min-height: 52px !important; padding: 8px 8px 8px 10px !important; gap: 10px !important; align-items: center !important; }
+[data-cp-part="bg-row"]::before { content: ""; flex: none; align-self: flex-start; width: 6px; height: 6px; margin: 6px 2px 0; border-radius: 50%; background-color: var(--cp-muted); opacity: 0.5; }
+[data-cp-part="bg-row"][data-cp-live]::before { background-color: var(--cp-ok); opacity: 1; animation: cp-bg-live 2s ease-in-out infinite; }
+@keyframes cp-bg-live { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--cp-ok) 45%, transparent); } 50% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--cp-ok) 0%, transparent); } }
+@media (prefers-reduced-motion: reduce) { [data-cp-part="bg-row"][data-cp-live]::before { animation: none; } }
+[data-cp-part="bg-text"] { display: grid !important; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; row-gap: 2px; align-items: baseline; }
+[data-cp-part="bg-text"] > [dir] { line-height: 18px !important; white-space: nowrap !important; overflow: hidden; text-overflow: ellipsis; }
+[data-cp-part="bg-title"] { grid-column: 1; grid-row: 1; font-size: 13px !important; font-weight: 500 !important; color: var(--cp-fg) !important; }
+[data-cp-part="bg-facts"] { grid-column: 2; grid-row: 1; font-size: 12px !important; color: var(--cp-muted) !important; font-variant-numeric: tabular-nums; }
+[data-cp-part="bg-cmd"] { grid-column: 1 / -1; font-family: var(--cp-mono) !important; font-size: var(--cp-code, 12px) !important; color: var(--cp-muted) !important; }
+[data-cp-part="bg-error"] { grid-column: 1 / -1; font-size: 12px !important; color: var(--colors-status-danger) !important; }
+[data-cp-part="bg-row"] > button { flex: none; height: 24px !important; min-height: 24px !important; padding: 0 10px !important; border: 1px solid var(--cp-rule) !important; }
+[data-cp-part="bg-row"] > button [dir] { font-size: 12px !important; font-weight: 500 !important; color: var(--cp-muted) !important; }
+[data-cp-part="bg-row"] > button:not(:disabled):is(:hover, :focus-visible) [dir] { color: var(--colors-status-danger) !important; }
 [data-testid="composer-parent-agent-pill"] [dir] { font-size: 12px !important; }
 /* A provider subagent's pane shows a link back to its parent where the composer would be: the composer's shape and the plugin's button. */
 [data-testid="parent-agent-callout"] { border-radius: 12px !important; border-color: var(--cp-rule) !important; padding: 8px 8px 8px 14px !important; }

@@ -2,7 +2,7 @@
 import { tagContextCard } from "./context-card";
 import { within, type ComputedStyle, type DomElement, type ResizeObserverClass, type WebDocument } from "./dom";
 import { rowIconMask } from "./icons";
-import { ACTION, CHIP, CTX, PERMISSION, PLAN, PRIMARY, ROW, ROW_HEAD, ROW_ICON, SECONDARY, SETTINGS_PANE, SLASH, SLASH_GLIDE_MS, SURFACE, USAGE, WORKING_BOX } from "./selectors";
+import { ACTION, BG_PANEL, CHIP, CTX, PERMISSION, PLAN, PRIMARY, ROW, ROW_HEAD, ROW_ICON, SECONDARY, SETTINGS_PANE, SLASH, SLASH_GLIDE_MS, SURFACE, USAGE, WORKING_BOX } from "./selectors";
 
 declare const document: WebDocument;
 declare function getComputedStyle(el: DomElement): ComputedStyle;
@@ -55,6 +55,8 @@ const PARTS: Array<[string, (el: DomElement) => DomElement | null | undefined, s
   ['[data-testid="chat-outline-preview"]', (el) => el, "outline-preview"],
   ['[data-testid="context-window-details"]', (el) => el, "context"],
   ['[data-testid="workspace-hover-card"]', (el) => el, "ws-card"],
+  // Its rows are plain views (Stop is a button), so the menuitem rule below never tags it as a surface.
+  [BG_PANEL, (el) => el, "menu"],
   // The timeline item around each reply block, which holds Paseo's gap between blocks.
   ['[data-testid="assistant-message"]', (el) => el.parentElement, "msg-item"],
   // The chat's live rows (turn footer, permission cards, bottom inset): the content's next box after the history slot and the rows.
@@ -330,4 +332,31 @@ export function tagParts(roots: DomElement[]) {
   }
   // Also when only its text re-renders, so the card is an ancestor of the root.
   for (const card of new Set([...within(roots, CTX), ...roots.map((root) => root.closest(CTX))])) if (card) tagContextCard(card);
+  for (const panel of new Set([...within(roots, BG_PANEL), ...roots.map((root) => root.closest(BG_PANEL))])) if (panel) tagBackgroundWork(panel);
+}
+
+/**
+ * The background tasks panel: each row's text is [title, command?, facts ("Shell · 1m 4s"), stop error?]. Facts is the last text
+ * with a " · " (a command before it may hold one too); while the task runs it holds the live timer's span.
+ */
+function tagBackgroundWork(panel: DomElement) {
+  for (const title of Array.from(panel.querySelectorAll("div > [dir]:first-child"))) {
+    const text = title.parentElement;
+    if (!text || text.closest('button, [role="button"]')) continue;
+    const kids = Array.from(text.children);
+    // "Waiting…" and error notices are single texts, not tasks.
+    if (kids.length < 2) continue;
+    const facts = kids.filter((kid) => kid.textContent?.includes(" · ")).pop();
+    text.setAttribute("data-cp-part", "bg-text");
+    text.parentElement?.setAttribute("data-cp-part", "bg-row");
+    text.parentElement?.parentElement?.setAttribute("data-cp-part", "bg-item");
+    toggleAttr(text.parentElement, "data-cp-live", !!facts?.querySelector("span"));
+    const factsAt = facts ? kids.indexOf(facts) : -1;
+    kids.forEach((kid, at) => {
+      const part = at === 0 ? "bg-title" : kid === facts ? "bg-facts" : at < factsAt ? "bg-cmd" : "bg-error";
+      kid.setAttribute("data-cp-part", part);
+      // Both are cut to one line; the tooltip shows them whole.
+      if (part === "bg-cmd" || part === "bg-title") kid.setAttribute("title", kid.textContent ?? "");
+    });
+  }
 }
