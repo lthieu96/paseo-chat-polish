@@ -9,6 +9,7 @@ import { clearImageCache } from "./client/images";
 import { sidebarIcon } from "./client/mark";
 import { agentEventData, hideableKind, imageData, turnMarkdown, imagesSchema, noticeData, noticeSchema, planSchema, stepsSchema, thoughtSchema, todoData, todoSchema, toolData, toolSchema } from "./client/model";
 import { followAgent, isTodo, isTurnTrigger, onShownAgent, onStaleSteps, onUnplacedStep, placeStep, resetMade, setReplyFolding, setStepSkip, stepKey, type Phase } from "./client/steps";
+import { hasUiFence } from "./shared/ui-fence";
 import { renderDiagram } from "./shared/diagram";
 import { currentLanguage, followLocale, t } from "./client/i18n";
 import { isPhone, polishesChat, rememberedPhoneChat, rememberPhoneChat } from "./client/phone";
@@ -173,6 +174,9 @@ export default function contribute(client: PluginClientContext) {
         id: `${KIND}-images`,
         query: { itemType: "assistant_message" },
         transform: ({ item, phase }) => {
+          // A ```ui/```app reply goes to the live-UI renderer (genui) further down the
+          // first-wins chain; claiming it here would show the widgets as code.
+          if (hasUiFence(item.text, phase)) return undefined;
           const merged = stepRow(item, phase);
           if (merged) return merged;
           const data = currentPrefs().images === "native" ? undefined : imageData(item.text, currentLanguage());
