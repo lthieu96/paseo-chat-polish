@@ -3,6 +3,7 @@ import type { AgentTimelineItem } from "@getpaseo/protocol/agent-types";
 import { isHtmlTool } from "../shared/html.ts";
 import { translate, type Language } from "../shared/i18n.ts";
 import { imageData } from "./model.ts";
+import { hasUiFence } from "../shared/ui-fence.ts";
 
 // Merged steps: each run of consecutive thoughts and tool calls between replies folds into one row.
 // A transformer sees one item at a time, so the runs come from each open agent's own timeline (fetched
@@ -141,6 +142,13 @@ export function stepRuns(list: readonly Entry[], skip: (item: Item) => boolean, 
     const { item } = list[i]!;
     if (i + 1 < list.length && !continuesTurn(list[i]!, list[i + 1]!)) later = false;
     if (item.type === "assistant_message") {
+      // A ```ui/```app reply belongs to a live-UI renderer (genui; see hasUiFence): it
+      // stays out of the run, ends it like any reply, and keeps the turn open so the
+      // steps after it still merge, below it.
+      if (hasUiFence(item.text)) {
+        later = true;
+        continue;
+      }
       // Tool screenshots reach the chat as image-only messages: pictures of a step, not replies, so they fold in and fold nothing.
       if (later || imageData(item.text)) folded.add(i);
       later ||= !imageData(item.text);
@@ -387,6 +395,8 @@ function runGrowing() {
 export function placeStep(item: Item, phase: Phase): { key: string; as: "head" | "none" } | undefined {
   const key = stepKey(item);
   const reply = item.type === "assistant_message";
+  // A live-UI reply is never a step: claiming it here would hide the widgets or show them as code.
+  if (reply && hasUiFence(item.text, phase)) return undefined;
   if (!key || (reply && !foldReplies)) return undefined;
   // A reply no run holds stays Paseo's; noted (once complete, its key final) so the re-transform folds it when a later reply arrives.
   if (reply && !places.has(key)) return void (phase === "complete" && made.set(key, "native"));
