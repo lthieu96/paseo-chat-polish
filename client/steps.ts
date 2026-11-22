@@ -56,9 +56,9 @@ export function taskChanges(before: readonly Task[], after: readonly Task[]): Ta
   });
 }
 
-/** A message from another agent or a scheduled heartbeat, sent as a tool call. Paseo starts a turn at it (from 0.14 it shows an agent's
- * message as a prompt), so it is never a step and the plugin leaves it to Paseo. */
-export const isTurnTrigger = (item: Item) => item.type === "tool_call" && (item.agentMessage !== undefined || toolName(item) === "agent_message" || toolName(item) === "heartbeat");
+/** A message from another agent, a scheduled heartbeat or a watched PR's update (0.17), sent as a tool call. Paseo starts a turn at it
+ * (from 0.14 it shows an agent's message as a prompt), so it is never a step and the plugin leaves it to Paseo. */
+export const isTurnTrigger = (item: Item) => item.type === "tool_call" && (item.agentMessage !== undefined || ["agent_message", "heartbeat", "change_request_update"].includes(toolName(item)));
 
 /** The id a step has both in the app and in the daemon's timeline: tool calls by callId, thoughts (which carry none) by their opening words,
  * todo updates (which carry none either) by their list. Plans, todo-list calls, agent messages and heartbeats aren't steps: they stand on their own. */

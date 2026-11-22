@@ -178,6 +178,8 @@ ${TRACK_PANEL} [role="menuitem"]:is(:hover, :focus-visible) > div { background-c
 
 [data-cp-part="composer"] { border-radius: 12px !important; padding: 14px 10px 10px 16px !important; gap: 20px !important; }
 @supports (corner-shape: squircle) { [data-cp-part="composer"] { border-radius: 28px !important; corner-shape: squircle; } }
+/* Fullscreen reuses the same box (from 0.17 with its toolbar hidden, not unmounted); Paseo gives it no padding there, so drop the card's. */
+[data-testid="composer-fullscreen"] [data-cp-part="composer"] { padding: 0 !important; gap: 0 !important; border-radius: 0 !important; }
 /* Paseo keeps the box two lines tall even when empty; let it size to its text instead (one line, up to 400px). */
 /* Paseo pulls the toolbar 6px past both sides; keep it on the left (the + lines up with the text) but not the right, so Send sits as far from the edge as from the bottom. */
 [data-cp-part="composer"] > div:last-child { margin-right: 0 !important; }
@@ -314,7 +316,7 @@ ${USAGE} > div:first-child > div:nth-child(3) { background-color: transparent !i
 ${USAGE} > div:nth-child(2) { gap: 10px !important; }
 ${LIMIT} { margin: 0 !important; padding: 0 !important; }
 [data-cp-part="limit-body"] { gap: 6px !important; }
-[data-cp-part="limit-body"] > div:first-child > div:nth-child(2), [data-cp-part="limit-body"] > div:last-child > div { font-variant-numeric: tabular-nums; }
+[data-cp-part="limit-body"] > div:first-child > div:nth-child(2), [data-cp-part="limit-body"] > div:last-child { font-variant-numeric: tabular-nums; }
 [data-cp-part="limit-bar"] { height: 4px !important; border-radius: 999px !important; background-color: var(--cp-control) !important; }
 [data-cp-part="limit-bar"] > div { border-radius: 999px !important; }
 ${USAGE} > div:nth-child(3) { padding-top: 12px !important; border-top: 1px solid var(--cp-rule) !important; }
