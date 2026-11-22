@@ -142,9 +142,9 @@ export function stepRuns(list: readonly Entry[], skip: (item: Item) => boolean, 
     const { item } = list[i]!;
     if (i + 1 < list.length && !continuesTurn(list[i]!, list[i + 1]!)) later = false;
     if (item.type === "assistant_message") {
-      // A ```ui/```app reply belongs to a live-UI renderer (genui) further down the
-      // first-wins chain: it stays out of the run, ends it like any reply, and keeps
-      // the turn open so the steps after it still merge.
+      // A ```ui/```app reply belongs to a live-UI renderer (genui; see hasUiFence): it
+      // stays out of the run, ends it like any reply, and keeps the turn open so the
+      // steps after it still merge, below it.
       if (hasUiFence(item.text)) {
         later = true;
         continue;

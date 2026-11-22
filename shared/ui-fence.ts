@@ -4,9 +4,10 @@ const FENCE_OPEN = /^ {0,3}(`{3,}|~{3,})\s*(\S*)/;
 
 /**
  * True when the reply opens a ```ui or ```app fence. Plugins like genui render
- * those live, and Paseo offers an assistant message to chat transformers
- * first-wins in plugin-name order, where chat-polish sorts before them: the
- * transformer must leave such a reply unclaimed or the widgets show as code.
+ * those live. Paseo runs chat transformers first-wins, sorted by install id: with
+ * genui's default id it claims the reply first, but merged steps must still treat
+ * it as a reply (or the steps after it merge above it), and under any id that
+ * sorts after chat-polish, claiming it here would hide the widget.
  * Wait for the opening line during streaming so a partial language stays put.
  */
 export function hasUiFence(text: string, phase = "complete"): boolean {
