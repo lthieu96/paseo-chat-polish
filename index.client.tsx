@@ -346,7 +346,7 @@ export default function contribute(client: PluginClientContext) {
       ["icons", anyIcon ? t("command.toggle.iconsOn") : t("command.toggle.iconsOff"), "Shapes", { rowIcons: anyIcon ? { steps: "hide", tool: "hide", thought: "hide" } : { steps: "show", tool: "show", thought: "show" } }],
       ["steps", p.steps !== "full" ? t("command.toggle.stepsOn") : t("command.toggle.stepsOff"), "Blend", { steps: p.steps !== "full" ? "full" : "faded" }],
       ["reads", hidesReads ? t("command.toggle.readsOn") : t("command.toggle.readsOff"), "EyeOff", { hidden: hidesReads ? p.hidden.filter((h) => h !== "read" && h !== "search") : [...new Set([...p.hidden, "read", "search"] as const)] }],
-      ["userCode", p.userMarkdown === "on" ? t("command.toggle.userCodeOn") : t("command.toggle.userCodeOff"), "Code", { userMarkdown: p.userMarkdown === "on" ? "off" : "on" }],
+      ["user-code", p.userMarkdown === "on" ? t("command.toggle.userCodeOn") : t("command.toggle.userCodeOff"), "Code", { userMarkdown: p.userMarkdown === "on" ? "off" : "on" }],
       ["copy", p.selectionCopy === "on" ? t("command.toggle.copyOn") : t("command.toggle.copyOff"), "ClipboardCopy", { selectionCopy: p.selectionCopy === "on" ? "off" : "on" }],
       ["recap", p.recap === "on" ? t("command.toggle.recapOn") : t("command.toggle.recapOff"), "FileDiff", { recap: p.recap === "on" ? "off" : "on" }],
       ["html", p.html === "on" ? t("command.toggle.htmlOn") : t("command.toggle.htmlOff"), "AppWindow", { html: p.html === "on" ? "off" : "on" }],

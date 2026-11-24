@@ -31,3 +31,11 @@ test("inlineCode: matching backtick runs, CommonMark padding, unmatched runs sta
   assert.deepEqual(inlineCode("one `` and `two"), [{ text: "one `` and `two" }]);
   assert.deepEqual(inlineCode("a ```inline triple``` b"), [{ text: "a " }, { text: "inline triple", code: true }, { text: " b" }]);
 });
+
+test("Command Center toggle ids are lowercase kebab-case (Paseo rejects others and fails the whole plugin)", async () => {
+  const { readFileSync } = await import("node:fs");
+  const source = readFileSync(new URL("../index.client.tsx", import.meta.url), "utf8");
+  const ids = [...source.matchAll(/^\s*\["([^"]+)", (?:p\.|any|hides)/gm)].map((m) => m[1]);
+  assert.ok(ids.includes("user-code") && ids.length >= 10, `found ${ids.join(", ")}`);
+  for (const id of ids) assert.match(id, /^[a-z0-9]+(-[a-z0-9]+)*$/, id);
+});
