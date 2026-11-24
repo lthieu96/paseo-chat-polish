@@ -230,6 +230,9 @@ export function PrefsEditor({ theme, page, prefs, onChange }: { theme: PluginThe
                   ]}
                 />
               </Row>
+              <Row theme={theme} label={t("prefs.row.userCode")} hint={t("prefs.hint.userCode")}>
+                <Switch theme={theme} label={t("prefs.row.userCode")} value={prefs.userMarkdown === "on"} onChange={(on) => set("userMarkdown")(on ? "on" : "off")} />
+              </Row>
             </Group>
           </>
         ) : null}

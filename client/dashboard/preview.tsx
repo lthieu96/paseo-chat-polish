@@ -12,7 +12,7 @@ import { PrefsOverride } from "../prefs";
 import { alpha, AppearanceOverride, CodeLine, HtmlItem, ImagesItem, MergedSteps, PMONO, SyntaxOverride, ThoughtItem, TodoItem, ToolItem, useStyles } from "../views";
 import { PASEO_FONT_STACKS } from "../web";
 import { Badge, Segmented, SQUIRCLE_CARD } from "./controls";
-import { CODE_CALLS, CODE_REPLY, LONG_MESSAGE, PREVIEW_CALLS, PREVIEW_IMAGE, PREVIEW_TODO, SAMPLE_PAGE } from "./samples";
+import { CODE_CALLS, CODE_REPLY, LONG_MESSAGE, PREVIEW_CALLS, PREVIEW_TRACE, PREVIEW_IMAGE, PREVIEW_TODO, SAMPLE_PAGE } from "./samples";
 import type { Typography } from "./theme-editor";
 
 /** Plugin theme tokens for a draft, so the preview renders exactly what Apply would ship. */
@@ -68,6 +68,32 @@ function PreviewBubble({ theme, clamp }: { theme: PluginTheme; clamp: boolean })
         </Text>
         {clamp ? <Text style={[s.small, { fontSize: 12 }]}>{open ? t("preview.showLess") : t("preview.showFullMessage")}</Text> : null}
       </Pressable>
+    </View>
+  );
+}
+
+/** A follow-up prompt with code: drawn as code with "Format code" on (web/user-markdown.ts does it in the chat), raw backticks off. */
+function PreviewCodeBubble({ theme, on }: { theme: PluginTheme; on: boolean }) {
+  const s = useStyles(theme);
+  const c = theme.colors;
+  const well = alpha(c.foreground, 0.08);
+  const inline = (code: string) => (on ? <Text style={[s.mono, { fontSize: 12.5, backgroundColor: well, borderRadius: 5, paddingHorizontal: 5 }]}>{code}</Text> : `\`${code}\``);
+  return (
+    <View style={{ alignItems: "flex-end", paddingTop: 4, paddingBottom: 8 }}>
+      <View {...SQUIRCLE_CARD} style={{ maxWidth: "80%", paddingHorizontal: 14, paddingVertical: 10, gap: 8, borderRadius: 16, backgroundColor: c.border }}>
+        <Text style={[s.prose, { color: c.foreground }]}>
+          {"Billing still fails after "}
+          {inline("requireAuth")}
+          {":"}
+        </Text>
+        {on ? (
+          <View style={{ backgroundColor: well, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8 }}>
+            <Text style={[s.mono, { fontSize: 12.5, lineHeight: 19, color: c.foreground }]}>{PREVIEW_TRACE}</Text>
+          </View>
+        ) : (
+          <Text style={[s.prose, { color: c.foreground }]}>{"```\n" + PREVIEW_TRACE + "\n```"}</Text>
+        )}
+      </View>
     </View>
   );
 }
@@ -261,6 +287,7 @@ export function Preview({ theme, draft, prefs, layout, theming }: { theme: Plugi
                     </InlineCode>
                     <Text style={[ps.prose, { color: pc.foreground }]}>and all 24 tests pass.</Text>
                   </View>
+                  <PreviewCodeBubble theme={pt} on={prefs.userMarkdown === "on"} />
                   <PreviewWorking theme={pt} />
                   {prefs.images === "native" ? (
                     <Image source={{ uri: PREVIEW_IMAGE }} style={{ width: "100%", aspectRatio: 16 / 10, borderRadius: 8 }} resizeMode="cover" />

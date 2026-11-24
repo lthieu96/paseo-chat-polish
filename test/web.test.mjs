@@ -17,6 +17,7 @@ test("DOM restyling, accordion transitions, and bottom following stay stable", {
     const names = ["css-guard", "i18n", "provider-icons", "stack-viewer", "web", ...readdirSync(new URL("../client/web/", import.meta.url)).map((file) => `web/${file.replace(/\.ts$/, "")}`)];
     const sources = Object.fromEntries(names.map((name) => [name, ts.transpileModule(readFileSync(new URL(`../client/${name}.ts`, import.meta.url), "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText]));
     // client/i18n has no locale source here, so the web modules word their strings in English. shared/i18n has no imports.
+    sources["shared/user-markdown"] = ts.transpileModule(readFileSync(new URL("../shared/user-markdown.ts", import.meta.url), "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
     sources["shared/i18n"] = ts.transpileModule(readFileSync(new URL("../shared/i18n.ts", import.meta.url), "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
     // Paseo's bundle exports its mermaid document as a minified string literal, with JS-only escapes like \xHH.
     const bundle = String.raw`Object.defineProperty(a,"mermaidRuntimeHtml",{get:function(){return o}});const o='<!doctype html>\n<p class="x" title=\'y\'>\x3c!-- __PASEO_MERMAID_RUNTIME_RECEIVE__ \\x41 \u0041 \u{1F600} \v \/ --\x3e</p>';
@@ -77,6 +78,23 @@ __d(function(g,r,i,a,m,e,d){"use strict";Object.defineProperty(e,'__esModule',{v
           const row14 = document.getElementById('a14row');
           checks.previewAttachmentsTagged = bubbleOf('a14').hasAttribute('data-cp-attach') && row14.dataset.cpPart === 'att-files' && row14.parentElement.hasAttribute('data-cp-attach-body') && !row14.nextElementSibling.hasAttribute('data-cp-part');
           shapes.remove(); await wait();
+          // Code in the user's own messages: drawn in place of Paseo's string, redrawn after React resets it, put back when off.
+          let mdOn = true; const unmd = web.renderUserMarkdown(() => mdOn);
+          const mdBox = document.createElement('section');
+          const fence = 'Trace:\\n\\n\\x60\\x60\\x60ts\\nconst a = 1;\\n\\x60\\x60\\x60\\n\\nsee \\x60foo\\x60';
+          mdBox.innerHTML = '<div data-testid="user-message"><div><div><div><div><div data-message-text="true" id="mdA"></div></div></div></div></div></div><div data-testid="user-message"><div><div><div><div><div data-message-text="true" id="mdB">plain 3*4 text</div></div></div></div></div></div>';
+          mdBox.querySelector('#mdA').textContent = fence;
+          document.body.appendChild(mdBox); await wait();
+          const mdA = document.getElementById('mdA');
+          checks.userCodeDrawn = mdA.querySelector(':scope > pre')?.textContent === 'const a = 1;' && mdA.querySelector('pre').getAttribute('data-cp-md-lang') === 'ts' && mdA.querySelector('code[data-cp-md-inline]')?.textContent === 'foo'
+            && getComputedStyle(mdA.querySelector('pre')).whiteSpace === 'pre' && document.getElementById('mdB').childElementCount === 0;
+          mdA.textContent = fence; await wait(400);
+          checks.userCodeRedrawn = !!mdA.querySelector(':scope > pre');
+          mdOn = false; mdBox.appendChild(document.createElement('div')); await wait(400);
+          checks.userCodeRestored = mdA.textContent === fence && mdA.childElementCount === 0 && !mdA.hasAttribute('data-cp-md');
+          unmd(); mdBox.remove(); await wait();
+          // These checks mutate on purpose; they must not loop, and they don't count toward the settle budget checked later.
+          checks.userCodeRestored &&= !capped; batches = 0;
           // Beside an attachment Paseo's 240px cap counted the image too and cut the text bubble flat; the plugin clamps the text alone.
           const tall = document.createElement('section');
           tall.innerHTML = '<div data-testid="user-message" id="t14"><div><div><div id="t14clip" style="max-height:240px;overflow:hidden"><div><div style="height:160px"><div role="button"></div></div><div data-message-text="true" style="line-height:20px;font-size:14px;white-space:pre">' + Array(15).fill('long prompt').join('\\n') + '</div></div><div id="t14fade"></div></div><button>Show more</button></div></div></div>'
@@ -321,7 +339,7 @@ __d(function(g,r,i,a,m,e,d){"use strict";Object.defineProperty(e,'__esModule',{v
     assert.equal(report.error, undefined, report.error);
     assert.deepEqual(report.errors, []);
     for (const [check, passed] of Object.entries(report.checks)) assert.equal(passed, true, check);
-    assert.equal(Object.keys(report.checks).length, 39);
+    assert.equal(Object.keys(report.checks).length, 42);
   } finally {
     server?.closeAllConnections(); server?.close();
     rmSync(temp, { recursive: true, force: true });
