@@ -77,7 +77,7 @@ function PreviewCodeBubble({ theme, on }: { theme: PluginTheme; on: boolean }) {
   const s = useStyles(theme);
   const c = theme.colors;
   const well = alpha(c.foreground, 0.08);
-  const inline = (code: string) => (on ? <Text style={[s.mono, { fontSize: 12.5, backgroundColor: well, borderRadius: 5, paddingHorizontal: 5 }]}>{code}</Text> : `\`${code}\``);
+  const inline = (code: string) => (on ? <Text {...PMONO} style={[s.mono, { fontSize: 12.5, color: c.foreground, backgroundColor: well, borderRadius: 5, paddingHorizontal: 5 }]}>{code}</Text> : `\`${code}\``);
   return (
     <View style={{ alignItems: "flex-end", paddingTop: 4, paddingBottom: 8 }}>
       <View {...SQUIRCLE_CARD} style={{ maxWidth: "80%", paddingHorizontal: 14, paddingVertical: 10, gap: 8, borderRadius: 16, backgroundColor: c.border }}>
@@ -88,7 +88,7 @@ function PreviewCodeBubble({ theme, on }: { theme: PluginTheme; on: boolean }) {
         </Text>
         {on ? (
           <View style={{ backgroundColor: well, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8 }}>
-            <Text style={[s.mono, { fontSize: 12.5, lineHeight: 19, color: c.foreground }]}>{PREVIEW_TRACE}</Text>
+            <Text {...PMONO} style={[s.mono, { fontSize: 12.5, lineHeight: 19, color: c.foreground }]}>{PREVIEW_TRACE}</Text>
           </View>
         ) : (
           <Text style={[s.prose, { color: c.foreground }]}>{"```\n" + PREVIEW_TRACE + "\n```"}</Text>
