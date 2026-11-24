@@ -5,11 +5,13 @@ declare const document: WebDocument;
 
 const TEXT = '[data-testid="user-message"] [data-message-text]';
 const DONE = "data-cp-md";
-const MONO = "var(--cp-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)";
+// Paseo's own code font first, so code in a prompt matches code in the reply below it.
+const MONO = "var(--fontFamily-mono, var(--cp-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace))";
 const WELL = "color-mix(in srgb, var(--colors-foreground) 8%, transparent)";
+// Long code lines wrap rather than scroll: a line that can't break would set the bubble's minimum width and push it off a phone.
 const CSS = `
 [${DONE}] > [data-cp-md-text] { display: block; white-space: pre-wrap; }
-[${DONE}] > pre { display: block; margin: 8px 0; padding: 8px 10px; border-radius: 8px; background: ${WELL}; font-family: ${MONO}; font-size: var(--cp-code, 12.5px); line-height: 1.5; white-space: pre; overflow-x: auto; tab-size: 2; cursor: text; }
+[${DONE}] > pre { display: block; margin: 8px 0; padding: 8px 10px; border-radius: 8px; background: ${WELL}; font-family: ${MONO}; font-size: var(--cp-code, 12.5px); line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; tab-size: 2; cursor: text; }
 [${DONE}] > :first-child { margin-top: 0; }
 [${DONE}] > :last-child { margin-bottom: 0; }
 [${DONE}] > pre[data-cp-md-lang]::before { content: attr(data-cp-md-lang); display: block; margin-bottom: 4px; font-size: 11px; line-height: 16px; color: var(--colors-foreground-muted); }

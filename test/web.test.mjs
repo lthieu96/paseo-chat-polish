@@ -87,14 +87,20 @@ __d(function(g,r,i,a,m,e,d){"use strict";Object.defineProperty(e,'__esModule',{v
           document.body.appendChild(mdBox); await wait();
           const mdA = document.getElementById('mdA');
           checks.userCodeDrawn = mdA.querySelector(':scope > pre')?.textContent === 'const a = 1;' && mdA.querySelector('pre').getAttribute('data-cp-md-lang') === 'ts' && mdA.querySelector('code[data-cp-md-inline]')?.textContent === 'foo'
-            && getComputedStyle(mdA.querySelector('pre')).whiteSpace === 'pre' && document.getElementById('mdB').childElementCount === 0;
+            && getComputedStyle(mdA.querySelector('pre')).whiteSpace === 'pre-wrap' && document.getElementById('mdB').childElementCount === 0;
+          // Beside an attachment: the text is drawn as code, and the attachment layout and the text clamp still apply.
+          const mdAtt = document.createElement('div');
+          mdAtt.innerHTML = '<div data-testid="user-message" id="mdT"><div><div><div style="max-height:240px;overflow:hidden"><div><div id="mdTrow" style="height:160px"><div role="button"></div></div><div data-message-text="true" style="line-height:20px;font-size:14px;white-space:pre-wrap"></div></div><div></div></div><button>Show more</button></div></div></div>';
+          mdAtt.querySelector('[data-message-text]').textContent = 'See:\\n\\x60\\x60\\x60\\n' + Array(14).fill('    at frame (a.ts:1:2)').join('\\n') + '\\n\\x60\\x60\\x60';
+          mdBox.appendChild(mdAtt); await wait(400);
+          checks.userCodeBesideAttachment = !!document.querySelector('#mdT [data-message-text] > pre') && bubbleOf('mdT').hasAttribute('data-cp-attach') && bubbleOf('mdT').getAttribute('data-chat-polish-clamp') === 'closed' && !!document.getElementById('mdTrow').dataset.cpPart;
           mdA.textContent = fence; await wait(400);
           checks.userCodeRedrawn = !!mdA.querySelector(':scope > pre');
           mdOn = false; mdBox.appendChild(document.createElement('div')); await wait(400);
           checks.userCodeRestored = mdA.textContent === fence && mdA.childElementCount === 0 && !mdA.hasAttribute('data-cp-md');
           unmd(); mdBox.remove(); await wait();
           // These checks mutate on purpose; they must not loop, and they don't count toward the settle budget checked later.
-          checks.userCodeRestored &&= !capped; batches = 0;
+          checks.userCodeRestored &&= !capped; batches = 0; released = 0;
           // Beside an attachment Paseo's 240px cap counted the image too and cut the text bubble flat; the plugin clamps the text alone.
           const tall = document.createElement('section');
           tall.innerHTML = '<div data-testid="user-message" id="t14"><div><div><div id="t14clip" style="max-height:240px;overflow:hidden"><div><div style="height:160px"><div role="button"></div></div><div data-message-text="true" style="line-height:20px;font-size:14px;white-space:pre">' + Array(15).fill('long prompt').join('\\n') + '</div></div><div id="t14fade"></div></div><button>Show more</button></div></div></div>'
@@ -339,7 +345,7 @@ __d(function(g,r,i,a,m,e,d){"use strict";Object.defineProperty(e,'__esModule',{v
     assert.equal(report.error, undefined, report.error);
     assert.deepEqual(report.errors, []);
     for (const [check, passed] of Object.entries(report.checks)) assert.equal(passed, true, check);
-    assert.equal(Object.keys(report.checks).length, 42);
+    assert.equal(Object.keys(report.checks).length, 43);
   } finally {
     server?.closeAllConnections(); server?.close();
     rmSync(temp, { recursive: true, force: true });
