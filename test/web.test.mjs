@@ -87,7 +87,7 @@ __d(function(g,r,i,a,m,e,d){"use strict";Object.defineProperty(e,'__esModule',{v
           document.body.appendChild(mdBox); await wait();
           const mdA = document.getElementById('mdA');
           checks.userCodeDrawn = mdA.querySelector(':scope > pre')?.textContent === 'const a = 1;' && mdA.querySelector('pre').getAttribute('data-cp-md-lang') === 'ts' && mdA.querySelector('code[data-cp-md-inline]')?.textContent === 'foo'
-            && getComputedStyle(mdA.querySelector('pre')).whiteSpace === 'pre-wrap' && document.getElementById('mdB').childElementCount === 0;
+            && getComputedStyle(mdA.querySelector('pre')).whiteSpace === 'pre-wrap' && mdA.querySelector('pre').hasAttribute('data-pmono') && mdA.querySelector('code').hasAttribute('data-pmono') && document.getElementById('mdB').childElementCount === 0;
           // Beside an attachment: the text is drawn as code, and the attachment layout and the text clamp still apply.
           const mdAtt = document.createElement('div');
           mdAtt.innerHTML = '<div data-testid="user-message" id="mdT"><div><div><div style="max-height:240px;overflow:hidden"><div><div id="mdTrow" style="height:160px"><div role="button"></div></div><div data-message-text="true" style="line-height:20px;font-size:14px;white-space:pre-wrap"></div></div><div></div></div><button>Show more</button></div></div></div>';

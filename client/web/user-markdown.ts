@@ -15,7 +15,9 @@ const CSS = `
 [${DONE}] > :first-child { margin-top: 0; }
 [${DONE}] > :last-child { margin-bottom: 0; }
 [${DONE}] > pre[data-cp-md-lang]::before { content: attr(data-cp-md-lang); display: block; margin-bottom: 4px; font-size: 11px; line-height: 16px; color: var(--colors-foreground-muted); }
-[${DONE}] code[data-cp-md-inline] { font-family: ${MONO}; font-size: 0.88em; padding: 1px 5px; border-radius: 5px; background: ${WELL}; overflow-wrap: anywhere; }
+[${DONE}] code[data-cp-md-inline] { font-family: ${MONO}; font-size: 0.88em; padding: 1px 4px; border-radius: 5px; background: ${WELL}; overflow-wrap: anywhere; }
+/* On a light bubble 8% reads close to a button. */
+:root:is(.light, .pluginLight) [${DONE}] code[data-cp-md-inline] { background: color-mix(in srgb, var(--colors-foreground) 6%, transparent); }
 `;
 
 /**
@@ -57,6 +59,8 @@ export function renderUserMarkdown(enabled: () => boolean) {
         if (block.kind === "code") {
           const pre = document.createElement("pre");
           pre.setAttribute("data-cp-md-part", "");
+          // The restyle sets the UI font on everything but [data-pmono].
+          pre.setAttribute("data-pmono", "");
           if (block.lang) pre.setAttribute("data-cp-md-lang", block.lang);
           pre.textContent = block.code;
           el.appendChild(pre);
@@ -67,7 +71,10 @@ export function renderUserMarkdown(enabled: () => boolean) {
         text.setAttribute("data-cp-md-text", "");
         for (const part of block.parts) {
           const span = document.createElement(part.code ? "code" : "span");
-          if (part.code) span.setAttribute("data-cp-md-inline", "");
+          if (part.code) {
+            span.setAttribute("data-cp-md-inline", "");
+            span.setAttribute("data-pmono", "");
+          }
           span.textContent = part.text;
           text.appendChild(span);
         }
