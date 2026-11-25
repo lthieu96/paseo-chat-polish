@@ -422,6 +422,7 @@ export function followAgent(paseo: PluginClientContext["paseo"], agentId: string
   let pending: Array<{ seq?: number; item: Item; at: number; turn?: string }> | undefined;
   let closed = false;
   const load = async () => {
+    if (closed) return;
     pending = [];
     try {
       const page = await timeline.refetch({ direction: "tail", limit: 1000, projection: "projected" });
@@ -433,6 +434,7 @@ export function followAgent(paseo: PluginClientContext["paseo"], agentId: string
       lists.set(agentId, list);
       rebuild(agentId);
     } catch (error) {
+      if (notMine(error)) return stop();
       console.warn("[chat-polish] Couldn't load the timeline to merge steps", error);
     } finally {
       pending = undefined;
@@ -452,8 +454,8 @@ export function followAgent(paseo: PluginClientContext["paseo"], agentId: string
       }
     } else if (event.type === "replacement" || event.type === "subscription_restored") void load();
   });
-  subscription.ready.then(load, (error: unknown) => console.warn("[chat-polish] Couldn't follow the timeline to merge steps", error));
-  return () => {
+  subscription.ready.then(load, (error: unknown) => (notMine(error) ? stop() : console.warn("[chat-polish] Couldn't follow the timeline to merge steps", error)));
+  const stop = () => {
     if (closed) return;
     closed = true;
     subscription();
@@ -465,7 +467,15 @@ export function followAgent(paseo: PluginClientContext["paseo"], agentId: string
     keysByAgent.delete(agentId);
     lists.delete(agentId);
   };
+  return stop;
 }
+
+/**
+ * The app loads one copy of the plugin per connected host, and each copy sees every host's tabs but can only fetch its own host's agents.
+ * "Agent not found" therefore means the tab is another host's: stop following it quietly (the caller keeps the id, so it isn't retried
+ * until the tab closes). shortcut: matches the daemon's message text; use an error code if Paseo adds one.
+ */
+const notMine = (error: unknown) => /agent not found/i.test(error instanceof Error ? error.message : String(error));
 
 /** After a fresh transform everything is made again. */
 export const resetMade = () => made.clear();
