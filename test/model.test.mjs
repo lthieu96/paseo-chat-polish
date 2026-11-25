@@ -599,6 +599,8 @@ test("css: the window restyle applies only while <html> has data-cp-rt-window (w
   selectors.splice(0, selectors.length, ...selectors.filter((s) => s && !s.startsWith("@")));
   assert.ok(selectors.length > 40);
   for (const list of selectors) for (const selector of splitTop(list, (ch) => ch === ",")) assert.match(selector.trim(), /^:root\[data-cp-rt-window(="(flat|floating)")?\]/, selector);
+  // Paseo 0.17's own full-width rule under the nav is hidden, or it stacks with the inset one the plugin draws.
+  assert.ok(selectors.includes('[data-testid="sidebar-nav-separator"]'.replace(/^/, ":root[data-cp-rt-window] ")));
 });
 
 test("Command Center toggles save through the settings RPCs, one at a time, each on the revision it just read", async () => {
