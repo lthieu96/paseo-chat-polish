@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { gunzipSync } from "node:zlib";
-import { hugeicon, roundPath, untar, untitledIcon } from "../server/icons.ts";
+import { HUGEICONS, UNTITLED, hugeicon, roundPath, untar, untitledIcon } from "../server/icons.ts";
 
 test("rounding keeps packed path numbers apart", () => {
   assert.equal(roundPath("l-.17.213"), "l-.17 0.21");
@@ -36,4 +36,16 @@ test("icons read from each package's format", () => {
   const set = { icons: { check: { body: '<path stroke="currentColor" d="m5 13.261 2.5 2.5"/>' } }, aliases: { tick: { parent: "check" } } };
   assert.equal(hugeicon(set, "tick"), '<path d="m5 13.26 2.5 2.5"/>');
   assert.throws(() => hugeicon(set, "missing"));
+});
+
+test("icon maps: Lucide names are PascalCase, twin names have each package's shape, and the icons Paseo 0.17 added are mapped", () => {
+  for (const [map, twin] of [[UNTITLED, /^[A-Z][A-Za-z]*\d*$/], [HUGEICONS, /^[a-z0-9]+(-[a-z0-9]+)*$/]]) {
+    for (const [lucide, name] of Object.entries(map)) {
+      assert.match(lucide, /^[A-Z][A-Za-z0-9]*$/, lucide);
+      assert.match(name, twin, `${lucide} -> ${name}`);
+    }
+  }
+  // Paseo 0.17 draws these; a missing key leaves the icon Lucide beside the chosen set (Untitled UI has no twin for some).
+  for (const key of ["Plug", "Heart", "Import", "Pin", "MessageCircle", "CornerDownLeft", "Files", "Stethoscope", "Trash", "House"]) assert.ok(HUGEICONS[key], `Hugeicons ${key}`);
+  for (const key of ["Heart", "Pin", "MessageCircle", "CornerDownLeft", "Trash", "House"]) assert.ok(UNTITLED[key], `Untitled UI ${key}`);
 });

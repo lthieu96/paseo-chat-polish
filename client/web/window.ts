@@ -19,6 +19,14 @@ const PARTS: Array<[string, (el: DomElement) => DomElement | null | undefined, s
   ['[data-testid="sidebar-display-preferences-menu"]', (el) => el.parentElement?.parentElement?.parentElement?.firstElementChild, "ws-label"],
   // A workspace row's title, beside its status indicator.
   ['[data-testid^="workspace-status-indicator-"]', (el) => el.nextElementSibling?.firstElementChild?.firstElementChild, "ws-title"],
+  // Desktop: with the Explorer closed, its toggle sits in a titlebar slot (absolute, pointer-events none) positioned against the window, not the
+  // panel. With the Explorer open the same testID is a plain button in the Explorer, which has no such ancestor.
+  ['[data-testid="workspace-explorer-toggle"]', (el) => {
+    for (let a = el.parentElement, depth = 0; a && depth < 3; a = a.parentElement, depth++) {
+      const c = getComputedStyle(a);
+      if (c.position === "absolute" && c.pointerEvents === "none") return a;
+    }
+  }, "titlebar"],
 ];
 
 const EXPLORER = '[data-testid="workspace-explorer-sidebar"]';
@@ -181,6 +189,8 @@ ${W} [${WIN}="nav"] [role="button"] > [dir] { font-size: 13px !important; }
 /* The rules under the nav and above the footer stop 10px short of both sides, so they don't run into the edge. */
 ${each(W, [`[${WIN}="nav"]`, '[data-testid="sidebar-footer"]'])} { border-color: transparent !important; background-image: linear-gradient(var(--cp-w-hair), var(--cp-w-hair)); background-size: calc(100% - 20px) 1px; background-repeat: no-repeat; }
 ${W} [${WIN}="nav"] { background-position: center bottom; }
+/* Paseo 0.17 draws the rule under the nav itself, full width, on this element; the inset rule above replaces it, or the two stack. */
+${W} [data-testid="sidebar-nav-separator"] { border-color: transparent !important; }
 ${W} [data-testid="sidebar-footer"] { background-position: center top; }
 ${W} [${WIN}="ws-label"] { font-size: 11.5px !important; letter-spacing: 0.02em; }
 ${W} [${WIN}="ws-title"] { font-size: 13px !important; }
@@ -231,6 +241,10 @@ ${FLOAT} [${WIN}="row"] { padding-right: 8px !important; background-color: var(-
 ${FLOAT} [${WIN}="panel"] { margin: 8px 0 8px 8px !important; border: 1px solid var(--cp-w-edge); border-radius: 10px; overflow: hidden; }
 /* The tab row starts at the panel's top inset plus border, so the rule under it lines up with the one under the header. */
 ${FLOAT} [data-testid="workspace-explorer-sidebar"] { padding-left: 8px !important; padding-top: 9px !important; }
+
+/* The desktop titlebar slot of the Explorer toggle is anchored to the window (top 0, right 4px), so floating's inset leaves it above and
+   beside the header it belongs to: move it by the panel's inset plus border (8 + 1) to sit where it does in the flat layout. */
+${FLOAT} [${WIN}="titlebar"] { margin-top: 9px; margin-right: 9px; }
 
 /* Resize handles keep their place and hit area (Paseo's spans the edge, or the gap when floating); a 2px accent line shows only on
    hover or while dragging. The Explorer's is Paseo's own highlight (3px, on hover and drag), thinned and moved into the gap. */

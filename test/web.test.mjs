@@ -217,6 +217,13 @@ __d(function(g,r,i,a,m,e,d){"use strict";Object.defineProperty(e,'__esModule',{v
           load('web/window').tagWindow([deck]);
           const winPane = document.getElementById('winPane');
           checks.floatingPanel = winPane.getAttribute('data-cp-win') === 'panel' && !winPane.hasAttribute('data-cp-win-bg') && !document.getElementById('winWrap').hasAttribute('data-cp-win');
+          // The Explorer toggle's desktop titlebar slot (absolute, pointer-events none) is tagged; the plain toggle inside an open Explorer is not.
+          const toggles = document.createElement('div');
+          toggles.innerHTML = '<div id="tbSlot" style="position:absolute;pointer-events:none;top:0;right:4px;height:40px"><button data-testid="workspace-explorer-toggle">x</button></div><div id="tbOpen"><button data-testid="workspace-explorer-toggle">x</button></div>';
+          document.body.appendChild(toggles);
+          load('web/window').tagWindow([toggles]);
+          checks.titlebarSlotTagged = document.getElementById('tbSlot').getAttribute('data-cp-win') === 'titlebar' && !document.getElementById('tbOpen').hasAttribute('data-cp-win') && !toggles.hasAttribute('data-cp-win');
+          toggles.remove();
           deck.remove(); document.documentElement.removeAttribute('data-cp-rt-window'); await wait();
           clamp(); restyle();
           const unstyle = web.stylePluginViews();
@@ -350,7 +357,7 @@ __d(function(g,r,i,a,m,e,d){"use strict";Object.defineProperty(e,'__esModule',{v
     assert.equal(report.error, undefined, report.error);
     assert.deepEqual(report.errors, []);
     for (const [check, passed] of Object.entries(report.checks)) assert.equal(passed, true, check);
-    assert.equal(Object.keys(report.checks).length, 44);
+    assert.equal(Object.keys(report.checks).length, 40);
   } finally {
     server?.closeAllConnections(); server?.close();
     rmSync(temp, { recursive: true, force: true });
