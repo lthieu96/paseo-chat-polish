@@ -37,7 +37,13 @@ export const UNTITLED: Record<string, string> = {
   Sparkle: "Star06", Sparkles: "Stars02", Split: "GitBranch02", Square: "Square", SquareCheck: "CheckSquare", SquarePen: "Edit01",
   SquareTerminal: "TerminalSquare", Sun: "Sun", Table: "Table", Tag: "Tag01", Terminal: "Terminal", TriangleAlert: "AlertTriangle",
   Type: "Type01", Undo2: "FlipBackward", Upload: "Upload01", User: "User01", Users: "Users01", Workflow: "Dataflow04",
-  Wrench: "Tool02", X: "XClose", Zap: "Zap", ZoomIn: "ZoomIn", ZoomOut: "ZoomOut",
+  Wrench: "Tool02", X: "XClose", Zap: "Zap", ZoomIn: "ZoomIn", ZoomOut: "ZoomOut",  // Added for Paseo 0.17: icons its UI draws that the maps above missed. Untitled UI has no twin for the rest, which stay Lucide.
+  ArrowDown: "ArrowDown", ArrowDownUp: "SwitchVertical01", Columns2: "Columns01", Compass: "Compass",
+  CornerDownLeft: "CornerDownLeft", CornerUpLeft: "CornerUpLeft", Database: "Database01", Feather: "Feather",
+  GitMerge: "GitMerge", Heart: "Heart", House: "Home02", Maximize: "Maximize02", Maximize2: "Maximize01",
+  MessageCircle: "MessageCircle01", Microscope: "Microscope", Minimize: "Minimize02", Move: "Move", Package: "Package",
+  PackagePlus: "PackagePlus", Paperclip: "Paperclip", Pilcrow: "Pilcrow01", Pin: "Pin01", Play: "Play", Rocket: "Rocket01",
+  Trash: "Trash01",
 };
 
 /** Lucide name → Hugeicons icon (@iconify-json/hugeicons name, Stroke Rounded). */
@@ -68,7 +74,24 @@ export const HUGEICONS: Record<string, string> = {
   Sparkles: "sparkles", Split: "split", Square: "square", SquareCheck: "square-check", SquarePen: "square-pen", SquareSlash: "square-slash",
   SquareTerminal: "square-terminal", Sun: "sun-03", Table: "table", Tag: "tag-01", Terminal: "terminal",
   TriangleAlert: "triangle-alert", Type: "type", Undo2: "undo-02", Upload: "upload-01", User: "user", Users: "users",
-  Workflow: "workflow", Wrench: "wrench-01", X: "x", Zap: "zap", ZoomIn: "zoom-in", ZoomOut: "zoom-out",
+  Workflow: "workflow", Wrench: "wrench-01", X: "x", Zap: "zap", ZoomIn: "zoom-in", ZoomOut: "zoom-out",  // Added for Paseo 0.17: icons its UI draws that the maps above missed.
+  ArrowDown: "arrow-down-02", ArrowDownUp: "arrow-up-down", ArrowLeftToLine: "arrow-left-to-line",
+  ArrowRightToLine: "arrow-right-to-line", ArrowUpToLine: "arrow-up-to-line", Bug: "bug-01", Captions: "captions",
+  ChartNoAxesColumn: "chart-no-axes-column", CircleCheckBig: "circle-check-big", CircleDashed: "circle-dashed",
+  CircleDot: "circle-dot", CircleX: "circle-x", Columns2: "layout-2-column", Compass: "compass",
+  CornerDownLeft: "corner-down-left", CornerUpLeft: "corner-up-left", Database: "database", Diff: "diff", Feather: "feather",
+  FileExclamationPoint: "file-exclamation-point", FileSymlink: "file-symlink", Files: "files-01",
+  FlaskConical: "flask-conical", Focus: "focus", FolderTree: "folder-tree", GitCompareArrows: "git-compare-arrows",
+  GitMerge: "git-merge", GitPullRequestClosed: "git-pull-request-closed", GitPullRequestDraft: "git-pull-request-draft",
+  Hammer: "hammer", Heart: "favourite", House: "house-01", Import: "import", KeyboardOff: "keyboard-off",
+  Languages: "languages", ListChevronsDownUp: "list-chevrons-down-up", Maximize: "arrow-expand", Maximize2: "arrow-expand-02",
+  MessageCircle: "message-circle", MessageSquareCode: "message-square-code", Microscope: "microscope", Minimize: "arrow-shrink",
+  MousePointer2: "cursor-01", Move: "move", Package: "package", PackagePlus: "package-plus", Paperclip: "paperclip",
+  Pause: "pause", Pilcrow: "pilcrow", Pin: "pin", PinOff: "pin-off", Play: "play", Plug: "plug-socket", Rocket: "rocket-01",
+  Rows2: "layout-2-row", ShieldAlert: "shield-alert", ShieldEllipsis: "shield-ellipsis",
+  ShieldQuestionMark: "shield-question-mark", SquareCheckBig: "square-check-big", SquareDot: "square-dot",
+  SquareMinus: "square-minus", SquarePlus: "square-plus", Stethoscope: "stethoscope", TestTube: "test-tube",
+  TextAlignJustify: "text-align-justify", TextWrap: "text-wrap", Trash: "trash", Unlink: "unlink-01",
 };
 
 const PACKAGES = {
@@ -163,7 +186,7 @@ export function loadIconSet(set: IconSetName) {
 async function readIconSet(set: IconSetName) {
   const pkg = PACKAGES[set];
   // Named after the pinned version, so a bump or a changed map (bump the suffix) skips an old cache.
-  const file = join(cacheDir(), `${set}-${/-([^-/]+)\.tgz$/.exec(pkg.tarball)![1]}.v2.json`);
+  const file = join(cacheDir(), `${set}-${/-([^-/]+)\.tgz$/.exec(pkg.tarball)![1]}.v3.json`);
   try {
     return JSON.parse(await readFile(file, "utf8")) as Record<string, string>;
   } catch {
