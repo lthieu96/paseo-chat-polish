@@ -181,6 +181,8 @@ ${W} [${WIN}="nav"] [role="button"] > [dir] { font-size: 13px !important; }
 /* The rules under the nav and above the footer stop 10px short of both sides, so they don't run into the edge. */
 ${each(W, [`[${WIN}="nav"]`, '[data-testid="sidebar-footer"]'])} { border-color: transparent !important; background-image: linear-gradient(var(--cp-w-hair), var(--cp-w-hair)); background-size: calc(100% - 20px) 1px; background-repeat: no-repeat; }
 ${W} [${WIN}="nav"] { background-position: center bottom; }
+/* Paseo 0.17 draws the rule under the nav itself, full width, on this element; the inset rule above replaces it, or the two stack. */
+${W} [data-testid="sidebar-nav-separator"] { border-color: transparent !important; }
 ${W} [data-testid="sidebar-footer"] { background-position: center top; }
 ${W} [${WIN}="ws-label"] { font-size: 11.5px !important; letter-spacing: 0.02em; }
 ${W} [${WIN}="ws-title"] { font-size: 13px !important; }
