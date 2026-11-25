@@ -171,11 +171,17 @@ test("MCP over HTTP: lists the tool, rejects vh pages, accepts a good one; confi
     // A fresh cache has no headless shell until the user downloads it from the dashboard.
     const { installHeadlessShell, removeHeadlessShell, shellStatus, staleShell } = await import("../server/headless-shell.ts");
     assert.match(shellStatus().state, /^(missing|unsupported)$/);
-    // Only an older version left behind: it was downloaded once, so a new one is fetched without asking; Remove deletes every version.
+    // Only an older version left behind: the dashboard offers the new one (stale) and nothing is downloaded until the user asks; Remove deletes every version.
     const old = join(cache, "chrome-headless-shell", "1.0.0");
     await mkdir(old, { recursive: true });
     assert.equal(staleShell(), shellStatus().state !== "unsupported");
+    if (shellStatus().state !== "unsupported") {
+      assert.deepEqual({ ...shellStatus() }, { state: "missing", version: shellStatus().version, stale: true });
+      // Reading the status starts nothing: the old version is still the only one there.
+      assert.deepEqual(await readdir(join(cache, "chrome-headless-shell")), ["1.0.0"]);
+    }
     await removeHeadlessShell();
+    if (shellStatus().state !== "unsupported") assert.equal(shellStatus().stale, undefined);
     assert.equal(await stat(old).then(() => true, () => false), false);
     assert.equal(staleShell(), false);
     // A download that doesn't match its pinned hash is never unpacked: the dashboard says why, and nothing is left behind.
@@ -232,4 +238,12 @@ test("page check: lays the page out in a browser and names what a reader would s
   // A page whose script never yields is a problem to fix, not a check that couldn't run; the next check runs as usual.
   assert.match((await checkPage("<script>for (;;) {}</script>")).problems.join("\n"), /didn't finish loading within 15s/);
   assert.deepEqual((await checkPage("<p>after</p>")).problems, []);
+});
+
+test("the plugin never downloads the headless browser on its own: only the dashboard's install call does", async () => {
+  const { readFileSync } = await import("node:fs");
+  const server = readFileSync(new URL("../index.server.ts", import.meta.url), "utf8");
+  const calls = server.match(/installHeadlessShell\(/g) ?? [];
+  assert.equal(calls.length, 1, "one call, inside the installBrowser handler");
+  assert.match(server, /server\.handle\(installBrowser, \(\) => \(void installHeadlessShell\(\)/);
 });

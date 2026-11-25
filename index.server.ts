@@ -7,7 +7,7 @@ import { recapData } from "./shared/recap";
 import { getTheme, themeSchema, themeSettings } from "./shared/theme";
 import { getIconSet, getPrefs, prefsSchema, prefsSettings } from "./shared/timeline";
 import { loadIconSet } from "./server/icons";
-import { installHeadlessShell, removeHeadlessShell, shellStatus, staleShell } from "./server/headless-shell";
+import { installHeadlessShell, removeHeadlessShell, shellStatus } from "./server/headless-shell";
 import { baseProvider, closeLocalServer, openHtmlPage, readStoredPage, startHtmlTool, withHtmlTool } from "./server/html";
 import { browserStatus, installBrowser, openHtml, removeBrowser, storedPage } from "./shared/html";
 import { applyUpdate, checkUpdate } from "./shared/update";
@@ -36,7 +36,6 @@ export default function contribute(server: PluginServerContext) {
   server.handle(browserStatus, shellStatus);
   server.handle(installBrowser, () => (void installHeadlessShell(), shellStatus()));
   server.handle(removeBrowser, async () => (await removeHeadlessShell(), shellStatus()));
-  if (staleShell()) void installHeadlessShell();
   server.addHook("agent.create.before", async ({ request }, { paseo }) => {
     // Off by default, so unreadable prefs mean off; internal agents (commit and PR messages) never draw.
     const current = await prefs.read();

@@ -118,7 +118,7 @@ function HtmlSwitch({ theme, prefs, onChange }: { theme: PluginTheme; prefs: Pre
                   received: mb(status.received ?? 0),
                   total: status.total ? t("prefs.browser.downloadingTotal", { total: mb(status.total) }) : "",
                 }),
-          missing: t("prefs.browser.missing"),
+          missing: status.stale ? t("prefs.browser.stale", { version: status.version ?? "" }) : t("prefs.browser.missing"),
           failed: t("prefs.browser.failed", { error: status.error ?? "" }),
           unsupported: t("prefs.browser.unsupported"),
         }[status.state];
