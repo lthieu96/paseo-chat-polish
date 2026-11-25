@@ -46,6 +46,8 @@ export const browserStatusSchema = z.object({
   /** "unsupported": no build for this platform. */
   state: z.enum(["missing", "downloading", "installed", "failed", "unsupported"]),
   version: z.string(),
+  /** Missing, but an older version is in the cache: the dashboard offers the new one and downloads it only when asked. */
+  stale: z.boolean().optional(),
   /** Bytes received so far, while it downloads. */
   received: z.number().optional(),
   /** Bytes in all, when the server sends a Content-Length. */

@@ -34,7 +34,7 @@ let failure: string | undefined;
 /** The pinned headless shell, if it's installed. */
 export const headlessShell = () => (PLATFORM && existsSync(executable()) ? executable() : undefined);
 
-/** Whether only another version is installed: the user already chose to download it, so a version bump fetches the new one without asking again. */
+/** Whether only another version is installed: the dashboard offers the new one (shellStatus.stale) and downloads it only when the user asks. */
 export function staleShell() {
   try {
     return !!PLATFORM && !headlessShell() && existsSync(root()) && readdirSync(root()).some((name) => name !== VERSION && !name.startsWith("download-"));
@@ -50,13 +50,12 @@ export function shellStatus() {
   if (!PLATFORM) return { state: "unsupported" as const, version };
   if (headlessShell()) return { state: "installed" as const, version };
   if (progress) return { state: "downloading" as const, version, ...progress };
-  return failure ? { state: "failed" as const, version, error: failure } : { state: "missing" as const, version };
+  return failure ? { state: "failed" as const, version, error: failure } : { state: "missing" as const, version, ...(staleShell() ? { stale: true } : {}) };
 }
 
 /**
- * Downloads the pinned headless shell into the plugin's cache (about 100 MB): from the dashboard when the user asks, or on start when only
- * an older version is there (staleShell). Until it's there pages show unchecked and agents don't get html_preview. Never rejects; a
- * failure is kept for shellStatus.
+ * Downloads the pinned headless shell into the plugin's cache (about 100 MB), only when the user asks in the dashboard, including to replace
+ * an older version. Until it's there pages show unchecked and agents don't get html_preview. Never rejects; a failure is kept for shellStatus.
  */
 export function installHeadlessShell() {
   if (!PLATFORM || headlessShell()) return Promise.resolve();
@@ -126,7 +125,7 @@ async function install() {
     await rm(temp, { recursive: true, force: true });
     throw error;
   }
-  // Older versions go once this one is in place, so a failed download leaves them for staleShell to retry next start.
+  // Older versions go once this one is in place, so a failed download leaves them, and the dashboard keeps offering the update.
   for (const name of await readdir(root())) if (name !== VERSION) await rm(join(root(), name), { recursive: true, force: true });
 }
 
