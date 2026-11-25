@@ -378,6 +378,68 @@ test("steps: a provider subagent's pane id isn't followed (no daemon agent behin
   followAgent(paseo, "provider:parent:child")();
 });
 
+// A followed agent whose host doesn't have it (the app loads one plugin copy per host, each seeing every host's tabs).
+async function followWith({ refetch, ready = Promise.resolve() }) {
+  const { followAgent } = await import("../client/steps.ts");
+  const warned = [];
+  const warn = console.warn;
+  console.warn = (...args) => warned.push(args);
+  let handler;
+  let fetches = 0;
+  let closes = 0;
+  const subscription = Object.assign(() => closes++, { ready });
+  const paseo = { agents: { ref: () => ({ timeline: { refetch: async () => (fetches++, refetch()), subscribe: (h) => ((handler = h), subscription) } }) } };
+  try {
+    const stop = followAgent(paseo, "other-host-agent");
+    await new Promise((r) => setTimeout(r, 0));
+    return { stop, warned, fetches: () => fetches, closes: () => closes, replace: async () => (handler({ event: { type: "replacement" } }), await new Promise((r) => setTimeout(r, 0))), restore: () => (console.warn = warn) };
+  } catch (error) {
+    console.warn = warn;
+    throw error;
+  }
+}
+
+test("steps: an agent the daemon doesn't know (another host's tab) is dropped quietly and not fetched again", async () => {
+  const f = await followWith({ refetch: () => Promise.reject(new Error("Agent not found: other-host-agent")) });
+  try {
+    assert.equal(f.fetches(), 1);
+    assert.deepEqual(f.warned, [], "no warning for another host's agent");
+    assert.equal(f.closes(), 1, "the subscription is closed");
+    await f.replace();
+    assert.equal(f.fetches(), 1, "a later replacement event doesn't fetch again");
+    f.stop();
+    assert.equal(f.closes(), 1, "stopping after the drop doesn't unsubscribe twice");
+  } finally {
+    f.restore();
+  }
+});
+
+test("steps: a subscription that fails with 'Agent not found' is dropped quietly too, and a plain string error counts", async () => {
+  const f = await followWith({ refetch: () => assert.fail("never fetched"), ready: Promise.reject("rpc: Agent not found: x") });
+  try {
+    assert.deepEqual(f.warned, []);
+    assert.equal(f.fetches(), 0);
+    assert.equal(f.closes(), 1);
+  } finally {
+    f.restore();
+  }
+});
+
+test("steps: other timeline failures still warn and keep following", async () => {
+  const f = await followWith({ refetch: () => Promise.reject(new Error("socket closed")) });
+  try {
+    assert.equal(f.warned.length, 1);
+    assert.match(String(f.warned[0][1]), /socket closed/);
+    assert.equal(f.closes(), 0, "still subscribed, so a replacement can reload");
+    await f.replace();
+    assert.equal(f.fetches(), 2);
+    f.stop();
+    assert.equal(f.closes(), 1);
+  } finally {
+    f.restore();
+  }
+});
+
 test("steps: a step transformed before its timeline catches up leads its run in place, with no re-transform", async () => {
   const { followAgent, onStaleSteps, onUnplacedStep, placeStep } = await import("../client/steps.ts");
   let handler;
