@@ -1,5 +1,6 @@
 // What the plugin does to Paseo's own app on desktop and web, through its DOM and settings; each part lives in client/web/.
 export { clampUserMessages } from "./web/user-messages";
+export { renderUserMarkdown } from "./web/user-markdown";
 export { setCompactHandler } from "./web/context-card";
 export { centerControlText } from "./web/control-font";
 export { openAgentIds, subagentPaneShown, watchDom } from "./web/dom";

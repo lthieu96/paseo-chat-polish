@@ -91,6 +91,9 @@ svg.onmouseleave=()=>{cross.style.opacity=dot.style.opacity=0;readout.textConten
 draw(true);new ResizeObserver(()=>{if(svg.clientWidth!==W)draw(false)}).observe(svg);replay.onclick=()=>draw(true);
 </script>`;
 
+/** A stack trace pasted into a prompt, for the "Format code" preview. */
+export const PREVIEW_TRACE = "TypeError: token is undefined\n    at requireAuth (src/auth.ts:12:9)\n    at billing (src/api/billing.ts:30:3)";
+
 export const LONG_MESSAGE = [
   "Move auth into one middleware and keep the tests green.",
   "Right now the token check runs twice on /api/billing: once in the router guard and once inside the handler.",

@@ -37,6 +37,8 @@ export const prefsSchema = z.object({
   hidden: z.array(z.enum(HIDEABLE)).default([]),
   /** Long user messages: clamped to six lines with a fade (desktop), or shown in full. */
   userMessages: z.enum(["clamp", "full"]).default("clamp"),
+  /** Fenced code blocks and `inline code` in the user's own messages drawn as code (desktop and web), or left as Paseo's plain text. */
+  userMarkdown: z.enum(["on", "off"]).default("on"),
   /** Thought and tool rows: faded (dim 30%, faded 45%, soft 65%) until hovered or opened, or full strength. An old "merged" value
    * (it hid items inside Paseo's virtualized list and crashed it) falls back to faded; merging is now `merge`, which removes items instead. */
   steps: z.enum(["dim", "faded", "soft", "full"]).catch("faded"),

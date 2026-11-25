@@ -14,7 +14,7 @@ import { currentLanguage, followLocale, t } from "./client/i18n";
 import { isPhone, polishesChat, rememberedPhoneChat, rememberPhoneChat } from "./client/phone";
 import { bindPrefsSaving, currentPrefs, savePrefs, setPrefs, subscribePrefs } from "./client/prefs";
 import { bindThemeRegistry, currentTheme, registerTheme, subscribeTheme } from "./client/theme-registry";
-import { addIconSet, bindPromptKeys, centerControlText, clampUserMessages, iconTwins, jumpToPrompt, openAgentIds, paintSidebar, subagentPaneShown, tagWindow, redrawDiagrams, setCompactHandler, readHostAppearance, restyleNative, selectionCopyMenu, setLanguage, followThemeColors, stackImages, setRailProviders, setRichText, stylePluginViews, nativeIconSet, watchDom } from "./client/web";
+import { addIconSet, bindPromptKeys, centerControlText, clampUserMessages, renderUserMarkdown, iconTwins, jumpToPrompt, openAgentIds, paintSidebar, subagentPaneShown, tagWindow, redrawDiagrams, setCompactHandler, readHostAppearance, restyleNative, selectionCopyMenu, setLanguage, followThemeColors, stackImages, setRailProviders, setRichText, stylePluginViews, nativeIconSet, watchDom } from "./client/web";
 import { getTheme, THEME_CATALOG_ID, themeSchema } from "./shared/theme";
 import { getIconSet, getPrefs, type Prefs } from "./shared/timeline";
 import { HtmlItem, ImagesItem, NoticeItem, StackViewerHost, PlanItem, RecapItem, StepsItem, ThoughtItem, TodoItem, ToolItem } from "./client/views";
@@ -71,6 +71,7 @@ export default function contribute(client: PluginClientContext) {
   const unrestyle = restyleNative(() => currentPrefs().nativeStyle === "design", { render: (source) => client.rpc(renderDiagram, { source }), on: () => currentPrefs().diagrams === "pele" });
   const unstylePluginViews = stylePluginViews();
   const uncenter = centerControlText();
+  const unmarkdown = renderUserMarkdown(() => currentPrefs().userMarkdown === "on");
   const unclamp = clampUserMessages(() => currentPrefs().userMessages === "clamp");
   const unselect = selectionCopyMenu(() => currentPrefs().selectionCopy === "on");
   const unstack = stackImages();
@@ -345,6 +346,7 @@ export default function contribute(client: PluginClientContext) {
       ["icons", anyIcon ? t("command.toggle.iconsOn") : t("command.toggle.iconsOff"), "Shapes", { rowIcons: anyIcon ? { steps: "hide", tool: "hide", thought: "hide" } : { steps: "show", tool: "show", thought: "show" } }],
       ["steps", p.steps !== "full" ? t("command.toggle.stepsOn") : t("command.toggle.stepsOff"), "Blend", { steps: p.steps !== "full" ? "full" : "faded" }],
       ["reads", hidesReads ? t("command.toggle.readsOn") : t("command.toggle.readsOff"), "EyeOff", { hidden: hidesReads ? p.hidden.filter((h) => h !== "read" && h !== "search") : [...new Set([...p.hidden, "read", "search"] as const)] }],
+      ["user-code", p.userMarkdown === "on" ? t("command.toggle.userCodeOn") : t("command.toggle.userCodeOff"), "Code", { userMarkdown: p.userMarkdown === "on" ? "off" : "on" }],
       ["copy", p.selectionCopy === "on" ? t("command.toggle.copyOn") : t("command.toggle.copyOff"), "ClipboardCopy", { selectionCopy: p.selectionCopy === "on" ? "off" : "on" }],
       ["recap", p.recap === "on" ? t("command.toggle.recapOn") : t("command.toggle.recapOff"), "FileDiff", { recap: p.recap === "on" ? "off" : "on" }],
       ["html", p.html === "on" ? t("command.toggle.htmlOn") : t("command.toggle.htmlOff"), "AppWindow", { html: p.html === "on" ? "off" : "on" }],
@@ -385,6 +387,7 @@ export default function contribute(client: PluginClientContext) {
     unpaintSidebar();
     uncenter();
     unclamp();
+    unmarkdown();
     unselect();
     unstack();
     unicons();

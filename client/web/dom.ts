@@ -50,7 +50,7 @@ export interface WebDocument {
   documentElement: DomElement;
   querySelector(selector: string): DomElement | null;
   querySelectorAll(selector: string): ArrayLike<DomElement>;
-  createElement(tag: "style" | "div" | "span" | "button" | "iframe"): DomElement;
+  createElement(tag: "style" | "div" | "span" | "button" | "iframe" | "pre" | "code"): DomElement;
   createElement(tag: "canvas"): { getContext(kind: "2d", options: { willReadFrequently: boolean }): Canvas2d | null };
   addEventListener(type: "click", listener: (event: { target: unknown; clientX: number; clientY: number }) => void, capture?: boolean): void;
   removeEventListener(type: "click", listener: (event: { target: unknown; clientX: number; clientY: number }) => void, capture?: boolean): void;
