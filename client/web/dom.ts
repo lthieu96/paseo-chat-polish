@@ -79,6 +79,7 @@ export interface KeyEvent {
 }
 export type MessageListener = (event: { source: unknown; data: unknown }) => void;
 export interface ComputedStyle {
+  pointerEvents: string;
   transform: string;
   borderRightWidth: string;
   borderRightStyle: string;
