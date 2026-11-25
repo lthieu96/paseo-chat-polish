@@ -48,7 +48,11 @@ export function renderUserMarkdown(enabled: () => boolean) {
       if (el.hasAttribute(DONE) && el.querySelector(":scope > [data-cp-md-part]")) continue;
       const source = el.textContent ?? "";
       const blocks = parseUserMarkdown(source);
-      if (!blocks) continue;
+      if (!blocks) {
+        // React replaced a drawn message's text with text that has no code: forget the old source, or switching off would put it back over the new text.
+        if (sources.delete(el)) el.removeAttribute(DONE);
+        continue;
+      }
       if (!style) {
         style = document.createElement("style");
         style.textContent = CSS;

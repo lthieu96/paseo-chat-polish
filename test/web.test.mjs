@@ -96,6 +96,11 @@ __d(function(g,r,i,a,m,e,d){"use strict";Object.defineProperty(e,'__esModule',{v
           checks.userCodeBesideAttachment = !!document.querySelector('#mdT [data-message-text] > pre') && bubbleOf('mdT').hasAttribute('data-cp-attach') && bubbleOf('mdT').getAttribute('data-chat-polish-clamp') === 'closed' && !!document.getElementById('mdTrow').dataset.cpPart;
           mdA.textContent = fence; await wait(400);
           checks.userCodeRedrawn = !!mdA.querySelector(':scope > pre');
+          // React then rewrites the message as plain text with no code: it stays as written, and switching off doesn't put the old source back.
+          mdA.textContent = 'edited, no code'; await wait(400);
+          mdOn = false; mdBox.appendChild(document.createElement('div')); await wait(400);
+          checks.userCodeNoStaleRestore = mdA.textContent === 'edited, no code' && !mdA.hasAttribute('data-cp-md');
+          mdA.textContent = fence; mdOn = true; mdBox.appendChild(document.createElement('div')); await wait(400);
           mdOn = false; mdBox.appendChild(document.createElement('div')); await wait(400);
           checks.userCodeRestored = mdA.textContent === fence && mdA.childElementCount === 0 && !mdA.hasAttribute('data-cp-md');
           unmd(); mdBox.remove(); await wait();
@@ -345,7 +350,7 @@ __d(function(g,r,i,a,m,e,d){"use strict";Object.defineProperty(e,'__esModule',{v
     assert.equal(report.error, undefined, report.error);
     assert.deepEqual(report.errors, []);
     for (const [check, passed] of Object.entries(report.checks)) assert.equal(passed, true, check);
-    assert.equal(Object.keys(report.checks).length, 43);
+    assert.equal(Object.keys(report.checks).length, 44);
   } finally {
     server?.closeAllConnections(); server?.close();
     rmSync(temp, { recursive: true, force: true });

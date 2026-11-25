@@ -3,8 +3,8 @@
 export type UserInline = { text: string; code?: true };
 export type UserBlock = { kind: "text"; parts: UserInline[] } | { kind: "code"; lang: string; code: string };
 
-// CommonMark: up to three spaces, then 3+ backticks (no backtick in the info string) or 3+ tildes.
-const OPEN = /^ {0,3}(`{3,}|~{3,})[ \t]*([^`\s]*)[^`]*$/;
+// CommonMark: up to three spaces, then 3+ backticks or 3+ tildes, then an info string (which may not hold a backtick after backticks).
+const OPEN = /^ {0,3}(`{3,}|~{3,})[ \t]*(\S*)(.*)$/;
 
 /**
  * Splits a message into text and fenced code blocks, and marks inline code in the text. Returns null when the message has
@@ -13,7 +13,7 @@ const OPEN = /^ {0,3}(`{3,}|~{3,})[ \t]*([^`\s]*)[^`]*$/;
 export function parseUserMarkdown(source: string): UserBlock[] | null {
   if (!source.includes("`") && !source.includes("~~~")) return null;
   const blocks: UserBlock[] = [];
-  const lines = source.split("\n");
+  const lines = source.split(/\r?\n/);
   let prose: string[] = [];
   const flush = () => {
     // The blank line between prose and a fence is the block gap, not text.
@@ -23,7 +23,7 @@ export function parseUserMarkdown(source: string): UserBlock[] | null {
   };
   for (let i = 0; i < lines.length; i++) {
     const open = OPEN.exec(lines[i]!);
-    if (!open) {
+    if (!open || (open[1]![0] === "`" && (open[2]! + open[3]!).includes("`"))) {
       prose.push(lines[i]!);
       continue;
     }

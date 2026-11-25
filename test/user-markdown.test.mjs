@@ -24,6 +24,28 @@ test("parseUserMarkdown: an unclosed fence runs to the end, and an indented fenc
   assert.deepEqual(parseUserMarkdown("  ```\n    two\n  one\n  ```"), [{ kind: "code", lang: "", code: "  two\none" }]);
 });
 
+test("parseUserMarkdown: CRLF text closes its fences like LF text", () => {
+  assert.deepEqual(parseUserMarkdown("a\r\n```js\r\nx\r\n```\r\nb"), [
+    { kind: "text", parts: [{ text: "a" }] },
+    { kind: "code", lang: "js", code: "x" },
+    { kind: "text", parts: [{ text: "b" }] },
+  ]);
+});
+
+test("parseUserMarkdown: fence edge cases", () => {
+  // A backtick fence's info string can't hold a backtick, so a line like this is inline code, not a fence; a tilde fence's can.
+  assert.deepEqual(parseUserMarkdown("```a`b```"), [{ kind: "text", parts: [{ text: "a`b", code: true }] }]);
+  assert.deepEqual(parseUserMarkdown("~~~ a`b\nx\n~~~"), [{ kind: "code", lang: "a`b", code: "x" }]);
+  // Four spaces (or a tab) is an indented block in CommonMark, not a fence; an unclosed fence with no body is an empty block.
+  assert.equal(parseUserMarkdown("    ```\nx"), null);
+  assert.equal(parseUserMarkdown("\t```\nx"), null);
+  assert.deepEqual(parseUserMarkdown("```"), [{ kind: "code", lang: "", code: "" }]);
+  assert.deepEqual(parseUserMarkdown("````\n```\n````"), [{ kind: "code", lang: "", code: "```" }]);
+  // Prose with ``` mid-line, or a lone tilde run, is untouched.
+  assert.equal(parseUserMarkdown("use ``` in md"), null);
+  assert.equal(parseUserMarkdown("a ~~ b ~"), null);
+});
+
 test("inlineCode: matching backtick runs, CommonMark padding, unmatched runs stay text", () => {
   assert.deepEqual(inlineCode("rename `fetchUser` to `loadUser`"), [{ text: "rename " }, { text: "fetchUser", code: true }, { text: " to " }, { text: "loadUser", code: true }]);
   assert.deepEqual(inlineCode("``a ` b``"), [{ text: "a ` b", code: true }]);
