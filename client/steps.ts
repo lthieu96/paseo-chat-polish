@@ -356,7 +356,8 @@ function rebuild(agentId: string) {
   let evictedRows = false;
   for (const key of oldKeys) {
     if (retained.has(key)) continue;
-    evictedRows ||= made.has(key);
+    // A thought still under 80 characters gets a longer key with each chunk; Paseo transforms its grown copy anyway, so that isn't an evicted row.
+    evictedRows ||= made.has(key) && !(key.startsWith("r:") && keys.some((k) => k.startsWith(key)));
     forget(key);
     if (oldRuns.has(key)) touch(key);
   }
