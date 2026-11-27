@@ -519,6 +519,29 @@ test("steps: a thought streaming into a growing run waits for its event instead 
   onStaleSteps(() => {});
 });
 
+test("steps: a turn's first thought growing past its opening words doesn't re-transform the timeline", async () => {
+  const { followAgent, onStaleSteps, placeStep } = await import("../client/steps.ts");
+  let handler;
+  const subscription = Object.assign(() => {}, { ready: Promise.resolve() });
+  const paseo = { agents: { ref: () => ({ timeline: {
+    refetch: async () => ({ entries: [{ item: { type: "user_message", text: "go" }, timestamp: new Date(0).toISOString() }], endCursor: { seq: 0 } }),
+    subscribe: (h) => ((handler = h), subscription),
+  } }) } };
+  let stale = 0;
+  onStaleSteps(() => stale++);
+  const stop = followAgent(paseo, "first-thought-agent");
+  await new Promise((r) => setTimeout(r, 0));
+  const send = (item, seq) => handler({ seq, timestamp: new Date().toISOString(), event: { type: "timeline", item } });
+  // Seen live (Claude, Paseo 0.17): the first chunk is "I'", so the key changes with every chunk until it reaches 80 characters.
+  send({ type: "reasoning", text: "I'" }, 1);
+  assert.equal(placeStep({ type: "reasoning", text: "I'" }, "streaming").as, "head");
+  send({ type: "reasoning", text: "m counting multiples" }, 2);
+  assert.equal(placeStep({ type: "reasoning", text: "I'm counting multiples" }, "streaming").as, "head");
+  assert.equal(stale, 0);
+  stop();
+  onStaleSteps(() => {});
+});
+
 test("css guard: positional selectors get a :where() precheck on their subject, others are left alone", async () => {
   const { guardPositional } = await import("../client/css-guard.ts");
   assert.equal(guardPositional('[data-x] > div'), '[data-x] > div');

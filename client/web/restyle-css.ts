@@ -5,7 +5,8 @@ import { BUBBLE, CHIP, CODE_BLOCK, CTX, CTX_HEAD, LANG, LIMIT, MD, MSG, DOC_MD, 
 // Values come from CSS variables set by setNativeColors (restyle.ts), so a theme switch restyles without re-tagging.
 
 const FOOTER = '[data-cp-part="footer"]';
-const FOOTER_ICON = ':is(button[aria-label="Copy turn"], [data-testid="assistant-fork-menu-trigger"])';
+// Turn stats (Paseo 0.17.2) carries its testid on the box inside its button, which pads it to 22px.
+const FOOTER_ICON = ':is(button[aria-label="Copy turn"], [data-testid="assistant-fork-menu-trigger"], [data-testid="turn-metrics-trigger"])';
 const COMPOSER_BUTTON =
   ':is([data-testid="message-input-attach-button"], [data-testid^="agent-feature-"], [data-testid="workspace-create-submit"], [data-testid="context-window-meter"], button:is([aria-label="Open agent features"], [aria-label="Start dictation"], [aria-label="Send message"], [aria-label="Queue message"], [aria-label="Stop agent"], [aria-label$="Voice mode"]))';
 
