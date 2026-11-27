@@ -331,6 +331,39 @@ ${USAGE} > div:nth-child(3) { padding-top: 12px !important; border-top: 1px soli
 /* Paseo's card sits 8px above the meter and closes 100ms after the pointer leaves both; this strip bridges the gap. */
 ${CTX}::after { content: ""; position: absolute; left: 0; right: 0; top: 100%; height: 12px; }
 ${USAGE} > div:nth-child(4) { margin-top: -6px !important; }
+
+/* Paseo's Add project and Usage modals: the popovers' border and shadow, hairlines, a segmented control, quiet fields and lists, the
+   card buttons, and Usage sources as outlined sections whose refresh shows on hover. */
+[data-cp-part="dialog"] { border-color: var(--cp-rule) !important; border-radius: 12px !important; box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45) !important; }
+:root:is(.light, .pluginLight) [data-cp-part="dialog"] { box-shadow: 0 10px 28px rgba(0, 0, 0, 0.14) !important; }
+:is([data-cp-part="dialog-head"], [data-cp-part="dialog-foot"]) { border-color: var(--cp-rule) !important; }
+[data-cp-part="dialog-head"] button { border-radius: 6px !important; }
+[data-cp-part="dialog-head"] button:hover { background-color: var(--cp-control) !important; }
+[data-testid="add-project-flow-tabs"] { height: auto !important; padding: 2px !important; gap: 2px !important; border-radius: 10px !important; background-color: var(--cp-raised) !important; }
+[data-testid^="add-project-flow-tab-"] { border-radius: 8px !important; }
+[data-testid^="add-project-flow-tab-"][aria-selected="true"] { background-color: var(--cp-control) !important; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25); }
+[data-testid^="add-project-flow-tab-"] [dir] { font-size: 13px !important; }
+[data-testid^="add-project-flow-tab-"][aria-selected="true"] [dir] { color: var(--cp-fg) !important; font-weight: 500 !important; }
+[data-cp-part="field"] { background-color: transparent !important; border-color: var(--cp-rule) !important; border-radius: 8px !important; }
+[data-cp-part="field"]:focus-within { border-color: var(--cp-accent) !important; box-shadow: none !important; outline: none !important; }
+[data-cp-part="field"] input { outline: none !important; }
+[data-testid="add-project-flow-browse"][data-cp-part="secondary"] { height: 32px !important; }
+[data-cp-part="pick-list"] { padding: 4px !important; background-color: transparent !important; border-color: var(--cp-rule) !important; border-radius: 10px !important; }
+:is([data-testid^="add-project-flow-folder-"], [data-testid^="add-project-flow-repository-"]) { padding: 8px 10px !important; gap: 10px !important; border-width: 0 !important; border-radius: 8px !important; }
+:is([data-testid^="add-project-flow-folder-"], [data-testid^="add-project-flow-repository-"]):hover { background-color: var(--cp-control) !important; }
+[data-cp-part="pick-text"] > :first-child { font-size: 13px !important; font-weight: 500 !important; color: var(--cp-fg) !important; }
+[data-cp-part="pick-path"] { font-family: var(--cp-mono) !important; font-size: var(--cp-code) !important; }
+[data-testid="add-project-flow-location"] { background-color: transparent !important; border: 1px solid var(--cp-rule) !important; border-radius: 8px !important; }
+[data-testid="add-project-flow-location"]:hover { background-color: var(--cp-control) !important; }
+[data-cp-part="usage-card"] { background-color: transparent !important; border-color: var(--cp-rule) !important; border-radius: 10px !important; }
+[data-cp-part="usage-name"] { font-size: 13px !important; font-weight: 500 !important; color: var(--cp-fg) !important; }
+[data-cp-part="usage-card"] [data-cp-part="usage-plan"] { background-color: transparent !important; border-color: var(--cp-rule) !important; }
+[data-cp-part="usage-plan"] > div { font-size: 11px !important; }
+[data-cp-part="usage-card"] [data-testid="usage-refresh"] { opacity: 0; transition: opacity 120ms ease-out; }
+[data-cp-part="usage-card"]:is(:hover, :focus-within) [data-testid="usage-refresh"] { opacity: 1; }
+[data-testid="usage-login-error"] { color: var(--colors-status-danger) !important; }
+[data-cp-part="usage-card"] [data-testid^="usage-pin-"][role="checkbox"] { margin: 0 -8px !important; padding: 6px 8px !important; border-radius: 8px !important; }
+[data-cp-part="usage-card"] [data-testid^="usage-pin-"][role="checkbox"]:hover { background-color: var(--cp-control) !important; }
 `;
 
 export const NATIVE_CSS = `
