@@ -80,6 +80,26 @@ const PARTS: Array<[string, (el: DomElement) => DomElement | null | undefined, s
   ['[data-cp-part="usage-limits"] > div', (el) => el, "limit-body"],
   ['[data-cp-part="limit-body"] > div', (el) => (el.children.length === 1 && !el.firstElementChild?.firstElementChild && !el.textContent ? el : null), "limit-bar"],
   ['[data-testid^="model-row-"] > div > div:nth-child(2)', (el) => el, "model-text"],
+  // Paseo's Add project and Usage modals (0.17): the dialog, its header (the title's row) and footer, then their controls.
+  ['[data-testid="add-project-flow-title"], [data-testid="usage-modal-title"]', (el) => el.closest('[role="dialog"]'), "dialog"],
+  ['[data-testid="add-project-flow-title"], [data-testid="usage-modal-title"]', (el) => el.parentElement?.parentElement?.parentElement, "dialog-head"],
+  ['[data-testid="add-project-flow-submit"]', (el) => el.parentElement, "dialog-foot"],
+  ['[data-testid="add-project-flow-submit"]', (el) => el, "primary"],
+  ['[data-testid="add-project-flow-browse"]', (el) => el, "secondary"],
+  // The input sits in a display: contents box inside the bordered one.
+  ['[data-testid="add-project-flow-input"], [data-testid="add-project-flow-name-field"] input', (el) => el.parentElement?.parentElement, "field"],
+  ['[data-testid="add-project-flow-results"]', (el) => el.parentElement, "pick-list"],
+  ['[data-testid^="add-project-flow-folder-"] > div:nth-child(2), [data-testid^="add-project-flow-repository-"] > div:nth-child(2)', (el) => el, "pick-text"],
+  ['[data-testid^="add-project-flow-folder-"] > div:nth-child(2) > div:nth-child(2)', (el) => el, "pick-path"],
+  ['[data-testid="usage-modal-body"] [data-testid^="usage-report-"]', (el) => el.parentElement, "usage-card"],
+  // The name is the header's first box with text (an empty box sits between it and the drag handle).
+  ['[data-cp-part="usage-card"] [data-testid="usage-card-drag-handle"]', (el) => Array.from(el.parentElement?.children ?? []).find((c) => c !== el && !!c.textContent?.trim()), "usage-name"],
+  // The plan chip follows the name; without one that slot is an empty spacer.
+  ['[data-cp-part="usage-name"]', (el) => (el.nextElementSibling?.textContent?.trim() ? el.nextElementSibling : null), "usage-plan"],
+  // The modal's limit rows double as pin switches; their list takes the context card's limit-body and limit-bar tags below.
+  ['[data-cp-part="usage-card"] [data-testid^="usage-pin-"][role="checkbox"]', (el) => el.parentElement, "usage-limits"],
+  ['[data-cp-part="usage-limits"] > div', (el) => el, "limit-body"],
+  ['[data-cp-part="limit-body"] > div', (el) => (el.children.length === 1 && !el.firstElementChild?.firstElementChild && !el.textContent ? el : null), "limit-bar"],
 ];
 
 const slashCards = new WeakSet<DomElement>();
