@@ -14,6 +14,8 @@ export function tagContextCard(card: DomElement) {
   used.setAttribute("data-cp-pct", pct);
   head.style.setProperty("--cp-pct", `${pct}%`);
   head.setAttribute("data-cp-level", Number(pct) >= 80 ? "high" : "normal");
+  // Paseo's divider is the card's only empty child; by position it was the 2nd, which the Compact row now takes.
+  for (const el of Array.from(card.children)) if (!el.firstElementChild && !el.textContent && el.getAttribute("data-cp-part") !== "ctx-rule") el.setAttribute("data-cp-part", "ctx-rule");
   if (compactHandler) markCompact(card, Number(pct));
   keepCardHeight(card);
 }

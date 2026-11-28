@@ -25,6 +25,8 @@ export const MD = `${MSG} .enrm-text`;
 export const DOC_MD = `${DOC} .enrm-text`;
 export const TASK_BOX = `${DOC_MD} li > span > input[type="checkbox"]`;
 export const ADMONITION = `${DOC_MD} .enrm-admonition`;
+// A diagram's source block (Paseo shows it while the diagram can't draw, or on View source).
+export const MERMAID_SOURCE = '[data-paseo-markdown-tag="pre"][data-paseo-markdown-language="mermaid"]';
 // Fences that name a language (```ts); Paseo leaves the attribute off otherwise.
 export const LANG = '[data-paseo-markdown-language]:not([data-paseo-markdown-language=""])';
 export const SLASH = '[data-testid="composer-autocomplete-popover"]';

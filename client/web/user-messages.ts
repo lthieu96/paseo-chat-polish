@@ -8,13 +8,15 @@ const CLAMP = "data-chat-polish-clamp";
 const SHOWN_LINES = 6;
 // Clamp only when it hides a real chunk; a 7-line message isn't worth a click.
 const CLAMP_FROM_LINES = 9;
+// The fade under a clamped message, with eased stops (a straight ramp shows a band where it starts).
+const EASED_MASK = "linear-gradient(#000 55%, rgb(0 0 0 / 0.74) 66%, rgb(0 0 0 / 0.45) 77%, rgb(0 0 0 / 0.19) 89%, transparent)";
 const CLAMP_CSS = `
 [${CLAMP}] { cursor: pointer; }
 [${CLAMP}]:not([data-cp-attach]) > :last-child { overflow: hidden; }
-[${CLAMP}="closed"]:not([data-cp-attach]) > :last-child { max-height: var(--chat-polish-max); -webkit-mask-image: linear-gradient(#000 55%, transparent); mask-image: linear-gradient(#000 55%, transparent); }
+[${CLAMP}="closed"]:not([data-cp-attach]) > :last-child { max-height: var(--chat-polish-max); -webkit-mask-image: ${EASED_MASK}; mask-image: ${EASED_MASK}; }
 /* Beside attachments the text is its own bubble: a mask would fade the bubble too, so it ends under a fade to the bubble's color. */
 [${CLAMP}="closed"][data-cp-attach] [data-message-text] { max-height: calc(var(--chat-polish-max) + 20px); overflow: hidden; }
-[${CLAMP}="closed"][data-cp-attach] [data-message-text]::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3em; background: linear-gradient(transparent, var(--colors-surface3)); }
+[${CLAMP}="closed"][data-cp-attach] [data-message-text]::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3em; background: linear-gradient(transparent, color-mix(in srgb, var(--colors-surface3) 19%, transparent) 25%, color-mix(in srgb, var(--colors-surface3) 45%, transparent) 50%, color-mix(in srgb, var(--colors-surface3) 74%, transparent) 75%, var(--colors-surface3)); }
 [${CLAMP}]::after { content: "Show full message"; margin-top: 8px; font-size: 12px; font-weight: 500; color: var(--chat-polish-muted); opacity: 0.75; }
 [${CLAMP}="open"]::after { content: "Show less"; }
 :root[data-cp-lang="zh"] [${CLAMP}]::after { content: "显示完整消息"; }

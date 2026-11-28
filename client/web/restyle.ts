@@ -8,7 +8,7 @@ import { readHostAppearance } from "./host";
 import { dropGhost, ghostOutlinePreview, hoverCardsRemoved, notePointer, swapOutlinePreview, watchHoverCards } from "./hover-cards";
 import { ICON_VARS } from "./icons";
 import { redrawDiagrams, setDiagramColors, themeMermaid, type PeleDiagrams } from "./mermaid";
-import { decoratePopovers, markLitRows, MODEL_SELECTOR_CSS, noteClick, noteThinkingFallback } from "./model-picker";
+import { decoratePopovers, MODEL_SELECTOR_CSS, noteClick, noteThinkingFallback } from "./model-picker";
 import { runningRemoved, tagParts } from "./parts";
 import { NATIVE_CSS } from "./restyle-css";
 import { markBlocks, RICH_TEXT_CSS } from "./rich-text";
@@ -152,7 +152,6 @@ export function restyleNative(enabled: () => boolean, pele?: PeleDiagrams) {
       tagWindow(roots);
       markBlocks(roots);
       decoratePopovers(roots);
-      markLitRows(roots);
       watchHoverCards(roots);
       swapOutlinePreview(roots);
     },

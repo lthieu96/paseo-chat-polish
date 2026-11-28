@@ -81,7 +81,7 @@ For the reviewed Paseo Registry revision:
 paseo plugin add lthieu96/chat-polish
 ```
 
-Check the installation with `paseo plugin ls`. Open **Chat Polish** in Paseo's sidebar once it is running. For individual tool rows, set **Settings → Chat → Chat display → Full**.
+Check the installation with `paseo plugin ls`. Open **Chat Polish** in Paseo's sidebar once it is running. For individual tool rows, set **Settings → Chat & panes → Chat display → Full**.
 
 ## Update
 
@@ -114,7 +114,7 @@ To update the Paseo Registry listing, submit the new GitHub tag as a revision th
 - Fonts, theme picks and the restyle write Paseo's own settings and DOM, which aren't a public API and may change.
 - The window restyle finds Paseo's sidebars, header, tabs and Explorer through its DOM internals (test IDs, nesting and a few computed styles); a Paseo update can make parts of it stop applying until the plugin is updated. Pick **Paseo** under Window to turn it off.
 - Previews of Paseo's built-in themes and font stacks are copied from Paseo 0.11.2 and can drift in later versions.
-- Plain tool rows need Settings → Chat → Chat display set to Full; the collapsed displays keep Paseo's grouped calls. With Collapse turns and merging on, a turn's steps and the replies before its last one fold into one merged row instead of Paseo's turn summary; with merging off, Paseo's summary stays.
+- Plain tool rows need Settings → Chat & panes → Chat display set to Full; the collapsed displays keep Paseo's grouped calls. With Collapse turns and merging on, a turn's steps and the replies before its last one fold into one merged row instead of Paseo's turn summary; with merging off, Paseo's summary stays.
 - Icon sets swap Paseo's icons by their `lucide-*` class; icons Paseo adds later fall back to Lucide until they are mapped.
 - Picking an icon set the first time needs internet (about a second); until it arrives, and offline, icons stay Lucide.
 - Pele lays diagrams out its own way and labels them in Helvetica/Arial. Mermaid's user journey keeps its own actor colors.

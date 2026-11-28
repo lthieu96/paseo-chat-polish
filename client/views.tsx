@@ -21,14 +21,19 @@ import { useCurrentTheme } from "./theme-registry";
 import { followExpansionAtBottom, loadPaseoLightbox, readHostAppearance, type HostAppearance, type PaseoLightbox } from "./web";
 import type { HtmlData } from "./html";
 import { closeStackViewer, registerStackViewerHost, setStackViewerIndex, useStackViewer } from "./stack-viewer";
-import { HtmlFrame, lastFrameHeight, useHovered, useHtmlTheme, windowButtonsInset } from "./html-frame";
+import { HtmlFrame, lastFrameHeight, liveColors, useHovered, useHtmlTheme, windowButtonsInset } from "./html-frame";
 import { htmlPage } from "../shared/page";
 import { inlineImages, localImages, openHtml, storedPage } from "../shared/html";
 
 type Colors = PluginTheme["colors"];
 const SQUIRCLE_CARD = { dataSet: { cpSquircle: "card" } } as object;
 const ROW_HOVER = { dataSet: { cpRow: "" } } as object;
-const RUNNING_LABEL = { dataSet: { cpRunningLabel: "" } } as object;
+const NO_PROPS = {};
+// On web these motions run as CSS animations (stylePluginViews) rather than Animated, which steps them from JS on every frame,
+// on the main thread, while a turn streams.
+const BORN = { dataSet: { cpBorn: "" } } as object;
+const PULSE = { dataSet: { cpPulse: "" } } as object;
+const FADE_IN = { dataSet: { cpFadeIn: "" } } as object;
 const NO_WRAP_SCROLL = { dataSet: { cpNowrap: "" } } as object;
 
 // Paseo's own fallback stack when Settings → Appearance → Code font is empty.
@@ -125,6 +130,7 @@ export function useStyles(theme: PluginTheme) {
 }
 
 const NATIVE_DRIVER = Platform.OS !== "web";
+const WEB = Platform.OS === "web";
 
 // One shared reduce-motion subscription for every row, attached while any row is mounted.
 let reducedMotion = false;
@@ -185,14 +191,17 @@ function usePulse(active: boolean) {
   return value;
 }
 
-/** Fade + 4px rise each time `key` changes after the first render, so a new label reads as the next step arriving. */
+/** Fade + 4px rise each time `key` changes after the first render, so a new label reads as the next step arriving. On web it returns the
+ * a/b tag CSS animates (each change flips it, restarting the animation) and no style. */
 function useSwap(key: string, active: boolean) {
   const reduced = useReducedMotion();
   const value = useRef(new Animated.Value(1)).current;
   const previousKey = useRef(key);
+  const [tag, setTag] = useState<"a" | "b">();
   useEffect(() => {
     const changed = previousKey.current !== key;
     previousKey.current = key;
+    if (WEB) return void (active && changed && setTag((t) => (t === "a" ? "b" : "a")));
     if (!active || reduced) {
       value.stopAnimation();
       value.setValue(1);
@@ -206,14 +215,16 @@ function useSwap(key: string, active: boolean) {
     });
     return () => anim.stop();
   }, [key, active, reduced, value]);
-  return active ? { opacity: value, transform: [{ translateY: value.interpolate({ inputRange: [0, 1], outputRange: [4, 0] }) }] } : null;
+  if (WEB) return { tag: active ? tag : undefined, style: null };
+  return { tag: undefined, style: active ? { opacity: value, transform: [{ translateY: value.interpolate({ inputRange: [0, 1], outputRange: [4, 0] }) }] } : null };
 }
 
-/** Fade + 4px rise for rows born while the agent is live; history renders still. */
+/** Fade + 4px rise for rows born while the agent is live; history renders still. Props to spread on the row's Animated.View. */
 function useEnter(live: boolean) {
   const [born] = useState(live);
-  const t = useTween(1, 160, born ? 0 : 1);
-  return born ? { opacity: t, transform: [{ translateY: t.interpolate({ inputRange: [0, 1], outputRange: [4, 0] }) }] } : null;
+  const t = useTween(1, 160, born && !WEB ? 0 : 1);
+  if (!born) return NO_PROPS;
+  return WEB ? BORN : { style: { opacity: t, transform: [{ translateY: t.interpolate({ inputRange: [0, 1], outputRange: [4, 0] }) }] } };
 }
 
 /** Open state whose toggle animates the surrounding layout change. */
@@ -229,7 +240,8 @@ function useDisclosure(initial = false) {
 }
 
 function FadeIn({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
-  const opacity = useTween(1, 100, 0);
+  const opacity = useTween(1, 100, WEB ? 1 : 0);
+  if (WEB) return <View {...FADE_IN} style={style}>{children}</View>;
   return <Animated.View style={[style, { opacity, transform: [{ translateY: opacity.interpolate({ inputRange: [0, 1], outputRange: [-4, 0] }) }] }]}>{children}</Animated.View>;
 }
 
@@ -345,11 +357,11 @@ function Row(p: RowProps) {
       )}
       {/* Baseline, not center: the verb is in the content size and a mono target a point smaller, so centering left them a pixel apart. */}
       <Animated.View
-        {...(p.pulsing ? RUNNING_LABEL : null)}
+        {...({ dataSet: { ...(p.pulsing ? { cpRunningLabel: "" } : null), ...(swap.tag ? { cpSwapRow: swap.tag } : null) } } as object)}
         style={[
           { flexDirection: "row", alignItems: "baseline", gap: 8, flexShrink: 1, minWidth: 0 },
-          swap,
-          Platform.OS !== "web" && { opacity: Animated.multiply(swap?.opacity ?? 1, pulse.interpolate({ inputRange: [0.45, 1], outputRange: [0.82, 1] })) },
+          swap.style,
+          !WEB && { opacity: Animated.multiply(swap.style?.opacity ?? 1, pulse.interpolate({ inputRange: [0.45, 1], outputRange: [0.82, 1] })) },
         ]}
       >
         {/* One line: a long merged summary ends in "…" rather than wrapping the row; with a target, the target gives way instead. */}
@@ -543,7 +555,7 @@ export function ToolItem({ item, theme, layout, nested }: PluginTimelineItemProp
   const indent = useIndent("tool");
   const c = theme.colors;
   return (
-    <Animated.View style={[nested ? null : TIGHT[density], enter, d.status === "canceled" ? { opacity: 0.55 } : null]}>
+    <Animated.View {...enter} style={[nested ? null : TIGHT[density], (enter as { style?: object }).style, d.status === "canceled" ? { opacity: 0.55 } : null]}>
       <Row
         theme={theme}
         compact={layout.compact}
@@ -644,7 +656,7 @@ export function MergedSteps(
         target={label.target}
         mono={label.mono}
         shell={label.shell}
-        meta={failed ? t("chat.failedCount", { n: failed }) : live ? t("chat.steps", { n: steps.length }) : ms ? duration(ms) : undefined}
+        meta={failed ? t("chat.failedCount", { n: failed }) : live ? (steps.length === 1 ? t("chat.stepsOne") : t("chat.steps", { n: steps.length })) : ms ? duration(ms) : undefined}
         metaColor={failed ? c.statusDanger : undefined}
         pulsing={!!live}
         swap
@@ -707,7 +719,7 @@ export function ThoughtItem({ item, theme, layout, nested }: PluginTimelineItemP
   const paras = item.data.text.trim().split(/\n\s*\n/);
   const inset = useIndent("thought") ? 9 : 0;
   return (
-    <Animated.View style={[nested ? null : TIGHT[density], enter]}>
+    <Animated.View {...enter} style={[nested ? null : TIGHT[density], (enter as { style?: object }).style]}>
       <Row
         theme={theme}
         compact={layout.compact}
@@ -743,7 +755,7 @@ export function PlanItem({ item, theme }: PluginTimelineItemProps<z.output<typeo
       <View style={s.cardHead}>
         <Icon name="Map" size={15} color={theme.colors.accent} />
         <Text style={s.title}>{t("chat.plan")}</Text>
-        {steps ? <Text style={[s.meta, { marginLeft: 0 }]}>{t("chat.planSteps", { n: steps })}</Text> : null}
+        {steps ? <Text style={[s.meta, { marginLeft: 0 }]}>{(steps === 1 ? t("chat.planStepsOne") : t("chat.planSteps", { n: steps }))}</Text> : null}
       </View>
       <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: long ? 6 : 14, maxHeight: long && !open ? 320 : undefined, overflow: "hidden" }}>
         <StreamedText text={text} phase={item.data.phase} style={[s.prose, { color: theme.colors.foreground, lineHeight: Math.round(s.prose.fontSize * 1.5) }]} selectable />
@@ -791,13 +803,14 @@ function TaskChangeRow({ theme, layout, step, change }: PluginTimelineItemProps<
 function TodoLine({ theme, status, text }: { theme: PluginTheme; status: "pending" | "in_progress" | "completed"; text: string }) {
   const s = useStyles(theme);
   const c = theme.colors;
-  const pulse = usePulse(status === "in_progress");
+  const pulse = usePulse(status === "in_progress" && !WEB);
   const [icon, color] =
     status === "completed" ? ["CircleCheck", c.statusSuccess] : status === "in_progress" ? ["CircleDot", c.accent] : ["Circle", c.foregroundMuted];
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
       <Icon name={icon} size={14} color={color} />
       <Animated.Text
+        {...(WEB && status === "in_progress" ? PULSE : null)}
         style={[
           s.target,
           { opacity: pulse, color: status === "completed" ? c.foregroundMuted : c.foreground },
@@ -874,7 +887,7 @@ export function NoticeItem({ item, theme }: PluginTimelineItemProps<z.output<typ
   const s = useStyles(theme);
   const d = item.data;
   const color = toneColor(theme.colors, d.tone);
-  const pulse = usePulse(d.pulsing);
+  const pulse = usePulse(d.pulsing && !WEB);
   if (d.variant === "inline") {
     return (
       <View style={[s.row, { alignItems: "flex-start" }]}>
@@ -891,7 +904,7 @@ export function NoticeItem({ item, theme }: PluginTimelineItemProps<z.output<typ
     <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 6 }} accessibilityRole="text">
       <View style={s.hairline} />
       <Icon name={d.icon} size={12} color={color} />
-      <Animated.Text style={[s.meta, { marginLeft: 0, color: d.tone === "danger" ? color : theme.colors.foregroundMuted, opacity: pulse, flexShrink: 1 }]} numberOfLines={2}>
+      <Animated.Text {...(WEB && d.pulsing ? PULSE : null)} style={[s.meta, { marginLeft: 0, color: d.tone === "danger" ? color : theme.colors.foregroundMuted, opacity: pulse, flexShrink: 1 }]} numberOfLines={2}>
         {d.text}
       </Animated.Text>
       <View style={s.hairline} />
@@ -1453,9 +1466,11 @@ export function RecapItem({ item, theme }: PluginTimelineItemProps<Recap>) {
 }
 
 /** A page an agent published with html_render. Native apps can't run its scripts in a frame, so they name it instead. */
-export function HtmlItem({ item, theme }: PluginTimelineItemProps<HtmlData>) {
+export function HtmlItem({ item, theme, agentId }: PluginTimelineItemProps<HtmlData>) {
   const t = useT();
-  if (Platform.OS === "web") return item.data.stored === undefined ? <HtmlPage {...item.data} theme={theme} /> : <StoredHtmlPage {...item.data} theme={theme} />;
+  // In the chat, the colors the app has applied (see liveColors); the dashboard's preview draws in the theme it's previewing.
+  const shown = useMemo(() => (Platform.OS === "web" && agentId !== "preview" ? { ...theme, colors: liveColors(theme.colors) } : theme), [theme, agentId]);
+  if (Platform.OS === "web") return item.data.stored === undefined ? <HtmlPage {...item.data} theme={shown} /> : <StoredHtmlPage {...item.data} theme={shown} />;
   return <Text style={{ color: theme.colors.foregroundMuted, fontSize: 13, paddingVertical: 4 }}>{t("chat.htmlNative", { title: item.data.title })}</Text>;
 }
 

@@ -1,6 +1,6 @@
 // The Chat Polish design for what Paseo draws itself: chat chrome, composer, cards, popovers, tool rows and markdown.
 import { icon } from "./icons";
-import { BUBBLE, CHIP, CODE_BLOCK, CTX, CTX_HEAD, LANG, LIMIT, MD, MSG, DOC_MD, PERMISSION, PLAN, QUESTION, ROW, ROW_HEAD, ROW_ICON, SLASH, SLASH_GLIDE_MS, SURFACE, IN_SURFACE, TAG, TRACK_PANEL, USAGE, WORKING_BOX } from "./selectors";
+import { BUBBLE, CHIP, CODE_BLOCK, CTX, CTX_HEAD, LANG, LIMIT, MD, MERMAID_SOURCE, MSG, DOC_MD, PERMISSION, PLAN, QUESTION, ROW, ROW_HEAD, ROW_ICON, SLASH, SLASH_GLIDE_MS, SURFACE, IN_SURFACE, TAG, TRACK_PANEL, USAGE, WORKING_BOX } from "./selectors";
 
 // Values come from CSS variables set by setNativeColors (restyle.ts), so a theme switch restyles without re-tagging.
 
@@ -8,7 +8,7 @@ const FOOTER = '[data-cp-part="footer"]';
 // Turn stats (Paseo 0.17.2) carries its testid on the box inside its button, which pads it to 22px.
 const FOOTER_ICON = ':is(button[aria-label="Copy turn"], [data-testid="assistant-fork-menu-trigger"], [data-testid="turn-metrics-trigger"])';
 const COMPOSER_BUTTON =
-  ':is([data-testid="message-input-attach-button"], [data-testid^="agent-feature-"], [data-testid="workspace-create-submit"], [data-testid="context-window-meter"], button:is([aria-label="Open agent features"], [aria-label="Start dictation"], [aria-label="Send message"], [aria-label="Queue message"], [aria-label="Stop agent"], [aria-label$="Voice mode"]))';
+  ':is([data-testid="message-input-attach-button"], [data-testid^="agent-feature-"], [data-testid="workspace-create-submit"], [data-testid="context-window-meter"], button[aria-label^="Context window"], button:is([aria-label="Open agent features"], [aria-label="Start dictation"], [aria-label="Send message"], [aria-label="Queue message"], [aria-label="Stop agent"], [aria-label$="Voice mode"]))';
 
 // Paseo steps the working dots' opacity from JS every ~160ms, which reads as slow and choppy. The same
 // clockwise chase (dots 4, 6, 5, 3, 1, 2) as a CSS animation runs smoothly on the compositor.
@@ -18,7 +18,7 @@ const DOT = `:is(${WORKING_BOX}, [data-cp-dots]) > div:first-child > div`;
 const WORKING_DOTS = `${DOT} { animation: cp-dots 0.8s linear infinite !important; }
 ${[4, 5, 3, 0, 2, 1].map((step, i) => `${DOT}:nth-child(${i + 1}) { animation-delay: ${((step - 6) * 0.8) / 6}s !important; }`).join("\n")}
 @keyframes cp-dots { 0% { opacity: 1; } 70%, 90% { opacity: 0.15; } 100% { opacity: 1; } }
-@media (prefers-reduced-motion: reduce) { ${DOT} { animation: none !important; } }`;
+/* Opacity only, so it keeps running under reduced motion: it is the only sign the agent is still working. */`;
 
 // Other loaders (Dashboard → Messages → Working indicator): tagParts puts nine <i> over the box, Paseo's grid hides,
 // and each loader draws with the dots it needs (or the overlay's ::before). Sizes scale the whole box.
@@ -41,13 +41,14 @@ ${L("sparkle")}::before { content: "·"; position: absolute; inset: 0; display: 
 ${L("spokes")} > i:nth-child(-n+8) { display: block; left: 50%; top: 50%; width: 1.4px; height: 3.6px; margin: -1.8px 0 0 -0.7px; border-radius: 1px; transform: rotate(calc(var(--i) * 45deg)) translateY(-4.4px); animation: cp-tail 0.9s linear infinite; animation-delay: calc((var(--i) - 8) * 0.9s / 8); }
 ${L("dotring")} > i:nth-child(-n+8) { display: block; left: 50%; top: 50%; width: 2.4px; height: 2.4px; margin: -1.2px 0 0 -1.2px; transform: rotate(calc(var(--i) * 45deg)) translateY(-5px); animation: cp-tail 1s linear infinite; animation-delay: calc((var(--i) - 8) * 1s / 8); }
 ${L("orb")}::before { content: ""; position: absolute; inset: 3px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #fff 0, var(--cp-accent) 45%, color-mix(in srgb, var(--cp-accent), #000 40%) 100%); animation: cp-orb 2s ease-in-out infinite; }
-@keyframes cp-orb { 0%, 100% { transform: scale(0.78); box-shadow: 0 0 0 0 transparent; opacity: 0.75; } 50% { transform: scale(1); box-shadow: 0 0 5px 1.5px color-mix(in srgb, var(--cp-accent) 45%, transparent); opacity: 1; } }
+@keyframes cp-orb { 0%, 100% { transform: scale(0.78); opacity: 0.75; } 50% { transform: scale(1); opacity: 1; } }
 :is(${L("matrix")}, ${L("snake")}) > i { display: block; width: 2.6px; height: 2.6px; left: calc(1.5px + var(--c) * 4.2px); top: calc(1.5px + var(--r) * 4.2px); }
 ${L("matrix")} > i { animation: cp-matrix 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite; animation-delay: calc(var(--m) * 0.14s); }
 @keyframes cp-matrix { 0%, 100% { opacity: 0.2; transform: scale(0.7); } 30% { opacity: 1; transform: scale(1.1); } 60% { opacity: 0.3; transform: scale(0.8); } }
 ${L("snake")} > i { animation: cp-snake 1.35s linear infinite; animation-delay: calc((var(--s) - 9) * 1.35s / 9); }
 @keyframes cp-snake { 0% { opacity: 1; } 33% { opacity: 0.35; } 55%, 100% { opacity: 0.12; } }
-@media (prefers-reduced-motion: reduce) { [data-cp-loader] > i, [data-cp-loader]::before { animation: none !important; } }`;
+/* Reduced motion stops the loaders that move (orb and matrix scale); the others only fade, and keep showing work in progress. */
+@media (prefers-reduced-motion: reduce) { ${L("orb")}::before, ${L("matrix")} > i { animation: none !important; } }`;
 // Shown when a row was first drawn open, so its own icon was never seen.
 const WRENCH_MASK = icon("Wrench", '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>');
 // The merged steps row's icon (views.tsx StepsItem), at the 1.5 stroke Paseo draws its icons with.
@@ -59,8 +60,13 @@ const REDRAW_MASK = icon("RefreshCw", '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 
 // that first frame would override the hiding and flash the popover in the window corner, so motion starts once placed.
 // On close, the context card is swapped for an exit copy without its FadeIn; animating that copy made it blink, so only
 // the open card (FadeIn in its style) rises in.
+// Pickers drawn like menus (28px rows inset 4px, 13/500 labels): every combobox but the model and thinking ones, which lay themselves
+// out; the mode picker is tagged only so its current choice is filled (MODEL_SELECTOR_CSS) and keeps this layout.
+const MENU_PICKER = `[data-testid="combobox-desktop-container"]:not([${TAG}="models"]):not([${TAG}="thinking"])`;
 // Floating surfaces drawn alike: pickers, Paseo's menus (tagged by tagParts), Command Center.
-const POPOVER = `:is(:is([data-testid="combobox-desktop-container"], [data-testid="chat-outline-preview"]):not([style*="opacity: 0"]), [data-testid="context-window-details"][style*="FadeIn"], :is([data-cp-part="menu"], [role="menu"], [role="listbox"]):not([hidden]):not([aria-hidden="true"]):not([data-state="closed"]):not([style*="opacity: 0"])):not([style*="-9999"], [style*="FadeOut"], [data-cp-glide], [data-cp-swap], [data-cp-ghost])`;
+// Paseo's own menus (role=menu, MenuSurface) open with an animation of their own (cut to 40ms by quickMenus); a second one on top
+// fought it frame by frame, so only surfaces that open still get cp-pop.
+const POPOVER = `:is(:is([data-testid="combobox-desktop-container"], [data-testid="chat-outline-preview"]):not([style*="opacity: 0"]), [data-testid="context-window-details"][style*="FadeIn"], :is([data-cp-setting-menu], [role="listbox"]):not([hidden]):not([aria-hidden="true"]):not([data-state="closed"]):not([style*="opacity: 0"])):not([style*="-9999"], [style*="FadeOut"], [data-cp-glide], [data-cp-swap], [data-cp-ghost])`;
 
 // The chat's own chrome from the "Chat Surfaces" design: turn footer, composer, prompts, outline rail.
 const CHAT_CHROME_CSS = `
@@ -69,6 +75,7 @@ ${FOOTER} [data-cp-part="fork"] { width: 20px !important; height: 20px !importan
 ${FOOTER} ${FOOTER_ICON} { width: 20px !important; height: 20px !important; padding: 3px !important; margin: 0 !important; }
 /* The timing label (both its copies) and the working line's elapsed time. Not "> :last-child *": css-guard limits a generic subject to the parent's children. */
 ${FOOTER} [dir] { font-size: 12px !important; }
+${FOOTER} > [role="button"]:last-child { flex: 0 1 auto !important; }
 ${BUBBLE} { transition: box-shadow 0.6s ease-out; }
 [data-testid="user-message"][data-cp-flash] > div > div:not([data-testid]) { box-shadow: 0 0 0 1.5px var(--cp-accent); transition: none; }
 [data-testid="turn-working-indicator"] > div > div:first-child { width: 20px !important; margin-left: 0 !important; align-items: center !important; }
@@ -97,6 +104,8 @@ ${LOADERS}
 /* Popovers that open with no motion (pickers, the context card, the outline preview) rise in; Paseo's menus already animate. */
 @keyframes cp-pop { from { opacity: 0; transform: translateY(2px) scale(0.99); } to { opacity: 1; transform: none; } }
 ${POPOVER} { animation: cp-pop 40ms cubic-bezier(0.16, 1, 0.3, 1) both !important; }
+/* The composer's pickers and the context card open upward from a chip or the meter at their bottom left, so they grow from there. */
+:is([data-testid="combobox-desktop-container"], [data-testid="context-window-details"]) { transform-origin: bottom left; }
 /* Menus open quickly; dismiss them immediately without a closing transition. */
 ${SURFACE} { transition: none !important; animation-duration: 40ms !important; }
 ${SURFACE}:is([hidden], [aria-hidden="true"], [data-state="closed"], [style*="opacity: 0"], [style*="-9999"]),
@@ -114,19 +123,23 @@ ${SURFACE}, ${IN_SURFACE} * { cursor: default !important; }
 ${IN_SURFACE} :is(input, textarea, [contenteditable="true"]) { cursor: text !important; }
 ${IN_SURFACE} :is(button, [role="button"], [role="menuitem"], [role="option"], a[href]):not(:disabled):not([aria-disabled="true"]),
 ${IN_SURFACE} :is(button, [role="button"], [role="menuitem"], [role="option"], a[href]):not(:disabled):not([aria-disabled="true"]) * { cursor: pointer !important; }
-${IN_SURFACE} :is(button, [role="button"], [role="menuitem"], [role="option"], a[href]):not(:disabled):not([aria-disabled="true"]):is(:hover, :focus-visible, [aria-selected="true"]) { background-color: color-mix(in srgb, var(--cp-control), var(--cp-fg) 12%) !important; }
-:root:is(.light, .pluginLight) ${IN_SURFACE} :is(button, [role="button"], [role="menuitem"], [role="option"], a[href]):not(:disabled):not([aria-disabled="true"]):is(:hover, :focus-visible, [aria-selected="true"]) { background-color: color-mix(in srgb, var(--cp-raised), var(--cp-fg) 8%) !important; }
-/* Paseo focuses a menu's first item on open and lights it like a hovered one: with the pointer on another item, only that one lights. */
-:root ${IN_SURFACE}:has([role="menuitem"]:hover) [role="menuitem"]:not(:hover):not(:disabled) { background-color: transparent !important; }
+/* Paseo lights a hovered row with the surface color the restyle lifts popups to, so it vanished: the row under the pointer, or keyboard
+   focus, lights a step up. Only those: Paseo's own active row (its keyboard cursor, parked on the first item when a menu opens) keeps
+   Paseo's fill, so no second row lights. The composer's pickers draw their rows themselves (MODEL_SELECTOR_CSS). */
+${IN_SURFACE} :is(button, [role="button"], [role="menuitem"], [role="option"], a[href]):not(:disabled):not([aria-disabled="true"]):is(:hover, :focus-visible) { background-color: color-mix(in srgb, var(--cp-control), var(--cp-fg) 12%) !important; }
+:root:is(.light, .pluginLight) ${IN_SURFACE} :is(button, [role="button"], [role="menuitem"], [role="option"], a[href]):not(:disabled):not([aria-disabled="true"]):is(:hover, :focus-visible) { background-color: color-mix(in srgb, var(--cp-raised), var(--cp-fg) 8%) !important; }
+/* Paseo focuses a menu's first item on open and lights it like a hovered one: with the pointer on another item, only that one lights
+   (a picker's current choice keeps its fill). */
+:root ${IN_SURFACE}:has(:is([role="menuitem"], [data-combobox-option-index] > button):hover) :is([role="menuitem"], [data-combobox-option-index] > button):not(:hover):not(:disabled):not([data-cp-picked]) { background-color: transparent !important; }
 /* The composer's track panels (subagents, tasks) light a row on a child inset 4px; the fill goes there, not on the full-width row, or both show. */
-:root ${TRACK_PANEL} [role="menuitem"]:not(:disabled):not([aria-disabled="true"]):is(:hover, :focus-visible, [aria-selected="true"]) { background-color: transparent !important; }
+:root ${TRACK_PANEL} [role="menuitem"]:not(:disabled):not([aria-disabled="true"]):is(:hover, :focus-visible) { background-color: transparent !important; }
 ${TRACK_PANEL} [role="menuitem"] > div { border-radius: 11px !important; }
 @supports (corner-shape: squircle) { ${TRACK_PANEL} [role="menuitem"] > div { corner-shape: squircle; } }
 ${TRACK_PANEL} [role="menuitem"]:is(:hover, :focus-visible) > div { background-color: color-mix(in srgb, var(--cp-control), var(--cp-fg) 12%) !important; }
 :root:is(.light, .pluginLight) ${TRACK_PANEL} [role="menuitem"]:is(:hover, :focus-visible) > div { background-color: color-mix(in srgb, var(--cp-raised), var(--cp-fg) 8%) !important; }
-/* Paseo lights a row with the raised color, which would vanish on a raised surface; markLitRows tags it to draw it a step up. */
-[data-cp-lit] { background-color: color-mix(in srgb, var(--cp-control), var(--cp-fg) 12%) !important; }
-:root:is(.light, .pluginLight) [data-cp-lit] { background-color: color-mix(in srgb, var(--cp-raised), var(--cp-fg) 8%) !important; }
+/* The click-away layer Paseo spreads over the window while a popup is open is a button, so the whole window showed a pointer;
+   outside the popup the cursor stays an arrow. Menus name theirs ("…-backdrop"); a picker's is the box before it (tagParts). */
+:is([data-testid$="-backdrop"], [data-cp-part="backdrop"]) { cursor: default !important; }
 /* The sidebar's workspace hover card is a menu too (role=menu), but its rows ran edge to edge, so their 16px hover fill missed the
    card's corners. Inset them 4px like menu rows: 28px tall, 13px text, 14px icons, title 13/600, divider inset too. */
 [data-cp-part="ws-card"] { padding: 4px !important; }
@@ -142,10 +155,10 @@ ${TRACK_PANEL} [role="menuitem"]:is(:hover, :focus-visible) > div { background-c
 @keyframes cp-glide-b { from { transform: translateY(var(--cp-from)); } }
 [data-cp-part="ws-card"][data-cp-glide="a"]:not([style*="FadeOut"]) { animation: cp-glide-a 100ms cubic-bezier(0.33, 1, 0.68, 1) both !important; }
 [data-cp-part="ws-card"][data-cp-glide="b"]:not([style*="FadeOut"]) { animation: cp-glide-b 100ms cubic-bezier(0.33, 1, 0.68, 1) both !important; }
-@keyframes cp-icon-a { from { opacity: 0; transform: scale(0.5); } }
-@keyframes cp-icon-b { from { opacity: 0; transform: scale(0.5); } }
-[data-cp-part="ws-card"][data-cp-swap="a"] svg { animation: cp-icon-a 100ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
-[data-cp-part="ws-card"][data-cp-swap="b"] svg { animation: cp-icon-b 100ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+@keyframes cp-icon-a { from { opacity: 0; transform: scale(0.95); } }
+@keyframes cp-icon-b { from { opacity: 0; transform: scale(0.95); } }
+[data-cp-part="ws-card"][data-cp-swap="a"] svg { animation: cp-icon-a 100ms cubic-bezier(0.23, 1, 0.32, 1) both; }
+[data-cp-part="ws-card"][data-cp-swap="b"] svg { animation: cp-icon-b 100ms cubic-bezier(0.23, 1, 0.32, 1) both; }
 @keyframes cp-swap-text-a { from { opacity: 0.35; transform: translateY(var(--cp-shift, 0px)); } }
 @keyframes cp-swap-text-b { from { opacity: 0.35; transform: translateY(var(--cp-shift, 0px)); } }
 [data-cp-part="ws-card"][data-cp-swap="a"] [dir] { animation: cp-swap-text-a 100ms cubic-bezier(0.33, 1, 0.68, 1) both; }
@@ -156,29 +169,23 @@ ${TRACK_PANEL} [role="menuitem"]:is(:hover, :focus-visible) > div { background-c
    file row's name and path, which carry testIDs). Draw it as accent text instead, like the plugin's other menus. */
 [data-testid="command-center-panel"] [dir] > span[class*="unistyles"]:not([data-testid]) { background-color: transparent !important; color: var(--cp-accent, var(--colors-accent-bright)) !important; }
 [data-testid="command-center-panel"] button:not([data-testid^="command-center-tab-"]) { margin: 0 6px !important; padding: 8px 10px !important; border-radius: 6px !important; }
-[data-testid="combobox-desktop-container"]:not([${TAG}]) > div:first-child > div { padding: 4px 12px !important; }
-[data-testid="combobox-desktop-container"]:not([${TAG}]) > div:nth-child(2) button { min-height: 28px !important; margin: 0 4px !important; padding: 0 8px !important; }
+${MENU_PICKER} > div:first-child > div { padding: 4px 12px !important; }
+${MENU_PICKER} > div:nth-child(2) button { min-height: 28px !important; margin: 0 4px !important; padding: 0 8px !important; }
 /* Picker rows sit 4px inside a 12px card with a 1px border: 12 - 1 - 4 = 7px keeps their corners concentric with the card's. */
 [data-testid="combobox-desktop-container"]:not([${TAG}="models"]) button { border-radius: 7px !important; }
-:is(:is([data-testid="combobox-desktop-container"]:not([${TAG}]) > div:nth-child(2) button, [data-cp-part="menu"] [role="menuitem"]) > div:nth-child(2), [data-testid="command-center-panel"] button > div > div:first-child > div:nth-child(2)) > :first-child { font-size: 13px !important; font-weight: 500 !important; }
+:is(:is(${MENU_PICKER} > div:nth-child(2) button, [data-cp-part="menu"] [role="menuitem"]) > div:nth-child(2), [data-testid="command-center-panel"] button > div > div:first-child > div:nth-child(2)) > :first-child { font-size: 13px !important; font-weight: 500 !important; }
 
 /* The sidebar's host picker draws its own rows (a combobox with children, not options): the menus' 28px rows, 13px/500 labels, 4px insets. */
 [data-testid="combobox-desktop-container"]:not([${TAG}]):has([data-testid="sidebar-host-add"]) > div:first-child > div { padding: 4px 0 !important; }
 :is([data-testid^="sidebar-host-row-"], [data-testid="sidebar-host-add"]) { min-height: 28px !important; padding: 4px 8px !important; margin: 0 4px !important; }
 :is([data-testid^="sidebar-host-row-"], [data-testid="sidebar-host-add"]) > div:nth-child(2) > :first-child { font-size: 13px !important; font-weight: 500 !important; }
 
-/* Pin the bottom while the chat follows output. Paseo scrolls to the bottom a frame after a row grows (streaming text, a tool call
-   finishing), so one frame painted with the bottom cut off: the jitter. With every child but the last (its bottom inset) out of
-   scroll anchoring, the browser keeps that inset in place in the same layout. Scrolled up, Paseo sets overflow-anchor: none on the
-   scroller, which turns this off. Measured on a streaming reply: off-bottom frames went from 12/33 to 0/69. From 0.16 the inset shares
-   a wrapper (tagged chat-aux) with the turn footer and permission cards. A box fully on screen is taken as the anchor whole, so a growing
-   footer pushed the inset down for a frame: the wrapper drops its box (its parent is the same flex column) and only the inset stays in.
-   Paseo's underfill check then reads the wrapper as 0px tall, so a short chat may load older history a little sooner. */
-[data-testid="agent-chat-scroll"] > div > :not(:last-child), [data-cp-part="chat-aux"] > :not(:last-child) { overflow-anchor: none !important; }
-[data-cp-part="chat-aux"] { display: contents !important; }
 
 [data-cp-part="composer"] { border-radius: 12px !important; padding: 14px 10px 10px 16px !important; gap: 20px !important; }
 @supports (corner-shape: squircle) { [data-cp-part="composer"] { border-radius: 28px !important; corner-shape: squircle; } }
+/* The composer's attachments (images, issues and PRs, files) take a softer corner than Paseo's 6px, in step with the composer's. */
+:is([data-testid^="composer-"][data-testid$="-attachment-pill"], [data-testid="composer-pending-file-attachment"]) { border-radius: 10px !important; }
+@supports (corner-shape: squircle) { :is([data-testid^="composer-"][data-testid$="-attachment-pill"], [data-testid="composer-pending-file-attachment"]) { border-radius: 20px !important; corner-shape: squircle; } }
 /* Fullscreen reuses the same box (from 0.17 with its toolbar hidden, not unmounted); Paseo gives it no padding there, so drop the card's. */
 [data-testid="composer-fullscreen"] [data-cp-part="composer"] { padding: 0 !important; gap: 0 !important; border-radius: 0 !important; }
 /* Paseo keeps the box two lines tall even when empty; let it size to its text instead (one line, up to 400px). */
@@ -205,12 +212,12 @@ ${CHIP} { height: 24px !important; padding: 0 7px !important; border-radius: 8px
 [data-cp-part="chip"] > div > div:last-child:nth-child(3) { display: none !important; }
 ${CHIP}:hover { background-color: var(--cp-control) !important; }
 [data-testid="message-input-root"] ${COMPOSER_BUTTON} { width: 26px !important; min-width: 26px !important; height: 26px !important; border-radius: 8px !important; }
-[data-testid="message-input-root"] [data-testid="context-window-meter"] { border-radius: 999px !important; }
+[data-testid="message-input-root"] :is([data-testid="context-window-meter"], button[aria-label^="Context window"]) { border-radius: 999px !important; }
 button[aria-label="Stop agent"] { background-color: var(--cp-control) !important; border: 1px solid var(--cp-rule) !important; }
 button[aria-label="Stop agent"] svg { width: 11px !important; height: 11px !important; stroke: var(--cp-fg) !important; fill: var(--cp-fg) !important; }
 /* Paseo 0.14 gives these pills a 32px min-height; its link back to a subagent's parent joins them. */
 :is([data-testid="subagents-track-header"], [data-testid="background-work"], [data-testid="composer-diff-stat-pill"], [data-testid="composer-parent-agent-pill"]) { height: 24px !important; min-height: 24px !important; padding: 0 10px !important; border-radius: 999px !important; border-color: var(--cp-rule) !important; }
-[data-testid="composer-parent-agent-pill"] { padding-left: 6px !important; }
+[data-testid="composer-parent-agent-pill"] { padding-left: 6px !important; background-color: var(--colors-surface0) !important; box-shadow: 0 0 0 4px var(--colors-surface0); }
 [data-testid="background-work"] [dir] { font-size: 12px !important; }
 /* Background tasks panel (tagged by tagBackgroundWork): a status dot, then the title with its elapsed time on the right over the command,
    each cut to one line (the tooltip has the rest), hairlines between tasks. Paseo stacked all three and wrapped long commands. */
@@ -218,9 +225,9 @@ button[aria-label="Stop agent"] svg { width: 11px !important; height: 11px !impo
 [data-cp-part="bg-item"] + [data-cp-part="bg-item"]::before { content: ""; position: absolute; top: 0; left: 16px; right: 16px; height: 1px; background-color: var(--cp-rule); }
 [data-cp-part="bg-row"] { min-height: 52px !important; padding: 8px 8px 8px 10px !important; gap: 10px !important; align-items: center !important; }
 [data-cp-part="bg-row"]::before { content: ""; flex: none; align-self: flex-start; width: 6px; height: 6px; margin: 6px 2px 0; border-radius: 50%; background-color: var(--cp-muted); opacity: 0.5; }
+/* A live task's dot breathes (opacity, which composites, rather than a box-shadow ring repainted every frame). */
 [data-cp-part="bg-row"][data-cp-live]::before { background-color: var(--cp-ok); opacity: 1; animation: cp-bg-live 2s ease-in-out infinite; }
-@keyframes cp-bg-live { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--cp-ok) 45%, transparent); } 50% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--cp-ok) 0%, transparent); } }
-@media (prefers-reduced-motion: reduce) { [data-cp-part="bg-row"][data-cp-live]::before { animation: none; } }
+@keyframes cp-bg-live { 50% { opacity: 0.4; } }
 [data-cp-part="bg-text"] { display: grid !important; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; row-gap: 2px; align-items: baseline; }
 [data-cp-part="bg-text"] > [dir] { line-height: 18px !important; white-space: nowrap !important; overflow: hidden; text-overflow: ellipsis; }
 [data-cp-part="bg-title"] { grid-column: 1; grid-row: 1; font-size: 13px !important; font-weight: 500 !important; color: var(--cp-fg) !important; }
@@ -238,7 +245,7 @@ button[aria-label="Stop agent"] svg { width: 11px !important; height: 11px !impo
 [data-testid="parent-agent-callout-open"] [dir] { font-size: 13px !important; font-weight: 500 !important; }
 /* Scroll to bottom: a 36px floating control like the plugin's surfaces (rule border, lifted fill), not Paseo's 48px disc. Its margin keeps
    it centered in the 48px box Paseo positions. */
-[data-testid="scroll-to-bottom-button"] { width: 36px !important; height: 36px !important; margin: 6px !important; border: 1px solid var(--cp-rule) !important; background-color: var(--cp-control) !important; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3) !important; transition: background-color 120ms ease-out; }
+[data-testid="scroll-to-bottom-button"] { width: 36px !important; height: 36px !important; margin: 6px !important; border: 1px solid var(--cp-rule) !important; background-color: var(--cp-control) !important; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3) !important; }
 :root:is(.light, .pluginLight) [data-testid="scroll-to-bottom-button"] { background-color: var(--cp-raised) !important; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12) !important; }
 [data-testid="scroll-to-bottom-button"]:hover { background-color: color-mix(in srgb, var(--cp-control), var(--cp-fg) 12%) !important; }
 :root:is(.light, .pluginLight) [data-testid="scroll-to-bottom-button"]:hover { background-color: color-mix(in srgb, var(--cp-raised), var(--cp-fg) 8%) !important; }
@@ -259,6 +266,10 @@ ${QUESTION} [role="radio"] > div > div:nth-child(2) > :first-child .enrm-text > 
 [data-cp-part="permission-body"] > div > div:first-child { background-color: var(--cp-sunken) !important; border: 1px solid var(--cp-rule) !important; border-radius: 8px !important; overflow: hidden !important; }
 [data-testid="permission-request-question"] { font-size: 12px !important; margin: 0 !important; }
 ${PERMISSION} > div:last-child, ${QUESTION} > div:last-child, ${PLAN} > div:last-child > div:last-child { justify-content: flex-end !important; }
+/* Pressed buttons give a little (a transform, so nothing reflows). */
+:is([data-cp-part="primary"], [data-cp-part="secondary"], [data-cp-compact] > button, [data-cp-redraw], [data-testid="scroll-to-bottom-button"], [data-testid="parent-agent-callout-open"]) { transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), background-color 120ms ease, opacity 120ms ease; }
+:is([data-cp-part="primary"], [data-cp-part="secondary"], [data-cp-compact] > button, [data-cp-redraw], [data-testid="scroll-to-bottom-button"], [data-testid="parent-agent-callout-open"]):not(:disabled):not([aria-disabled="true"]):active { transform: scale(0.97); }
+@media (prefers-reduced-motion: reduce) { :is([data-cp-part="primary"], [data-cp-part="secondary"], [data-cp-compact] > button, [data-cp-redraw], [data-testid="scroll-to-bottom-button"], [data-testid="parent-agent-callout-open"]):active { transform: none; } }
 :is([data-cp-part="primary"], [data-cp-part="secondary"]) { height: 28px !important; padding: 0 12px !important; border-radius: 8px !important; justify-content: center !important; }
 [data-cp-part="primary"] *, [data-cp-part="secondary"] * { font-size: 13px !important; font-weight: 500 !important; }
 [data-cp-part="secondary"] { background-color: transparent !important; border-color: var(--cp-rule) !important; }
@@ -306,11 +317,12 @@ ${CTX_HEAD} > [data-cp-pct] { font-size: 0 !important; }
 ${CTX_HEAD} > [data-cp-pct]::before { content: attr(data-cp-pct) "%"; margin-right: 6px; font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--cp-fg); }
 ${CTX_HEAD} > [data-cp-pct]::after { content: "used"; font-size: 12px; color: var(--cp-muted); }
 :root[data-cp-lang="zh"] ${CTX_HEAD} > [data-cp-pct]::after { content: "已用"; }
-${CTX_HEAD} > :nth-child(3) { grid-column: 2; grid-row: 2; justify-self: end; font-family: var(--cp-mono) !important; font-size: 12px !important; }
-${CTX_HEAD}[data-cp-level]::after { content: ""; grid-column: 1 / -1; grid-row: 3; height: 4px; margin-top: 2px; border-radius: 999px; background: linear-gradient(to right, var(--cp-accent) var(--cp-pct), var(--cp-control) 0); }
-${CTX_HEAD}[data-cp-level="high"]::after { background: linear-gradient(to right, var(--cp-warn) var(--cp-pct), var(--cp-control) 0); }
+${CTX_HEAD} > :nth-child(3) { grid-column: 2; grid-row: 2; justify-self: end; font-size: 12px !important; font-variant-numeric: tabular-nums; color: var(--cp-muted) !important; }
+${CTX_HEAD}[data-cp-level]::after { content: ""; grid-column: 1 / -1; grid-row: 3; height: 4px; margin-top: 2px; border-radius: 999px; background: linear-gradient(to right, var(--cp-accent) var(--cp-pct), var(--cp-track) 0); }
+${CTX_HEAD}[data-cp-level="high"]::after { background: linear-gradient(to right, var(--cp-warn) var(--cp-pct), var(--cp-track) 0); }
 ${CTX_HEAD} > :nth-child(4) { grid-column: 1 / -1; grid-row: 4; font-size: 12px !important; color: var(--cp-muted) !important; }
-${CTX} > div:nth-child(2) { background-color: var(--cp-rule) !important; }
+/* Paseo's divider (tagged by tagContextCard: the card's empty child); the Compact row sits where it used to be the 2nd child. */
+[data-cp-part="ctx-rule"] { background-color: var(--cp-rule) !important; }
 ${USAGE} > div:first-child > div:nth-child(2) { font-size: 13px !important; font-weight: 500 !important; color: var(--cp-fg) !important; }
 ${USAGE} > div:first-child > div:nth-child(3) { background-color: transparent !important; border: 1px solid var(--cp-rule) !important; padding: 0 7px !important; }
 [data-cp-part="usage-plan"] > div { font-size: 11px !important; }
@@ -318,12 +330,13 @@ ${USAGE} > div:nth-child(2) { gap: 10px !important; }
 ${LIMIT} { margin: 0 !important; padding: 0 !important; }
 [data-cp-part="limit-body"] { gap: 6px !important; }
 [data-cp-part="limit-body"] > div:first-child > div:nth-child(2), [data-cp-part="limit-body"] > div:last-child { font-variant-numeric: tabular-nums; }
-[data-cp-part="limit-bar"] { height: 4px !important; border-radius: 999px !important; background-color: var(--cp-control) !important; }
+[data-cp-part="limit-bar"] { height: 4px !important; border-radius: 999px !important; background-color: var(--cp-track) !important; }
 [data-cp-part="limit-bar"] > div { border-radius: 999px !important; }
 ${USAGE} > div:nth-child(3) { padding-top: 12px !important; border-top: 1px solid var(--cp-rule) !important; }
 [data-cp-compact] { margin: -6px -6px 0; }
 [data-cp-compact] > button { display: flex; flex: 1; align-items: center; gap: 8px; height: 30px; padding: 0 8px; border: 0; border-radius: 8px; background: transparent; color: var(--cp-fg); font: inherit; font-size: 12px; font-weight: 500; text-align: left; cursor: pointer; }
-[data-cp-compact] > button:hover { background-color: var(--cp-control); }
+[data-cp-compact] > button:hover { background-color: color-mix(in srgb, var(--cp-control), var(--cp-fg) 12%); }
+:root:is(.light, .pluginLight) [data-cp-compact] > button:hover { background-color: color-mix(in srgb, var(--cp-raised), var(--cp-fg) 8%); }
 [data-cp-compact] > button > span:last-child { margin-left: auto; font-size: 11px; font-weight: 400; color: var(--cp-muted); }
 [data-cp-compact][data-cp-level="high"] > button { color: var(--cp-warn); }
 [data-cp-compact] > button[disabled] { opacity: 0.6; cursor: default; }
@@ -332,6 +345,10 @@ ${USAGE} > div:nth-child(3) { padding-top: 12px !important; border-top: 1px soli
 ${CTX}::after { content: ""; position: absolute; left: 0; right: 0; top: 100%; height: 12px; }
 ${USAGE} > div:nth-child(4) { margin-top: -6px !important; }
 
+/* Turn stats (Paseo 0.17) opens beside the context card: the same card, its title as the caps label, figures in tabular digits. */
+[data-testid="turn-metrics-details"] { padding: 14px !important; gap: 10px !important; border-radius: 12px !important; border: 1px solid var(--cp-rule) !important; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3) !important; font-variant-numeric: tabular-nums; }
+[data-testid="turn-metrics-details"] > :first-child { font-size: 11px !important; font-weight: 600 !important; letter-spacing: 0.06em; text-transform: uppercase; color: var(--cp-muted) !important; }
+
 /* Paseo's Add project and Usage modals: the popovers' border and shadow, hairlines, a segmented control, quiet fields and lists, the
    card buttons, and Usage sources as outlined sections whose refresh shows on hover. */
 [data-cp-part="dialog"] { border-color: var(--cp-rule) !important; border-radius: 12px !important; box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45) !important; }
@@ -339,9 +356,10 @@ ${USAGE} > div:nth-child(4) { margin-top: -6px !important; }
 :is([data-cp-part="dialog-head"], [data-cp-part="dialog-foot"]) { border-color: var(--cp-rule) !important; }
 [data-cp-part="dialog-head"] button { border-radius: 6px !important; }
 [data-cp-part="dialog-head"] button:hover { background-color: var(--cp-control) !important; }
-[data-testid="add-project-flow-tabs"] { height: auto !important; padding: 2px !important; gap: 2px !important; border-radius: 10px !important; background-color: var(--cp-raised) !important; }
+[data-testid="add-project-flow-tabs"] { height: auto !important; padding: 2px !important; gap: 2px !important; border-radius: 10px !important; background-color: var(--cp-track) !important; }
 [data-testid^="add-project-flow-tab-"] { border-radius: 8px !important; }
-[data-testid^="add-project-flow-tab-"][aria-selected="true"] { background-color: var(--cp-control) !important; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25); }
+[data-testid^="add-project-flow-tab-"][aria-selected="true"] { background-color: color-mix(in srgb, var(--cp-control), var(--cp-fg) 10%) !important; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25); }
+:root:is(.light, .pluginLight) [data-testid^="add-project-flow-tab-"][aria-selected="true"] { background-color: var(--colors-surface0) !important; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12), 0 0 0 1px var(--cp-rule); }
 [data-testid^="add-project-flow-tab-"] [dir] { font-size: 13px !important; }
 [data-testid^="add-project-flow-tab-"][aria-selected="true"] [dir] { color: var(--cp-fg) !important; font-weight: 500 !important; }
 [data-cp-part="field"] { background-color: transparent !important; border-color: var(--cp-rule) !important; border-radius: 8px !important; }
@@ -359,7 +377,7 @@ ${USAGE} > div:nth-child(4) { margin-top: -6px !important; }
 [data-cp-part="usage-name"] { font-size: 13px !important; font-weight: 500 !important; color: var(--cp-fg) !important; }
 [data-cp-part="usage-card"] [data-cp-part="usage-plan"] { background-color: transparent !important; border-color: var(--cp-rule) !important; }
 [data-cp-part="usage-plan"] > div { font-size: 11px !important; }
-[data-cp-part="usage-card"] [data-testid="usage-refresh"] { opacity: 0; transition: opacity 120ms ease-out; }
+[data-cp-part="usage-card"] [data-testid="usage-refresh"] { opacity: 0.4; transition: opacity 120ms ease-out; }
 [data-cp-part="usage-card"]:is(:hover, :focus-within) [data-testid="usage-refresh"] { opacity: 1; }
 [data-testid="usage-login-error"] { color: var(--colors-status-danger) !important; }
 [data-cp-part="usage-card"] [data-testid^="usage-pin-"][role="checkbox"] { margin: 0 -8px !important; padding: 6px 8px !important; border-radius: 8px !important; }
@@ -369,7 +387,7 @@ ${USAGE} > div:nth-child(4) { margin-top: -6px !important; }
 export const NATIVE_CSS = `
 /* followThemeColors (restyle.ts) sets these inline from Paseo's --colors-*; unset, menus drew with no fill at all, so Paseo's own
    colors stand in until it runs. */
-:root { --cp-fg: var(--colors-foreground); --cp-muted: var(--colors-foreground-muted); --cp-accent: var(--colors-accent); --cp-accent-fg: var(--colors-accent-foreground); --cp-raised: var(--colors-surface1); --cp-control: var(--colors-surface2); --cp-sunken: var(--colors-surface0); --cp-rule: color-mix(in srgb, var(--colors-border) 60%, transparent); --cp-ok: var(--colors-status-success); --cp-warn: var(--colors-status-warning); }
+:root { --cp-track: color-mix(in srgb, var(--cp-fg) 14%, transparent); --cp-fg: var(--colors-foreground); --cp-muted: var(--colors-foreground-muted); --cp-accent: var(--colors-accent); --cp-accent-fg: var(--colors-accent-foreground); --cp-raised: var(--colors-surface1); --cp-control: var(--colors-surface2); --cp-sunken: var(--colors-surface0); --cp-rule: color-mix(in srgb, var(--colors-border) 60%, transparent); --cp-ok: var(--colors-status-success); --cp-warn: var(--colors-status-warning); }
 /* Settings pages (tagged by tagSettings): surfaces 12, controls 8, and one text field, 32px in a sunken well that lights up on focus.
    Settings has its own sidebar, so a reload there can come before the --cp-* colors are set: Paseo's own colors stand in. */
 [data-cp-set="card"] { border-radius: 12px !important; }
@@ -535,27 +553,35 @@ ${CODE_BLOCK} :is(div, span) { line-height: 1.5 !important; }
 /* Code block A: the language in a header strip, with Paseo's copy button in it. B floats the language instead; C has none. */
 :root:not([data-cp-rt-code="b"]):not([data-cp-rt-code="c"]) ${CODE_BLOCK}${LANG} { padding-top: 0 !important; }
 :root:not([data-cp-rt-code="b"]):not([data-cp-rt-code="c"]) ${CODE_BLOCK}${LANG}::before { content: attr(data-paseo-markdown-language); margin: 0 -14px 10px; padding: 7px 14px; border-bottom: 1px solid var(--cp-rule); font-family: var(--cp-mono); font-size: 12px; line-height: 18px; color: var(--cp-muted); }
-:root:not([data-cp-rt-code="b"]):not([data-cp-rt-code="c"]) ${CODE_BLOCK}${LANG} > button[aria-label="Copy code"] { top: 5px !important; opacity: 0.6 !important; }
-:root:not([data-cp-rt-code="b"]):not([data-cp-rt-code="c"]) ${CODE_BLOCK}${LANG} > button[aria-label="Copy code"]:hover { opacity: 1 !important; }
+:root:not([data-cp-rt-code="b"]):not([data-cp-rt-code="c"]) ${CODE_BLOCK}${LANG} > :is(button[aria-label="Copy code"], [data-paseo-markdown-ignore]) { top: 5px !important; }
+${[":not(:hover)", ":hover"].map((state, i) => `:root:not([data-cp-rt-code="b"]):not([data-cp-rt-code="c"]) ${CODE_BLOCK}${LANG} > button[aria-label="Copy code"]${state}, :root:not([data-cp-rt-code="b"]):not([data-cp-rt-code="c"]) ${CODE_BLOCK}${LANG} > [data-paseo-markdown-ignore] > button[aria-label="Copy code"]${state} { opacity: ${i ? 1 : 0.6} !important; }`).join("\n")}
 /* Mermaid: the diagram itself is themed inside its frame (themeMermaid); the card matches code blocks, its zoom controls faint until hover. */
 [data-testid="mermaid-viewport"] { background-color: var(--cp-sunken) !important; border-color: var(--cp-rule) !important; border-radius: 8px !important; }
 [data-testid="mermaid-viewport"] [data-testid="zoomable-viewport-toolbar"] { opacity: 0.6; transition: opacity 0.15s; }
 [data-testid="mermaid-viewport"]:hover [data-testid="zoomable-viewport-toolbar"] { opacity: 1; }
+[data-testid="mermaid-viewport"]:not(:hover):not(:focus-within) [data-testid="zoomable-viewport-toolbar"] > button:disabled { opacity: 0 !important; }
 /* Over a diagram's source, Paseo puts its "View diagram" button where the code block's copy button is; it sits beside it instead. */
 [data-cp-part="diagram-toggle"] { right: 34px !important; opacity: 0.6; }
 [data-cp-part="diagram-toggle"]:hover { opacity: 1; }
 :root:not([data-cp-rt-code="b"]):not([data-cp-rt-code="c"]) [data-cp-part="diagram-toggle"] { top: 5px !important; }
 /* Redraw (redrawDiagram) takes the toggle's spot; when Paseo adds its toggle after it, the toggle moves one further left. */
-[data-cp-redraw] { position: absolute; top: 8px; right: 34px; width: 22px; height: 22px; padding: 0; border: 0; cursor: pointer; opacity: 0.6; background-color: var(--cp-muted); -webkit-mask: ${REDRAW_MASK} center / 14px no-repeat; mask: ${REDRAW_MASK} center / 14px no-repeat; }
+[data-cp-redraw] { display: none; position: absolute; top: 8px; right: 34px; width: 22px; height: 22px; padding: 0; border: 0; cursor: pointer; opacity: 0.6; background-color: var(--cp-muted); -webkit-mask: ${REDRAW_MASK} center / 14px no-repeat; mask: ${REDRAW_MASK} center / 14px no-repeat; }
 :root:not([data-cp-rt-code="b"]):not([data-cp-rt-code="c"]) [data-cp-redraw] { top: 5px; }
+${MERMAID_SOURCE} ~ [data-cp-redraw] { display: block; }
 [data-cp-redraw]:hover { opacity: 1; }
 [data-cp-redraw="failed"] { background-color: var(--cp-warn); opacity: 1; }
 [data-cp-part="diagram-toggle"] ~ [data-cp-redraw], [data-cp-redrawn] > :is([data-paseo-markdown-language], [data-cp-redraw], [data-cp-part="diagram-toggle"]) { display: none !important; }
 [data-cp-redraw] ~ [data-cp-part="diagram-toggle"] { right: 58px !important; }
 [data-cp-redraw-card] { display: flex; justify-content: center; padding: 12px; cursor: zoom-in; border: 1px solid var(--cp-rule); border-radius: 8px; background-color: var(--cp-sunken); }
-[data-cp-redraw-card] > iframe { display: block; width: 100%; height: 120px; border: 0; background: transparent; pointer-events: none; }
+[data-cp-redraw-card] > iframe { display: block; width: 100%; height: 120px; border: 0; background: transparent; pointer-events: none; opacity: 0; transition: opacity 160ms cubic-bezier(0.23, 1, 0.32, 1); }
+[data-cp-redrawn] [data-cp-redraw-card] > iframe { opacity: 1; }
 [data-cp-diagram-full] { position: fixed; inset: 0; z-index: 2147483000; padding: 32px; background-color: var(--cp-sunken); cursor: zoom-out; }
 [data-cp-diagram-full] > iframe { display: block; width: 100%; height: 100%; border: 0; background: transparent; pointer-events: none; }
+/* Opens like Paseo's own diagram viewer next to it: a fade, the drawing settling from 0.98. Closing stays instant. */
+[data-cp-diagram-full] { transition: opacity 200ms cubic-bezier(0.23, 1, 0.32, 1); }
+[data-cp-diagram-full] > iframe { transition: transform 200ms cubic-bezier(0.23, 1, 0.32, 1); }
+@starting-style { [data-cp-diagram-full] { opacity: 0; } [data-cp-diagram-full] > iframe { transform: scale(0.98); } }
+@media (prefers-reduced-motion: reduce) { [data-cp-diagram-full] > iframe { transition: none; } }
 :root { --cp-thumb-w: 200px; --cp-thumb-h: 128px; }
 :root[data-cp-rt-images="large"] { --cp-thumb-w: 320px; --cp-thumb-h: 200px; }
 :root[data-cp-rt-images="xlarge"] { --cp-thumb-w: 480px; --cp-thumb-h: 300px; }
@@ -567,10 +593,10 @@ ${DOC_MD} > :last-child, ${DOC_MD} :is(blockquote, .enrm-admonition, li) > p:las
 ${DOC_MD} :is(p, li, blockquote) { line-height: 1.6 !important; }
 /* Paseo colors links with the accent, which a light theme tunes to 3:1 for fills; as text it needs 4.5:1, so it leans toward the text color. */
 :root:is(.light, .pluginLight) ${DOC_MD} a { color: color-mix(in srgb, var(--cp-accent) 70%, var(--cp-fg)) !important; }
-${DOC_MD} code { border-radius: 4px !important; padding: 2px 5px !important; }
+${DOC_MD} code { border-radius: 4px !important; padding: 1px 4px !important; border-width: 0 !important; }
 ${DOC_MD} strong { font-weight: 600 !important; }
-${DOC_MD} h1 { font-size: 24px !important; line-height: 1.3 !important; }
-${DOC_MD} h2 { font-size: 20px !important; line-height: 1.3 !important; }
+${DOC_MD} h1 { font-size: 24px !important; line-height: 1.3 !important; letter-spacing: -0.02em; }
+${DOC_MD} h2 { font-size: 20px !important; line-height: 1.3 !important; letter-spacing: -0.02em; }
 ${DOC_MD} h3 { font-size: 16px !important; line-height: 1.3 !important; }
 ${DOC_MD} li { margin-top: 0 !important; }
 ${DOC_MD} li:not(:last-child) { margin-bottom: var(--cp-d-li) !important; }
@@ -585,5 +611,5 @@ ${DOC_MD} tbody > tr { background: transparent !important; }
 ${DOC_MD} td { font-size: calc(var(--cp-content) - 1px) !important; }
 ${DOC_MD} th { background: var(--cp-raised) !important; font-size: 12px !important; font-weight: 600 !important; color: var(--cp-muted) !important; }
 ${DOC_MD} hr { border-top-color: var(--cp-rule) !important; }
-:root:not([data-cp-rt-images="native"]) ${MD} img { width: var(--cp-thumb-w) !important; height: var(--cp-thumb-h) !important; object-fit: cover !important; border: 1px solid var(--cp-rule) !important; border-radius: 8px !important; background-color: var(--cp-raised) !important; margin: 6px 8px 2px 0 !important; }
+:root:not([data-cp-rt-images="native"]) ${MD} img { width: var(--cp-thumb-w) !important; height: var(--cp-thumb-h) !important; object-fit: cover !important; border: 1px solid var(--cp-rule) !important; border-radius: 8px !important; background-color: var(--cp-raised) !important; margin: 6px 8px 10px 0 !important; }
 ${CHAT_CHROME_CSS}`;

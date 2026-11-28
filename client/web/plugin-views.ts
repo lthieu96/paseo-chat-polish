@@ -11,8 +11,20 @@ export function stylePluginViews() {
   const style = document.createElement("style");
   style.textContent = `
 @supports (corner-shape: squircle) { [data-cp-squircle="card"] { border-radius: 28px !important; corner-shape: squircle; } }
-[data-cp-row], ${ROW_HEAD} { transition: opacity 80ms ease-out, background-color 80ms ease-out; }
-[data-cp-row] [dir], ${ROW} [data-cp-part="row-label"] > [dir] { transition: color 80ms ease-out; }
+[data-cp-row], ${ROW_HEAD} { transition: opacity 80ms ease, background-color 80ms ease; }
+[data-cp-row] [dir], ${ROW} [data-cp-part="row-label"] > [dir] { transition: color 80ms ease; }
+/* Plugin rows' motion on web (views.tsx: useEnter, useSwap, usePulse, FadeIn), as CSS so it doesn't step from JS while a turn streams.
+   A row born live rises in; a running row's next step label rises in (a/b flips restart it); live labels pulse; opened details drop in. */
+@keyframes cp-born { from { opacity: 0; transform: translateY(4px); } }
+[data-cp-born] { animation: cp-born 160ms cubic-bezier(0.23, 1, 0.32, 1) both; }
+@keyframes cp-row-swap-a { from { opacity: 0.25; transform: translateY(4px); } }
+@keyframes cp-row-swap-b { from { opacity: 0.25; transform: translateY(4px); } }
+[data-cp-swap-row="a"] > * { animation: cp-row-swap-a 240ms cubic-bezier(0.23, 1, 0.32, 1) both; }
+[data-cp-swap-row="b"] > * { animation: cp-row-swap-b 240ms cubic-bezier(0.23, 1, 0.32, 1) both; }
+@keyframes cp-pulse { 50% { opacity: 0.45; } }
+[data-cp-pulse] { animation: cp-pulse 2.2s ease-in-out infinite; }
+@keyframes cp-fade-in { from { opacity: 0; transform: translateY(-4px); } }
+[data-cp-fade-in] { animation: cp-fade-in 100ms cubic-bezier(0.23, 1, 0.32, 1) both; }
 /* One scroller for both axes keeps the horizontal bar visible with tall diffs. */
 [data-cp-nowrap] { overflow: auto !important; }
 [data-cp-nowrap] > div { width: max-content; min-width: 100%; }
@@ -38,7 +50,7 @@ export function stylePluginViews() {
    out of view they're placed at once. Folding, the row's cards shrink toward the first, then the two behind it fan out from
    under it. Nothing flies across the row. */
 [data-cp-stack-card="deal"] { animation: cp-stack-deal 220ms cubic-bezier(0.22, 1, 0.36, 1) backwards; }
-[data-cp-stack-card="out"] { animation: cp-stack-out 110ms cubic-bezier(0.4, 0, 1, 1) forwards; }
+[data-cp-stack-card="out"] { animation: cp-stack-out 110ms cubic-bezier(0.23, 1, 0.32, 1) forwards; }
 [data-cp-stack-card="fan"] { animation: cp-stack-fan 150ms cubic-bezier(0.22, 1, 0.36, 1) backwards; }
 /* The stack row's bar: thin, in the theme's text color. Paseo sets scrollbar-color on the page, which turns off
    ::-webkit-scrollbar styling, so this uses the standard properties. */
@@ -48,10 +60,11 @@ export function stylePluginViews() {
 @keyframes cp-stack-fan { from { opacity: 0; transform: none; } }
 [data-cp-stack-lift] { transition: transform 160ms cubic-bezier(0.22, 1, 0.36, 1), opacity 160ms ease-out, box-shadow 160ms ease-out; }
 @media (prefers-reduced-motion: reduce) {
+  /* Fewer and gentler, not none: movement goes, opacity and color changes stay (the live pulse, row fades) so state still reads. */
   [data-cp-stack-card], [data-cp-stack-lift] { transition: none !important; animation: none !important; }
   [data-cp-running-label] { animation: none; -webkit-mask-image: none; mask-image: none; }
-  [data-cp-expand] { transition: none; }
-  [data-cp-row], [data-cp-row] [dir], ${ROW_HEAD}, ${ROW} [data-cp-part="row-label"] > [dir] { transition: none; }
+  [data-cp-expand] { transition: opacity 100ms ease-out; }
+  [data-cp-born], [data-cp-swap-row] > *, [data-cp-fade-in] { animation: none; }
 }`;
   document.head.appendChild(style);
   return () => { stopFollowingExpansion(); style.remove(); };

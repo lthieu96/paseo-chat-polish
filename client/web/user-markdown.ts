@@ -14,7 +14,8 @@ const CSS = `
 [${DONE}] > pre { display: block; margin: 8px 0; padding: 8px 10px; border-radius: 8px; background: ${WELL}; font-family: ${MONO}; font-size: var(--cp-code, 12.5px); line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; tab-size: 2; cursor: text; }
 [${DONE}] > :first-child { margin-top: 0; }
 [${DONE}] > :last-child { margin-bottom: 0; }
-[${DONE}] > pre[data-cp-md-lang]::before { content: attr(data-cp-md-lang); display: block; margin-bottom: 4px; font-size: 11px; line-height: 16px; color: var(--colors-foreground-muted); }
+/* The language as a header strip over the code (as reply code blocks show it), so it doesn't read as the code's first line. */
+[${DONE}] > pre[data-cp-md-lang]::before { content: attr(data-cp-md-lang); display: block; margin: -8px -10px 8px; padding: 4px 10px; border-bottom: 1px solid color-mix(in srgb, var(--colors-foreground) 10%, transparent); font-size: 11px; line-height: 16px; color: var(--colors-foreground-muted); }
 [${DONE}] code[data-cp-md-inline] { font-family: ${MONO}; font-size: 0.88em; padding: 1px 4px; border-radius: 5px; background: ${WELL}; overflow-wrap: anywhere; }
 /* On a light bubble 8% reads close to a button. */
 :root:is(.light, .pluginLight) [${DONE}] code[data-cp-md-inline] { background: color-mix(in srgb, var(--colors-foreground) 6%, transparent); }

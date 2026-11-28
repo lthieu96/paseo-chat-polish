@@ -644,3 +644,12 @@ test("Command Center toggles save through the settings RPCs, one at a time, each
   assert.equal(currentPrefs().density, "normal");
   unbind();
 });
+
+test("steps: an html_render page stands alone, but a call the tool rejected is a step (else Collapse turns folds the page too)", async () => {
+  const { stepKey } = await import("../client/steps.ts");
+  const html = (callId, status, isError) => tool({ type: "unknown", input: { title: "T", html: "<p>x</p>" }, output: isError === undefined ? null : { isError } }, { callId, status, name: "mcp__chat_polish__html_render" });
+  assert.equal(stepKey(html("page", "completed", false)), undefined);
+  assert.equal(stepKey(html("live", "running")), undefined);
+  assert.equal(stepKey(html("rejected", "completed", true)), "t:rejected");
+  assert.equal(stepKey(html("failed", "failed")), "t:failed");
+});

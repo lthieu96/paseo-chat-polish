@@ -54,13 +54,13 @@ const PARTS: Array<[string, (el: DomElement) => DomElement | null | undefined, s
   [`${PLAN} > button:first-child`, (el) => el, "plan-head"],
   ['[data-testid="chat-outline-preview"]', (el) => el, "outline-preview"],
   ['[data-testid="context-window-details"]', (el) => el, "context"],
+  // A picker's click-away layer: the full-window box Paseo renders just before it.
+  ['[data-testid="combobox-desktop-container"]', (el) => { const box = el.previousElementSibling; return box && !box.hasAttribute("data-cp-part") && !box.hasAttribute("data-testid") ? box : null; }, "backdrop"],
   ['[data-testid="workspace-hover-card"]', (el) => el, "ws-card"],
   // Its rows are plain views (Stop is a button), so the menuitem rule below never tags it as a surface.
   [BG_PANEL, (el) => el, "menu"],
   // The timeline item around each reply block, which holds Paseo's gap between blocks.
   ['[data-testid="assistant-message"]', (el) => el.parentElement, "msg-item"],
-  // The chat's live rows (turn footer, permission cards, bottom inset): the content's next box after the history slot and the rows.
-  ['[data-testid="agent-chat-scroll"] > div > [data-testid="older-history-slot"]', (el) => el.nextElementSibling?.nextElementSibling, "chat-aux"],
   // A menu item's surface: Paseo 0.16 marks it (data-menu-surface), with or without a testID (the workspace row's ⋮ menu has none).
   ['[role="menuitem"]', (el) => el.closest('[data-menu-surface="true"], [role="menu"]') ?? el.parentElement?.closest("[data-testid]"), "menu"],
   ['[data-testid="turn-working-indicator"] > div > div:first-child > div > div', (el) => el, "loader"],
@@ -188,12 +188,14 @@ function tagSettings(roots: DomElement[]) {
       const s = getComputedStyle(el);
       const radius = parseFloat(s.borderRadius);
       const border = parseFloat(s.borderTopWidth) > 0;
-      // Pills (switches, badges) are full by design; boxes that draw nothing aren't shapes.
-      if (!radius || radius >= 999 || (!border && s.backgroundColor === CLEAR)) continue;
+      // Boxes that draw nothing aren't shapes.
+      if (!radius || (!border && s.backgroundColor === CLEAR)) continue;
       const height = el.getBoundingClientRect().height;
+      const pill = radius >= 999;
       if (el.tagName === "BUTTON" || el.getAttribute("role") === "button") {
-        if (radius >= 10 && height >= 24 && height <= 48) tags.push([el, "data-cp-set", "control"]);
-      } else if (el.getAttribute("role") === "alert" || (border && radius >= 8 && height >= 44)) tags.push([el, "data-cp-set", "card"]);
+        // Pill buttons with a label (selects like "System ⌄", "Show setup again") take the controls' 8px; switches and badges have no text and stay round.
+        if ((pill ? !!el.textContent?.trim() : radius >= 10) && height >= 24 && height <= 48) tags.push([el, "data-cp-set", "control"]);
+      } else if (!pill && (el.getAttribute("role") === "alert" || (border && radius >= 8 && height >= 44))) tags.push([el, "data-cp-set", "card"]);
     }
   for (const [el, name, value] of tags) if (!el.hasAttribute(name)) el.setAttribute(name, value);
 

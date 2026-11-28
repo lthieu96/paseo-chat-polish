@@ -3,6 +3,7 @@ import { t } from "../i18n";
 import { findInAppScripts } from "./app-script";
 import { darker, isDark, mix } from "./color";
 import type { DomElement, KeyEvent, MessageListener, WebDocument } from "./dom";
+import { MERMAID_SOURCE } from "./selectors";
 
 declare const document: WebDocument;
 declare const window: { addEventListener(type: "message", listener: MessageListener): void; removeEventListener(type: "message", listener: MessageListener): void };
@@ -330,9 +331,11 @@ export function themeMermaid(enabled: () => boolean, pele?: PeleDiagrams) {
     const win = frameWindow(viewport.querySelector("iframe"));
     if (!win) return Promise.resolve(false);
     claimed.set(viewport, text);
-    // Past the last revision this frame was asked for; a block that remounted since is back at 1.
+    // The last revision this frame was asked for (Pele frames record every request) and the next few; a block that remounted since is
+    // back at 1. Each revision is one "rendered" message to Paseo, so the wide sweep is only for a frame whose revision was never seen.
     const last = (requests.get(win) as { revision?: unknown } | undefined)?.revision;
-    return claim(win, text, Array.from({ length: (typeof last === "number" ? last : 0) + 256 }, (_, i) => i + 1));
+    const revisions = typeof last === "number" ? [...new Set([1, 2, 3, ...Array.from({ length: 8 }, (_, i) => last + i)])] : Array.from({ length: 256 }, (_, i) => i + 1);
+    return claim(win, text, revisions);
   };
   const onClick = ({ target }: { target: unknown }) => {
     const viewport = (target as DomElement | null)?.closest?.('[data-testid="mermaid-fullscreen"]')?.closest('[data-testid="mermaid-viewport"]');
@@ -366,15 +369,15 @@ export function setDiagramColors(c: DiagramColors) {
  * If Paseo doesn't take it, the drawing shows in a card of the plugin's own over the source.
  */
 export function redrawDiagram(box: DomElement, button: DomElement) {
-  const source = (box.querySelector('[data-paseo-markdown-language="mermaid"] > div:first-child')?.textContent ?? "").replace(/\n$/, "");
+  const source = (box.querySelector(`${MERMAID_SOURCE} > div:first-child`)?.textContent ?? "").replace(/\n$/, "");
   box.querySelector(":scope > [data-cp-redraw-card]")?.remove();
   button.setAttribute("data-cp-redraw", "");
   button.setAttribute("title", t("web.redrawDiagram"));
   // From Paseo 0.16 the viewport sits in an inert display: contents wrapper after the source block.
   const viewport = box.nextElementSibling?.querySelector(':scope > [data-testid="mermaid-viewport"]') ?? box.nextElementSibling;
   const taken = viewport?.matches('[data-testid="mermaid-viewport"]') && claimDiagram ? claimDiagram(viewport, source) : Promise.resolve(false);
-  // Once Paseo takes the drawing, it unmounts the source block.
-  void taken.then((ok) => setTimeout(() => box.isConnected && drawCard(box, button, source), ok ? 800 : 0));
+  // Once Paseo takes the drawing, it unmounts the source block (from 0.18 the box may stay, holding the diagram instead).
+  void taken.then((ok) => setTimeout(() => box.isConnected && box.querySelector(`:scope > ${MERMAID_SOURCE}`) && drawCard(box, button, source), ok ? 800 : 0));
 }
 
 function drawCard(box: DomElement, button: DomElement, source: string) {

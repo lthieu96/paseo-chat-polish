@@ -2,12 +2,11 @@
 import { Platform } from "react-native";
 import { t } from "../i18n";
 import { BOT_ICON, PROVIDER_ICONS } from "../provider-icons";
-import { within, type ComputedStyle, type DomElement, type MutationObserverClass, type WebDocument } from "./dom";
+import { within, type ComputedStyle, type DomElement, type WebDocument } from "./dom";
 import { CTX, PERMISSION, PLAN, POP, QUESTION, SURFACE, IN_SURFACE, TAG } from "./selectors";
 
 declare const document: WebDocument;
 declare function getComputedStyle(el: DomElement): ComputedStyle;
-declare const MutationObserver: MutationObserverClass;
 declare function requestAnimationFrame(cb: () => void): number;
 declare function setTimeout(cb: () => void, ms: number): number;
 
@@ -26,16 +25,20 @@ const BACK = '[data-testid="sheet-header-back"]';
 const SETTINGS = '[data-testid^="selector-header-settings-"]';
 const MODEL_ROW = '[data-testid^="model-row-"]';
 const HEADER = `${MODEL_POP} [data-cp-part="header"]`;
+// A choice in one of the composer's pickers (models, thinking, mode: the popovers tagged with TAG).
+const PICKER_ROW = `:is([data-combobox-option-index] > button, ${MODEL_ROW})`;
+const PICKER = `${POP}[${TAG}] ${PICKER_ROW}`;
 
 export const MODEL_SELECTOR_CSS = `
 ${MODEL_POP} { width: 440px !important; min-width: 440px !important; max-width: 440px !important; display: grid !important; grid-template-columns: 172px minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr); border-radius: 12px !important; border-color: var(--cp-rule) !important; overflow: hidden !important; }
 ${MODEL_POP} > div:first-child { display: contents !important; }
 ${MODEL_POP} [data-cp-part="search"] { grid-column: 1 / -1; grid-row: 1; padding: 4px 12px !important; border-bottom: 1px solid var(--cp-rule) !important; }
-${HEADER} { grid-column: 2; grid-row: 2; padding: 10px 12px 6px 14px !important; }
+${HEADER} { grid-column: 2; grid-row: 2; padding: 10px 12px 6px 36px !important; }
 ${HEADER} > :is(button, [data-cp-part="icon"]) { display: none !important; }
 ${HEADER} > [data-cp-part="title"] { font-size: 13px !important; font-weight: 600 !important; color: var(--cp-fg) !important; }
 ${HEADER} > [data-cp-part="title"]::after { content: attr(data-cp-count); margin-left: 8px; font-size: 12px; font-weight: 400; color: var(--cp-muted); }
 ${MODEL_POP} > div:nth-child(2) { grid-column: 2; grid-row: 3; min-height: 0 !important; }
+${MODEL_POP} [data-cp-part="model-list"], [data-cp-rail] { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 14px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 14px), transparent); padding-bottom: 14px !important; }
 ${MODEL_POP} [data-cp-part="providers"] { display: none !important; }
 ${MODEL_POP} :is([data-cp-part="rows"], [data-testid="model-profiles-empty"]) { margin: 0 6px 2px !important; border-radius: 6px !important; overflow: hidden !important; }
 ${MODEL_POP} :is(${MODEL_ROW}, [data-testid="model-profiles-empty"]) { min-height: 28px !important; padding: 0 !important; justify-content: center !important; }
@@ -47,14 +50,14 @@ ${MODEL_POP} ${MODEL_ROW} > div > div:last-child { display: contents !important;
 ${MODEL_POP} ${MODEL_ROW} > div > div:last-child > div:first-child { order: -1; width: 14px !important; }
 ${MODEL_POP} ${MODEL_ROW} svg { stroke: var(--cp-accent) !important; }
 
-[data-cp-rail] { grid-column: 1; grid-row: 2 / 4; display: flex; flex-direction: column; gap: 2px; padding: 6px; overflow-y: auto; background: rgba(0, 0, 0, 0.14); border-right: 1px solid var(--cp-rule); }
+[data-cp-rail] { grid-column: 1; grid-row: 2 / 4; display: flex; flex-direction: column; gap: 2px; padding: 6px; overflow-y: auto; min-height: 0; background: rgba(0, 0, 0, 0.14); border-right: 1px solid var(--cp-rule); }
 /* A 14% black rail is a mid grey on a light popup; a faint tint of the text color keeps it a step down. */
 :root:is(.light, .pluginLight) [data-cp-rail] { background: color-mix(in srgb, var(--cp-fg) 5%, transparent); }
 :root:is(.light, .pluginLight) [data-cp-tip] { box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12); }
 [data-cp-rail] button { all: unset; box-sizing: border-box; position: relative; display: flex; align-items: center; gap: 8px; flex-shrink: 0; height: 28px; padding: 0 8px; border-radius: 6px; font-size: 13px; color: var(--cp-fg); cursor: pointer; }
 [data-cp-rail] button:hover { background: var(--cp-control); }
 [data-cp-rail] button[aria-current="true"] { background: var(--cp-control); font-weight: 500; }
-[data-cp-rail] button[aria-current="true"]::before { content: ""; position: absolute; left: -6px; top: 8px; bottom: 8px; width: 2px; border-radius: 999px; background: var(--cp-accent); }
+[data-cp-rail] button[aria-current="true"]::before { content: ""; position: absolute; left: -4px; top: 8px; bottom: 8px; width: 2px; border-radius: 999px; background: var(--cp-accent); }
 [data-cp-rail] button[aria-disabled="true"] { opacity: 0.45; cursor: default; }
 [data-cp-rail] button[aria-disabled="true"]:hover { background: transparent; }
 [data-cp-rail] hr { border: 0; height: 1px; margin: 4px 2px; background: var(--cp-rule); flex-shrink: 0; }
@@ -68,6 +71,13 @@ ${MODEL_POP} ${MODEL_ROW} svg { stroke: var(--cp-accent) !important; }
 [data-cp-tip] { position: absolute; z-index: 1; display: none; max-width: 220px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--cp-rule); background: var(--cp-sunken); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4); font-size: 12px; line-height: 1.45; color: var(--cp-muted); overflow-wrap: anywhere; pointer-events: none; }
 [data-cp-tip] b { display: block; margin-bottom: 2px; font-weight: 600; color: var(--cp-fg); }
 
+/* Composer pickers: the current choice keeps a fill; the pointer's row and keyboard focus light a step more; Paseo's own fill (its
+   keyboard cursor, on the thinking list's first row when it opens) is hidden. Other popups keep Paseo's own highlights. */
+${PICKER}:not([data-cp-picked]):not(:hover):not(:focus-visible) { background-color: transparent !important; }
+${PICKER}[data-cp-picked] { background-color: color-mix(in srgb, var(--cp-control), var(--cp-fg) 7%) !important; }
+${PICKER}:is(:hover, :focus-visible) { background-color: color-mix(in srgb, var(--cp-control), var(--cp-fg) 12%) !important; }
+:root:is(.light, .pluginLight) ${PICKER}[data-cp-picked] { background-color: color-mix(in srgb, var(--cp-raised), var(--cp-fg) 5%) !important; }
+:root:is(.light, .pluginLight) ${PICKER}:is(:hover, :focus-visible) { background-color: color-mix(in srgb, var(--cp-raised), var(--cp-fg) 9%) !important; }
 ${THINKING_POP} { border-radius: 12px !important; border-color: var(--cp-rule) !important; }
 ${THINKING_POP}[data-cp-described] { width: 420px !important; }
 ${THINKING_POP} button { min-height: 28px !important; margin: 0 4px !important; padding: 0 8px !important; gap: 8px !important; }
@@ -82,7 +92,7 @@ ${THINKING_POP} button > div:nth-child(2) { flex: 1 1 auto !important; min-width
 [data-cp-hint] { position: absolute; right: 12px; bottom: calc(100% + 8px); padding: 3px 10px; border: 1px solid var(--cp-rule); border-radius: 999px; background: var(--cp-raised); font-size: 12px; line-height: 16px; white-space: nowrap; color: var(--cp-muted); pointer-events: none; }
 /* Popup surfaces use 20px squircles; nested surfaces keep their own radius scale. */
 @supports (corner-shape: squircle) {
-  ${SURFACE}, ${THINKING_POP}, ${MODEL_POP}, ${CTX}, [data-testid="chat-outline-preview"], ${PERMISSION}, ${QUESTION} { border-radius: 20px !important; corner-shape: squircle; }
+  ${SURFACE}, ${THINKING_POP}, ${MODEL_POP}, ${CTX}, [data-testid="turn-metrics-details"], [data-testid="chat-outline-preview"], ${PERMISSION}, ${QUESTION}, [data-cp-part="dialog"] { border-radius: 20px !important; corner-shape: squircle; }
   ${IN_SURFACE} :is(button, [role="button"], [role="menuitem"], [role="option"], a[href]) { border-radius: 16px !important; corner-shape: squircle; }
   ${PLAN} { border-radius: 24px !important; corner-shape: squircle; }
   ${MODEL_POP} :is([data-cp-part="rows"], [data-testid="model-profiles-empty"]) { border-radius: 21px !important; corner-shape: squircle; }
@@ -113,6 +123,7 @@ let pickedModelAt = 0;
 /** The composer's picker chips, and the one whose picker is open. */
 const CHIPS = '[data-testid="combined-model-selector"], [data-testid="agent-thinking-selector"], [data-testid="mode-control"]';
 let openedBy: DomElement | undefined;
+let clickedModeAt = 0;
 
 export function noteClick(event: { target: unknown; clientX: number; clientY: number }) {
   const target = event.target as DomElement | null;
@@ -129,29 +140,8 @@ export function noteClick(event: { target: unknown; clientX: number; clientY: nu
   // Any other click (the mode chip, a menu) means the next popover isn't the thinking list; clicks inside an open popover keep it.
   else if (!target?.closest?.(POP)) clickedThinking = undefined;
   if (target?.closest?.(`${MODEL_POP} ${MODEL_ROW}`)) pickedModelAt = Date.now();
-}
-
-/**
- * Paseo lights a picker's hovered or keyboard-active row with the raised color, through generated classes CSS can't name.
- * The surfaces are raised now, so tag the lit row (data-cp-lit) whenever a row's class changes; CSS draws it a step up.
- * Only open pickers are watched, a handful of rows each. The plugin's own rail rows keep their CSS hover.
- */
-const watchedSurfaces = new WeakSet<DomElement>();
-export function markLitRows(roots: DomElement[]) {
-  for (const surface of within(roots, '[data-testid="combobox-desktop-container"], [data-testid="command-center-panel"]')) {
-    if (watchedSurfaces.has(surface)) continue;
-    watchedSurfaces.add(surface);
-    const mark = () => {
-      for (const row of Array.from(surface.querySelectorAll("button"))) {
-        if (row.closest("[data-cp-rail]")) continue;
-        // Measure Paseo's own color, not the one data-cp-lit paints.
-        row.removeAttribute("data-cp-lit");
-        if (getComputedStyle(row).backgroundColor !== "rgba(0, 0, 0, 0)") row.setAttribute("data-cp-lit", "");
-      }
-    };
-    new MutationObserver(mark).observe(surface, { subtree: true, childList: true, attributes: true, attributeFilter: ["class"] });
-    mark();
-  }
+  if (target?.closest?.('[data-testid="mode-control"]')) clickedModeAt = Date.now();
+  else if (!target?.closest?.(POP)) clickedModeAt = 0;
 }
 
 /** Marks and decorates Paseo's model and thinking popovers as they open or change view. */
@@ -168,7 +158,21 @@ export function decoratePopovers(roots: DomElement[]) {
       decorateModels(pop);
     } else if (clickedThinking && Date.now() - clickedThinking.at < 2000) {
       decorateThinking(pop, clickedThinking.chip);
-    }
+    } else if (Date.now() - clickedModeAt < 2000 && !pop.hasAttribute(TAG)) pop.setAttribute(TAG, "mode");
+    if (pop.hasAttribute(TAG)) markPicked(pop);
+  }
+}
+
+/**
+ * The composer's pickers mark the current choice with a fill (data-cp-picked), as well as its check. Paseo's own fill there is its
+ * keyboard cursor, which the thinking list parks on its first row when it opens, so a row that wasn't chosen looked picked; CSS hides
+ * that fill and lights the pointer's row and keyboard focus instead (MODEL_SELECTOR_CSS).
+ */
+function markPicked(pop: DomElement) {
+  for (const row of Array.from(pop.querySelectorAll(PICKER_ROW))) {
+    // Model rows say so (aria-selected); thinking and mode rows only show their check, a third child after icon and label.
+    const picked = row.matches(MODEL_ROW) ? row.getAttribute("aria-selected") === "true" : row.children.length > 2;
+    if (picked !== row.hasAttribute("data-cp-picked")) picked ? row.setAttribute("data-cp-picked", "") : row.removeAttribute("data-cp-picked");
   }
 }
 
@@ -182,6 +186,7 @@ function decorateModels(pop: DomElement) {
   for (const el of Array.from(pop.querySelectorAll('[data-cp-part="header"] > div'))) if (el.querySelector(":scope > svg")) el.setAttribute("data-cp-part", "icon");
   for (const el of Array.from(pop.querySelectorAll('[data-testid^="model-provider-"]'))) el.parentElement?.parentElement?.parentElement?.setAttribute("data-cp-part", "providers");
   for (const el of Array.from(pop.querySelectorAll(MODEL_ROW))) el.parentElement?.setAttribute("data-cp-part", "rows");
+  pop.children[1]?.firstElementChild?.setAttribute("data-cp-part", "model-list");
   // Counted while the search is empty, so a filtered list doesn't change the provider's total.
   let title = pop.querySelector(SETTINGS);
   while (title && title.parentElement?.getAttribute("data-cp-part") !== "header") title = title.parentElement;
@@ -219,7 +224,19 @@ function decorateModels(pop: DomElement) {
   const active = rail.querySelector('[aria-current="true"]');
   const offset = active ? active.getBoundingClientRect().top - rail.getBoundingClientRect().top : 0;
   if (opening && offset > rail.getBoundingClientRect().height - 36) rail.scrollTop += offset - 120;
+  // Once per popover, when its rows (which can land a pass after it opens) show the picked one, and after layout.
+  const picked = scrolledTo.has(pop) ? undefined : Array.from(pop.querySelectorAll(MODEL_ROW)).find((row) => row.querySelector(":scope > div > div:last-child svg"));
+  if (picked) {
+    scrolledTo.add(pop);
+    requestAnimationFrame(() => {
+      const list = pop.querySelector('[data-cp-part="model-list"]');
+      if (!list) return;
+      const at = picked.getBoundingClientRect().top - list.getBoundingClientRect().top;
+      if (at > list.clientHeight - 36) list.scrollTop += at - list.clientHeight / 2;
+    });
+  }
 }
+const scrolledTo = new WeakSet<DomElement>();
 
 function wireRail(pop: DomElement, rail: DomElement) {
   const tip = document.createElement("div");

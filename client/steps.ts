@@ -1,6 +1,7 @@
 import type { PluginClientContext } from "@getpaseo/plugin/client";
 import type { AgentTimelineItem } from "@getpaseo/protocol/agent-types";
 import { isHtmlTool } from "../shared/html.ts";
+import { htmlData } from "./html.ts";
 import { translate, type Language } from "../shared/i18n.ts";
 import { imageData } from "./model.ts";
 import { hasUiFence } from "../shared/ui-fence.ts";
@@ -66,8 +67,10 @@ export function stepKey(item: Item): string | undefined {
   if (item.type === "todo") return `d:${item.items.map((t) => `${taskStatus(t)} ${t.text}`).join("\n")}`;
   if (item.type === "tool_call") {
     const name = toolName(item);
-    // An html_render call never joins a run: once it completes it shows as a page, content like a reply.
-    if (item.detail.type === "plan" || TODO_TOOLS.has(name) || isTurnTrigger(item) || DROPPED_TOOLS.has(name) || isHtmlTool(item.name)) return undefined;
+    // An html_render page never joins a run: it shows as a page, content like a reply. A call the tool rejected is a step like any other:
+    // left as Paseo's own tool row, it made Collapse turns fold the whole turn, the page with it.
+    const page = isHtmlTool(item.name) && (item.status === "running" || htmlData(item) !== undefined);
+    if (item.detail.type === "plan" || TODO_TOOLS.has(name) || isTurnTrigger(item) || DROPPED_TOOLS.has(name) || page) return undefined;
     return `t:${item.callId}`;
   }
   // Replies are steps only when Collapse turns folds them (see stepRuns); like thoughts they carry no id in every provider.

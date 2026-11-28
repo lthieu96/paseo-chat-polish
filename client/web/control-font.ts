@@ -29,7 +29,8 @@ export function centeredMetrics(m: { ascent: number; descent: number; capHeight:
  * with ascent/descent overrides, and points Paseo's --paseo-ui-font at it only inside controls, so replies and code keep the font as is.
  * Desktop/web only; Paseo reloads when its fonts change, so this runs once. Returns cleanup.
  * ponytail: local() needs each face's full name ("<font> Medium") or PostScript name ("<Font>-Medium"); a weight that matches
- * neither falls back to the uncorrected font. Every weight gets the regular face's metrics. --paseo-ui-font is a Paseo internal.
+ * neither takes the regular face (right for a variable font; a static family missing that weight shows it at regular weight).
+ * Every weight gets the regular face's metrics. --paseo-ui-font is a Paseo internal.
  */
 export function centerControlText() {
   if (Platform.OS !== "web" || typeof document === "undefined") return () => {};
@@ -43,7 +44,11 @@ export function centerControlText() {
   if (!fix) return () => {};
   const ps = name.replace(/\s+/g, "");
   const faces = WEIGHTS.map(([weight, style]) => {
-    const src = [`local("${name} ${style}")`, `local("${ps}-${style}")`, ...(weight === 400 ? [`local("${name}")`] : [])].join(", ");
+    // A variable font (one file for every weight, e.g. "Berkeley Mono Variable") has no "<font> Medium" face: each weight falls back to
+    // its regular face by PostScript name, whose weight axis then follows the face's font-weight. Without it, every weight but none
+    // matched and controls drew the uncorrected font, its text sitting low.
+    const regular = weight === 400 ? [`local("${name}")`] : [`local("${ps}-Regular")`, `local("${name} Regular")`, `local("${name}")`];
+    const src = [`local("${name} ${style}")`, `local("${ps}-${style}")`, ...regular].join(", ");
     return `@font-face { font-family: "${FAMILY}"; src: ${src}; font-weight: ${weight}; ascent-override: ${(fix.ascent * 100).toFixed(1)}%; descent-override: ${(fix.descent * 100).toFixed(1)}%; }`;
   });
   const style = document.createElement("style");

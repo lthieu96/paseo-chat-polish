@@ -14,6 +14,11 @@ const PARTS: Array<[string, (el: DomElement) => DomElement | null | undefined, s
   ['[data-testid="sidebar-footer"]', (el) => el.parentElement, "left"],
   // Its wrapper, a stacking context below the main area's: raised so the resize handle's half over the gap gets the pointer.
   ['[data-testid="sidebar-footer"]', (el) => el.parentElement?.parentElement, "left-wrap"],
+  // Paseo 0.18 slides the sidebar inside two overflow: hidden boxes in a column of its own, which clipped that half and put it under the main area.
+  // Tagged only where that nesting is found, so older layouts keep theirs.
+  ['[data-testid="sidebar-footer"]', (el) => clipAt(el, 3), "left-clip"],
+  ['[data-testid="sidebar-footer"]', (el) => clipAt(el, 4), "left-clip"],
+  ['[data-testid="sidebar-footer"]', (el) => (clipAt(el, 3) ? up(el, 5) : null), "left-col"],
   // The block of New workspace, History, Search… with the rule under it.
   ['[data-testid="sidebar-global-new-workspace"]', (el) => el.parentElement?.parentElement?.parentElement, "nav"],
   ['[data-testid="sidebar-display-preferences-menu"]', (el) => el.parentElement?.parentElement?.parentElement?.firstElementChild, "ws-label"],
@@ -28,6 +33,17 @@ const PARTS: Array<[string, (el: DomElement) => DomElement | null | undefined, s
     }
   }, "titlebar"],
 ];
+
+function up(el: DomElement, levels: number) {
+  let a: DomElement | null | undefined = el;
+  for (let i = 0; i < levels && a; i++) a = a.parentElement;
+  return a;
+}
+// The ancestor that many levels up if it clips (or was already tagged, since the restyle then makes it overflow).
+function clipAt(el: DomElement, levels: number) {
+  const a = up(el, levels);
+  return a && (a.getAttribute(WIN) === "left-clip" || getComputedStyle(a).overflow === "hidden") ? a : null;
+}
 
 const EXPLORER = '[data-testid="workspace-explorer-sidebar"]';
 const REPO = '[data-testid="changes-repository-header"]';
@@ -78,7 +94,9 @@ export function tagWindow(roots: DomElement[]) {
     for (let el = header.firstElementChild; el && el.getAttribute(WIN) !== "header"; el = el.firstElementChild)
       if (getComputedStyle(el).borderBottomWidth !== "0px") {
         const row = el;
-        writes.push(() => set(row, WIN, "header"));
+        // Settings draws the header row empty (a drag strip): keep its height, drop its rule.
+        const empty = !row.textContent?.trim() && !row.querySelector("button, svg, img");
+        writes.push(() => (set(row, WIN, "header"), empty ? row.setAttribute("data-cp-empty", "") : row.removeAttribute("data-cp-empty")));
         break;
       }
     // On a workspace, Paseo 0.16 wraps the header and tab row in a measuring view (AdaptiveWorkspaceChrome); the pane is above it.
@@ -198,6 +216,7 @@ ${W} [data-testid="sidebar-workspace-timestamp"] { font-size: 11.5px !important;
 
 /* Header and tabs: medium title, faint project name; the active tab raised, the others faint. */
 ${W} [${WIN}="header"], ${W} [data-testid="workspace-tabs-row"] { border-bottom-color: var(--cp-w-hair) !important; }
+${W} [${WIN}="header"][data-cp-empty] { border-bottom-color: transparent !important; }
 ${W} [data-testid="workspace-header-title"] { font-weight: 500 !important; color: var(--cp-w-strong) !important; }
 ${W} [data-testid="workspace-header-subtitle"] { color: var(--cp-w-faint) !important; }
 ${W} ${TAB}[aria-selected="true"] { background-color: var(--colors-surface1) !important; }
@@ -250,7 +269,8 @@ ${FLOAT} [${WIN}="titlebar"] { margin-top: 9px; margin-right: 9px; }
    hover or while dragging. The Explorer's is Paseo's own highlight (3px, on hover and drag), thinned and moved into the gap. */
 ${W} ${LEFT_HANDLE}::after { content: ""; position: absolute; top: 0; bottom: 0; left: 4px; width: 2px; background-color: var(--colors-accent); opacity: 0; transition: opacity 150ms ease-out; pointer-events: none; }
 ${W} ${LEFT_HANDLE}:is(:hover, :active)::after { opacity: 1; }
-${W} [${WIN}="left-wrap"] { z-index: 1 !important; }
+${W} [${WIN}="left-wrap"], ${W} [${WIN}="left-col"] { z-index: 1 !important; }/* The sidebar unmounts when closed and slides out to the window's left edge, so nothing spills where these stop clipping. */
+${W} [${WIN}="left-clip"] { overflow: visible !important; }
 ${FLOAT} ${LEFT_HANDLE} { right: -9px !important; width: 10px !important; }
 ${W} ${EXPLORER_HIGHLIGHT} { width: 2px !important; left: 0 !important; }
 ${FLOAT} ${EXPLORER_HIT} { left: 0 !important; width: 8px !important; }
