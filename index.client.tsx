@@ -1,5 +1,5 @@
 import type { PluginTimelineData } from "@getpaseo/plugin";
-import type { PluginClientContext, PluginSidebarItemProps } from "@getpaseo/plugin/client";
+import type { PluginClientContext, PluginSidebarItemProps, PluginSurfaceProps } from "@getpaseo/plugin/client";
 import { copyText, useToast, type ToastApi } from "@getpaseo/plugin/client/ui";
 import { SidebarRow } from "@getpaseo/plugin/client/ui";
 import { useEffect } from "react";
@@ -34,6 +34,15 @@ function ToastLender() {
   return null;
 }
 const toast = () => toasts.at(-1);
+
+/**
+ * The dashboard inside Settings. Settings has its own sidebar, so the dashboard switches pages with its compact control rather than a
+ * second sidebar beside it. Settings scrolls its pane, so the dashboard takes its content's height and scrolls with it; a fixed 760px
+ * cut its last cards off and scrolled a second time inside the pane.
+ */
+function SettingsDashboard(props: PluginSurfaceProps) {
+  return <Dashboard {...props} layout={{ ...props.layout, compact: true }} params={{}} />;
+}
 
 function DashboardItem({ currentScreen, openScreen }: PluginSidebarItemProps) {
   return (
@@ -365,8 +374,8 @@ export default function contribute(client: PluginClientContext) {
   const unsubscribeToggles = subscribePrefs(addToggles);
 
   client.addScreen({ id: "dashboard", title: "Chat Polish", Component: Dashboard });
-  // The cog on Chat Polish in Settings → Plugins (Paseo 0.16) opens the same dashboard there. Settings scrolls, so it gets a height.
-  client.addSettingsScreen({ id: "dashboard", title: "Chat Polish", icon: sidebarIcon, Component: (props) => <View style={{ height: 760 }}><Dashboard {...props} params={{}} /></View> });
+  // The cog on Chat Polish in Settings → Plugins (Paseo 0.16) opens the same dashboard there.
+  client.addSettingsScreen({ id: "dashboard", title: "Chat Polish", icon: sidebarIcon, Component: SettingsDashboard });
   client.addSidebarHeaderItem({ id: "dashboard", title: "Chat Polish", Component: DashboardItem });
   client.addComposerItem({ id: "toast", Component: ToastLender });
   return () => {

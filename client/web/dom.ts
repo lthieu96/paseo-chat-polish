@@ -80,6 +80,7 @@ export interface KeyEvent {
 export type MessageListener = (event: { source: unknown; data: unknown }) => void;
 export interface ComputedStyle {
   pointerEvents: string;
+  overflow: string;
   transform: string;
   borderRightWidth: string;
   borderRightStyle: string;
@@ -177,8 +178,14 @@ export function watchDom(watcher: DomWatcher, cleanup: () => void) {
         if (record.attributeName === "style" && target.hasAttribute("data-cp-depth")) roots.push(target);
         // A running row's label text changed (the next step); tagParts animates it in.
         if (!record.attributeName && target.parentElement?.hasAttribute("data-cp-running-label")) roots.push(target);
+        // Only Settings' own tree and portaled overlays (outside the app root) matter; a style read for everything else changing in the
+        // app (every hover, every streamed row) forced a style pass per record.
         if (record.attributeName && settings) {
-          if (target.closest(SETTINGS_PANE) || getComputedStyle(target).position === "absolute" || getComputedStyle(target).position === "fixed") roots.push(target);
+          if (target.closest(SETTINGS_PANE)) roots.push(target);
+          else if (!target.closest("#root")) {
+            const position = getComputedStyle(target).position;
+            if (position === "absolute" || position === "fixed") roots.push(target);
+          }
         }
       }
       const added = distinctRoots(roots);

@@ -79,7 +79,7 @@ ${ON} ${MD} [${OPEN}] [${CARD}] {
 }
 /* The face (the card with the badge) sits in the same spot closed and open, so it stays put; dealing it too made it blink. */
 ${ON} ${MD} [${OPEN}] [${CARD}][${STILL}], ${ON} ${MD} [${OPEN}] [${CARD}][${BADGE}] { animation: none; }
-${ON} ${MD} [${FOLDING}] [${CARD}]:not([${BADGE}]):not([${STILL}]) { animation: cp-fold-out ${FOLD_MS}ms cubic-bezier(0.4, 0, 1, 1) forwards; }
+${ON} ${MD} [${FOLDING}] [${CARD}]:not([${BADGE}]):not([${STILL}]) { animation: cp-fold-out ${FOLD_MS}ms cubic-bezier(0.23, 1, 0.32, 1) forwards; }
 ${ON} ${MD} [${CLOSING}] [${CARD}]:not([${FAR}]):not([${BADGE}]) { animation: cp-fan-in 150ms ${EASE} backwards; }
 @keyframes cp-deal { from { opacity: 0; scale: 0.88; translate: 0 8px; } }
 @keyframes cp-fold-out { to { opacity: 0; scale: 0.92; translate: -16px 0; } }

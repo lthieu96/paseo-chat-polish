@@ -346,6 +346,22 @@ export function Editor({ theme, draft, shown, view, appId, saved, typo, setDraft
         <SectionHead theme={theme} title={t("themeEditor.section.textAccent")} hint={t("themeEditor.textAccentHint")} />
         {grid(TEXTS)}
       </View>
+      {locked ? null : (
+        <ColorRow
+          theme={theme}
+          name={TOKEN_LABEL[token] ?? token}
+          hint={t(TOKEN_ROLE_KEYS[token])}
+          color={draft.colors[token]}
+          text={tokenText}
+          bad={!isHex(normalize(tokenText))}
+          accent
+          onText={(v) => {
+            const next = normalize(v);
+            setTyping({ ...typing, [token]: v });
+            if (isHex(next)) setDraft({ ...draft, colors: { ...draft.colors, [token]: next.toLowerCase() } });
+          }}
+        />
+      )}
 
       {canSetAppTheme ? (
         <View style={{ gap: 10 }}>
@@ -370,22 +386,6 @@ export function Editor({ theme, draft, shown, view, appId, saved, typo, setDraft
           />
         </View>
       ) : null}
-      {locked ? null : (
-        <ColorRow
-          theme={theme}
-          name={TOKEN_LABEL[token] ?? token}
-          hint={t(TOKEN_ROLE_KEYS[token])}
-          color={draft.colors[token]}
-          text={tokenText}
-          bad={!isHex(normalize(tokenText))}
-          accent
-          onText={(v) => {
-            const next = normalize(v);
-            setTyping({ ...typing, [token]: v });
-            if (isHex(next)) setDraft({ ...draft, colors: { ...draft.colors, [token]: next.toLowerCase() } });
-          }}
-        />
-      )}
       <HighlightTheme theme={theme} draft={draft} shown={shown} setDraft={setDraft} />
     </View>
   );

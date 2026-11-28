@@ -6,6 +6,8 @@ import { readHostAppearance, seriesFrom } from "./web";
 
 // Web only (views.tsx checks Platform.OS); just the DOM this module touches.
 declare const navigator: { userAgent: string } | undefined;
+declare const document: { documentElement: unknown } | undefined;
+declare function getComputedStyle(el: unknown): { getPropertyValue(name: string): string };
 type MessageListener = (event: { source: unknown; data: unknown }) => void;
 declare const window: { addEventListener(type: "message", listener: MessageListener): void; removeEventListener(type: "message", listener: MessageListener): void };
 interface HoverTarget {
@@ -34,6 +36,18 @@ const SHRINK_AFTER_MS = 400;
 
 const SANS = '-apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif';
 const MONO = "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
+
+/**
+ * The theme's colors as the app has applied them: Paseo's --colors-* on the page. A chat item can first render with Paseo's default theme,
+ * before the plugin's own is registered, and that baked the wrong colors into a page's frame (a green flash, then the right theme).
+ */
+export function liveColors<T extends Record<string, unknown>>(fallback: T): T {
+  if (typeof document === "undefined") return fallback;
+  const css = getComputedStyle(document.documentElement);
+  const read = (key: string) => css.getPropertyValue(`--colors-${key.replace(/[A-Z]/g, (ch) => `-${ch.toLowerCase()}`)}`).trim();
+  if (!read("foreground")) return fallback;
+  return Object.fromEntries(Object.entries(fallback).map(([key, value]) => [key, (typeof value === "string" && read(key)) || value])) as T;
+}
 
 /** The CSS variables a page gets from the app's theme and fonts. */
 export function useHtmlTheme(colors: HtmlColors) {
@@ -71,8 +85,11 @@ export function HtmlFrame({
   const css = useHtmlTheme(colors);
   const latest = useRef(css);
   latest.current = css;
-  // The page starts in the theme of its first render; later themes are posted, since a new srcdoc would reload it.
-  const srcDoc = useMemo(() => htmlPage(html, latest.current), [html]);
+  // The page starts in the theme of its first render; later themes are posted, since a new srcdoc would reload it. A page that draws on a
+  // canvas reloads instead: its drawing keeps the colors it was painted in (dark labels on a dark page after a switch), and the page has
+  // no way to know it should repaint.
+  const canvas = /<canvas[\s>]/i.test(html);
+  const srcDoc = useMemo(() => htmlPage(html, latest.current), [html, canvas ? css : ""]);
   // Width -1 until the page reports one, so its first report always sets the frame: up at once, down after SHRINK_AFTER_MS (fitFrame).
   const shown = useRef(lastSizes.get(id) ?? { height: lastFrameHeight(id, heights), width: -1 });
   const [height, setHeight] = useState(shown.current.height);
@@ -146,4 +163,6 @@ export function useHovered(ref: { current: unknown }) {
 }
 
 /** Room for the macOS window buttons, which Paseo's desktop app draws over its own content, at the start of a full-window header. */
-export const windowButtonsInset = () => (typeof navigator !== "undefined" && /Electron/.test(navigator.userAgent) && /Macintosh/.test(navigator.userAgent) ? 80 : 16);
+export const windowButtonsInset = () => (typeof navigator !== "undefined" && /Electron/.test(navigator.userAgent) && /Macintosh/.test(navigator.userAgent) && desktopWindow() ? 80 : 16);
+// The desktop window's preload exposes paseoDesktop; a page in one of Paseo's browser tabs runs in Electron too, but without it.
+const desktopWindow = () => !!(globalThis as { paseoDesktop?: unknown }).paseoDesktop;

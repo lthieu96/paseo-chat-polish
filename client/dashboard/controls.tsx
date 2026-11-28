@@ -10,30 +10,35 @@ import { Icon } from "../icons";
 import { alpha, sunken, useReducedMotion, useStyles } from "../views";
 
 export const SQUIRCLE_CARD = { dataSet: { cpSquircle: "card" } } as object;
+// react-native-web passes CSS transitions through; native ignores them (and snaps).
+const PRESS_EASE = { transitionProperty: "transform, background-color, opacity", transitionDuration: "160ms", transitionTimingFunction: "cubic-bezier(0.23, 1, 0.32, 1)" } as object;
 
 export function Button({ theme, label, icon, primary, disabled, onPress }: { theme: PluginTheme; label: string; icon: string; primary?: boolean; disabled?: boolean; onPress(): void }) {
   const s = useStyles(theme);
   const reducedMotion = useReducedMotion();
   const c = theme.colors;
-  const fg = primary ? onAccent(c.accent, c.accentForeground, c.foreground) : c.foreground;
+  // A disabled primary drops its fill: dark text on a faded accent read as muddy (about 2.5:1).
+  const filled = primary && !disabled;
+  const fg = filled ? onAccent(c.accent, c.accentForeground, c.foreground) : c.foreground;
   return (
     <Pressable
       accessibilityRole="button"
       disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => ({
+        ...PRESS_EASE,
         flexDirection: "row",
         alignItems: "center",
         gap: 6,
         paddingHorizontal: 12,
         paddingVertical: 7,
         borderRadius: 8,
-        opacity: disabled ? 0.45 : reducedMotion && pressed ? 0.8 : 1,
-        transform: pressed && !reducedMotion ? [{ scale: 0.97 }] : undefined,
-        ...(primary ? { backgroundColor: c.accent } : { borderWidth: StyleSheet.hairlineWidth, borderColor: c.border }),
+        opacity: disabled ? 0.5 : reducedMotion && pressed ? 0.8 : 1,
+        transform: pressed && !reducedMotion ? [{ scale: 0.97 }] : [{ scale: 1 }],
+        ...(filled ? { backgroundColor: c.accent } : { borderWidth: StyleSheet.hairlineWidth, borderColor: c.border }),
       })}
     >
-      <Icon name={icon} size={14} color={primary ? fg : c.foregroundMuted} />
+      <Icon name={icon} size={14} color={filled ? fg : c.foregroundMuted} />
       <Text style={[s.verb, { color: fg, fontWeight: primary ? "600" : "400" }]}>{label}</Text>
     </Pressable>
   );
@@ -102,17 +107,30 @@ export function Notice({ theme, icon = "Info", children, action }: { theme: Plug
   );
 }
 
+/** A white knob that slides over the track (on web; native snaps), the track fading to the accent: on reads stronger than off on any theme. */
 export function Switch({ theme, value, label, onChange }: { theme: PluginTheme; value: boolean; label: string; onChange(v: boolean): void }) {
   const c = theme.colors;
+  const reducedMotion = useReducedMotion();
   return (
     <Pressable
       accessibilityRole="switch"
       accessibilityLabel={label}
       accessibilityState={{ checked: value }}
       onPress={() => onChange(!value)}
-      style={{ width: 30, height: 18, padding: 2, borderRadius: 9, justifyContent: "center", backgroundColor: value ? c.accent : c.surface2 }}
+      style={{ width: 30, height: 18, padding: 2, borderRadius: 9, justifyContent: "center", backgroundColor: value ? c.accent : alpha(c.foregroundMuted, 0.35), ...({ transitionProperty: "background-color", transitionDuration: "160ms", transitionTimingFunction: "ease" } as object) }}
     >
-      <View style={{ width: 14, height: 14, borderRadius: 7, alignSelf: value ? "flex-end" : "flex-start", backgroundColor: value ? c.accentForeground : c.foregroundMuted }} />
+      <View
+        style={{
+          width: 14,
+          height: 14,
+          borderRadius: 7,
+          backgroundColor: "#ffffff",
+          boxShadow: "0 1px 2px rgba(0, 0, 0, 0.3)",
+          // 30 wide, 2 padding each side, 14 knob: 12 of travel.
+          transform: [{ translateX: value ? 12 : 0 }],
+          ...(reducedMotion ? null : PRESS_EASE),
+        }}
+      />
     </Pressable>
   );
 }
@@ -217,7 +235,8 @@ export function TopBar({ theme, layout, title, badge, subtitle, children }: { th
           <Text style={[s.title, { fontSize: 20 }]}>{title}</Text>
           {badge ? <Badge theme={theme} label={badge} tone={theme.colors.statusWarning} /> : null}
         </View>
-        <Text style={[s.small, { fontSize: 13 }]}>{subtitle}</Text>
+        {/* Two lines kept on wide layouts, so the header (and its rule) stays put when switching between pages with short and long subtitles. */}
+        <Text style={[s.small, { fontSize: 13, lineHeight: 18, minHeight: layout.compact ? undefined : 36 }]}>{subtitle}</Text>
       </View>
       {layout.compact && children ? <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8 }}>{children}</View> : children}
     </View>

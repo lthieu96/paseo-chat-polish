@@ -8,7 +8,10 @@ declare function setTimeout(cb: () => void, ms: number): number;
 declare const innerWidth: number;
 
 const SELECT_CSS = `
-[data-cp-select] { position: fixed; z-index: 10000; display: flex; align-items: center; gap: 1px; padding: 3px; border: 1px solid var(--colors-border); border-radius: 8px; background-color: var(--cp-control, var(--colors-surface2)); box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45); animation: cp-pop 40ms ease-out; }
+[data-cp-select] { position: fixed; z-index: 10000; display: flex; align-items: center; gap: 1px; padding: 3px; border: 1px solid var(--colors-border); border-radius: 8px; background-color: var(--cp-control, var(--colors-surface2)); box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45); animation: cp-pop 40ms ease-out; transform-origin: bottom center; transition: opacity 120ms cubic-bezier(0.23, 1, 0.32, 1); }
+/* Grows from the selection it points at; after "Copied" it fades out rather than vanishing (other dismissals stay instant). */
+[data-cp-select][data-cp-below] { transform-origin: top center; }
+[data-cp-select][data-cp-leaving] { opacity: 0; pointer-events: none; }
 :root:is(.light, .pluginLight) [data-cp-select] { background-color: var(--cp-raised, var(--colors-surface1)); }
 [data-cp-select] > span { padding: 0 4px 0 7px; color: var(--cp-muted, var(--colors-foreground-muted)); font-size: 12px; }
 [data-cp-select] > button { height: 24px; padding: 0 8px; border: 0; border-radius: 6px; background: transparent; color: var(--cp-fg, var(--colors-foreground)); font-family: inherit; font-size: 12px; font-weight: 500; white-space: nowrap; cursor: pointer; }
@@ -58,7 +61,9 @@ export function selectionCopyMenu(enabled: () => boolean) {
     const box = sel.getRangeAt(0).getBoundingClientRect();
     if (box.bottom < 0 || box.height === 0) return hide();
     const { width, height } = menu.getBoundingClientRect();
-    const top = box.top - height - 12 < 8 ? box.bottom + 12 : box.top - height - 12;
+    const below = box.top - height - 12 < 8;
+    const top = below ? box.bottom + 12 : box.top - height - 12;
+    if (below !== menu.hasAttribute("data-cp-below")) below ? menu.setAttribute("data-cp-below", "") : menu.removeAttribute("data-cp-below");
     menu.style.setProperty("top", `${Math.round(top)}px`);
     menu.style.setProperty("left", `${Math.round(Math.min(Math.max(box.left + box.width / 2 - width / 2, 8), innerWidth - width - 8))}px`);
   };
@@ -87,7 +92,11 @@ export function selectionCopyMenu(enabled: () => boolean) {
       button.addEventListener("click", () => {
         copy();
         lead.textContent = t("web.copied");
-        setTimeout(() => menu === m && hide(), 700);
+        setTimeout(() => {
+          if (menu !== m) return;
+          m.setAttribute("data-cp-leaving", "");
+          setTimeout(() => menu === m && hide(), 120);
+        }, 700);
       });
       m.appendChild(button);
     }

@@ -103,7 +103,8 @@ function UpdateCardView({ theme, status, phase, error, onUpdate }: { theme: Plug
   const title = phase === "restarting" ? t("nav.update.updated") : phase === "updating" ? t("nav.update.updating") : error ? t("nav.update.failed") : t("nav.update.available");
   const mono = [s.small, { fontSize: 11, lineHeight: 15 }];
   const review = status.links[0];
-  const press = ({ pressed }: { pressed: boolean }) => ({ opacity: reducedMotion && pressed ? 0.8 : 1, transform: pressed && !reducedMotion ? [{ scale: 0.97 }] : undefined });
+  // The press eases back on web (react-native-web passes the transition through), rather than snapping.
+  const press = ({ pressed }: { pressed: boolean }) => ({ opacity: reducedMotion && pressed ? 0.8 : 1, transform: [{ scale: pressed && !reducedMotion ? 0.97 : 1 }], ...({ transitionProperty: "transform, opacity", transitionDuration: "160ms", transitionTimingFunction: "cubic-bezier(0.23, 1, 0.32, 1)" } as object) });
   return (
     <View {...SQUIRCLE_CARD} style={{ gap: 10, padding: 12, borderRadius: 12, backgroundColor: alpha(tone, 0.08), borderWidth: 1, borderColor: alpha(tone, 0.24) }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>

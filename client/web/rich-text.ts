@@ -4,7 +4,7 @@ import { t } from "../i18n";
 import { within, type DomElement, type WebDocument } from "./dom";
 import { icon } from "./icons";
 import { redrawDiagram } from "./mermaid";
-import { ADMONITION, CODE_BLOCK, LANG, md, DOC, TASK_BOX } from "./selectors";
+import { ADMONITION, CODE_BLOCK, LANG, md, DOC, MERMAID_SOURCE, TASK_BOX } from "./selectors";
 
 declare const document: WebDocument;
 
@@ -29,7 +29,8 @@ export function markBlocks(roots: DomElement[]) {
     const count = (code.textContent ?? "").replace(/\n$/, "").split("\n").length;
     if (code.getAttribute("data-cp-lines")?.split("\n").length !== count) code.setAttribute("data-cp-lines", Array.from({ length: count }, (_, i) => i + 1).join("\n"));
   }
-  for (const pre of find('[data-paseo-markdown-language="mermaid"]')) {
+  // The source block only: from Paseo 0.18 a drawn diagram's display: contents wrapper carries the same language mark.
+  for (const pre of find(MERMAID_SOURCE)) {
     const box = pre.parentElement;
     if (!box || box.querySelector(":scope > [data-cp-redraw]")) continue;
     const button = document.createElement("button");
